@@ -3,14 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
   <title>Sam Proctor</title>
   <style>
     body {
       margin: 0;
       background-color: black;
       color: white;
-      font-family: sans-serif;
+      font-family: 'Space Grotesk', sans-serif;
     }
+      
+      /* --- Cinematic Hero Video --- */
+          .hero {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+          }
+
+          .hero video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+          }
+
+          .hero h1 {
+            position: relative;
+            z-index: 1;
+            padding: 2rem;
+            text-align: center;
+            font-size: 2rem;
+          }
+      
+      .scroll-indicator {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 2rem;
+        color: white;
+        opacity: 0.7;
+        animation: bounce 2s infinite;
+        cursor: default;
+        user-select: none;
+      }
+
+      @keyframes bounce {
+        0%, 100% {
+          transform: translateX(-50%) translateY(0);
+        }
+        50% {
+          transform: translateX(-50%) translateY(10px);
+        }
+      }
+      
 
     .hero {
       position: relative;
@@ -38,33 +89,84 @@
       z-index: 1;
     }
 
-    .bio {
-      padding: 4rem 2rem;
-      text-align: center;
-      background: black;
-    }
+      .bio {
+        padding: 4rem 2rem;
+        background-color: black;
+        color: white;
+      }
 
-    .bio a {
-      color: #00ffff;
-      text-decoration: none;
-    }
+      .bio-container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        max-width: 900px;
+        margin: 0 auto;
+        gap: 2rem;
+      }
 
-    .bio a:hover {
-      text-decoration: underline;
-    }
+      .bio-photo {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid white;
+        flex-shrink: 0;
+      }
+
+      .bio-text {
+        flex: 1;
+        min-width: 250px;
+      }
+
+      .bio-text h2 {
+        margin-top: 0;
+      }
+
+      .bio-text a {
+        color: #cccccc;  /* or use #ccc for grey */
+        text-decoration: underline;
+      }
+
+      .bio-text a:hover {
+        color: #888;  /* subtle hover color */
+      }
+
   </style>
 </head>
 <body>
 
+    <!-- Hero Cinematic Video -->
+     <div class="hero">
+       <video autoplay muted loop playsinline>
+         <source src="trees.mp4" type="video/mp4" />
+         Your browser does not support the video tag.
+       </video>
+       <div class="scroll-indicator">↓</div>
+     </div>
+    
   <div class="hero">
     <div style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1098646547?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Sam Proctor - Gameplay Engineering Demo Reel 2025"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>
   </div>
 
   <div class="bio">
-    <img src="me.jpg" alt="Photo of Sam Proctor" class="bio-photo" />
-    <h1>Sam Proctor</h1>
-    <p>I’m a multidisciplinary artist and creative technologist exploring the edges of sound, visuals, and interactivity.</p>
-    <p><a href="mailto:iamsamproctor@gmail.com">Email</a></p>
+    <div class="bio-container">
+      <img src="me.jpg" alt="Photo of Sam Proctor" class="bio-photo" />
+
+      <div class="bio-text">
+        <h2>Hi, I’m Sam</h2>
+        <p>
+          I’m a gameplay engineer with over five years of experience building XR games and interactive experiences.<br><br>
+          I have a background in Media Arts and Sciences, with a focus on XR and interactive media. Most of my work has centered on mobile AR, where I’ve developed engaging, real-time gameplay using Unity.<br><br>
+          Outside of engineering, I’m also a digital artist and musician. I love producing electronic music and singing.<br><br>
+          Let’s connect!
+        </p>
+        <p>
+          📧 <a href="mailto:iamsamproctor@gmail.com">Email</a><br>
+          💼 <a href="https://linkedin.com/in/samuelproctor" target="_blank">LinkedIn</a><br>
+          📷 <a href="https://instagram.com/samdaproctor" target="_blank">IG</a>
+        </p>
+      </div>
+    </div>
   </div>
 
 </body>
