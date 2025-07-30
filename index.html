@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Swiper CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
 
   <title>Sam Proctor</title>
@@ -142,6 +144,48 @@
         display: block;
         margin: 0 auto;
       }
+      
+      .swiper {
+        width: 100%;
+        padding-top: 20px;
+        padding-bottom: 40px;
+      }
+
+      .swiper-slide {
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .swiper-slide iframe {
+        width: 80vw;
+        height: 45vw;
+        max-width: 800px;
+        max-height: 450px;
+        border-radius: 12px;
+      }
+      
+      .swiper-pagination-bullet {
+        background-color: grey;
+        opacity: 1;
+      }
+
+      .swiper-pagination-bullet-active {
+        background-color: white;
+      }
+      
+      .video-section {
+        padding: 60px 0;
+        text-align: center;
+      }
+
+      .video-section h2 {
+        font-size: 2.5rem;
+        margin-bottom: 30px;
+        color: white;
+        font-weight: bold;
+      }
   </style>
 </head>
 <body>
@@ -168,6 +212,26 @@
     <script src="https://player.vimeo.com/api/player.js"></script>
   </div>
 
+  <section class="video-section">
+      <h2>Art</h2>
+  <div class="swiper mySwiper">
+    <div class="swiper-wrapper">
+      <!-- Slide 1 -->
+      <div class="swiper-slide">
+        <iframe src="https://player.vimeo.com/video/1105714832" frameborder="0" allowfullscreen></iframe>
+      </div>
+      <!-- Slide 2 -->
+      <div class="swiper-slide">
+        <iframe src="https://player.vimeo.com/video/1105718102" frameborder="0" allowfullscreen></iframe>
+      </div>
+    </div>
+
+    <div class="swiper-button-next"></div>
+    <div class="swiper-button-prev"></div>
+    <div class="swiper-pagination"></div>
+  </div>
+  </section>
+  
   <!-- Bio Section -->
   <div class="bio">
     <div class="bio-container">
@@ -190,5 +254,24 @@
     </div>
   </div>
 
+  <!-- Swiper JS -->
+  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+  
+  <script>
+    const swiper = new Swiper(".mySwiper", {
+      loop: true,
+      navigation: {
+        nextEl: ".swiper-button-next",
+        prevEl: ".swiper-button-prev",
+      },
+      pagination: {
+        el: ".swiper-pagination",
+        clickable: true,
+      },
+      spaceBetween: 30,
+      centeredSlides: true,
+      slidesPerView: 1,
+    });
+  </script>
 </body>
 </html>
