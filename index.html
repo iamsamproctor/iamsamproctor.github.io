@@ -156,6 +156,7 @@
         max-width: 400px;
         margin: 0 auto;
         aspect-ratio: 9 / 16;
+        overflow: hidden;
         height: auto;
       }
 
@@ -164,6 +165,12 @@
         justify-content: center;
         align-items: center;
         height: 100%;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+      
+      .swiper-slide-active {
+        opacity: 1;
       }
 
       .swiper-slide iframe {
@@ -196,6 +203,39 @@
         margin-bottom: 30px;
         color: white;
         font-weight: bold;
+      }
+      
+      .swiper-button-next,
+      .swiper-button-prev {
+        color: white;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        z-index: 10;
+      }
+
+      .swiper-button-next {
+        right: -50px;
+      }
+
+      .swiper-button-prev {
+        left: -50px;
+      }
+
+      .swiper.mySwiper {
+        position: relative;
+        overflow: visible;
+      }
+      
+      @media (min-width: 768px) {
+        .swiper-button-next {
+          right: -50px;
+        }
+
+        .swiper-button-prev {
+          left: -50px;
+        }
       }
   </style>
 </head>
