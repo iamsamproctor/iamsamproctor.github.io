@@ -3,375 +3,818 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <!-- Swiper CSS -->
   <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
-
   <title>Sam Proctor</title>
   <link rel="icon" href="favicon2.ico" />
+
   <style>
-      html {
-        scroll-behavior: smooth;
-        height: 100%;
-        overflow-x: hidden;
-      }
+    :root{
+      --bg: #000;
+      --text: #fff;
+      --muted: rgba(255,255,255,0.72);
+      --muted2: rgba(255,255,255,0.55);
+      --line: rgba(255,255,255,0.12);
+      --card: rgba(255,255,255,0.06);
+      --card2: rgba(255,255,255,0.08);
+      --shadow: 0 20px 60px rgba(0,0,0,0.65);
+      --radius: 18px;
+      --radius2: 26px;
+      --max: 1080px;
+    }
 
-      body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        background-color: black;
-        color: white;
-        font-family: 'Space Grotesk', sans-serif;
-        overflow-x: hidden;
-      }
+    html { scroll-behavior: smooth; height: 100%; overflow-x: hidden; }
+    body {
+      margin: 0; padding: 0; min-height: 100%;
+      background: var(--bg); color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      overflow-x: hidden;
+    }
 
-    /* --- Cinematic Hero Video --- */
+    /* ---------- Top Nav ---------- */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+      background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.35));
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-inner{
+      max-width: var(--max);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      gap: 16px;
+    }
+    .brand {
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none; color:var(--text);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .brand-dot{
+      width: 10px; height: 10px; border-radius: 50%;
+      background: white; opacity: 0.85;
+      box-shadow: 0 0 18px rgba(255,255,255,0.25);
+    }
+    .nav a.link{
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 8px 10px;
+      border-radius: 10px;
+      transition: 180ms ease;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .nav a.link:hover{
+      color: var(--text);
+      border-color: var(--line);
+      background: rgba(255,255,255,0.04);
+    }
+    .nav-right{
+      display:flex; align-items:center; gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    /* spacing so hero doesn't hide under nav */
+    .spacer{ height: 58px; }
+
+    /* ---------- Hero ---------- */
     .hero {
       position: relative;
       width: 100%;
       height: 100vh;
       overflow: hidden;
     }
-
     .hero video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
       object-fit: cover;
       z-index: -1;
+      filter: contrast(1.05) saturate(1.05);
     }
-
+    .hero-overlay{
+      position:absolute; inset:0;
+      background: radial-gradient(60% 60% at 50% 50%, rgba(0,0,0,0.25), rgba(0,0,0,0.78));
+      z-index:-1;
+      pointer-events:none;
+    }
     .hero-content {
       position: absolute;
-      top: 50%;
+      top: 52%;
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      color: white;
       padding: 1rem;
-      max-width: 90%;
+      max-width: 920px;
+      width: min(92vw, 920px);
       opacity: 0;
-      animation: fadeIn 2s ease forwards;
-      animation-delay: 0.5s;
+      animation: fadeIn 1.6s ease forwards;
+      animation-delay: 0.25s;
     }
-
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-      }
-    }
+    @keyframes fadeIn { to { opacity: 1; } }
 
     .hero-content h1 {
-      font-size: 3rem;
+      font-size: clamp(2.2rem, 4.6vw, 3.6rem);
       margin: 0;
+      letter-spacing: -0.6px;
     }
-
     .hero-content h2 {
-      font-size: 1.5rem;
-      margin: 0.5rem 0;
-      font-weight: normal;
+      font-size: clamp(1.05rem, 2.2vw, 1.55rem);
+      margin: 0.6rem 0 0;
+      font-weight: 600;
+      color: rgba(255,255,255,0.86);
     }
-
     .hero-content p {
-      font-size: 1rem;
+      font-size: 1.05rem;
       color: #cccccc;
-      margin-top: 1rem;
+      margin: 1rem auto 0;
+      max-width: 52ch;
+      line-height: 1.6;
     }
 
-      .scroll-indicator {
-        margin-top: 2rem;
-        font-size: 2rem;
-        color: white;
-        opacity: 0.7;
-        animation: bounce 2s infinite;
-        cursor: default;
-        user-select: none;
-        display: inline-block;
-      }
-
+    .hero-ctas{
+      margin-top: 1.35rem;
+      display:flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      transition: 180ms ease;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.18);
+    }
+    .btn.primary{
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.22);
+    }
+    .scroll-indicator {
+      margin-top: 1.4rem;
+      font-size: 2rem;
+      color: white;
+      opacity: 0.7;
+      animation: bounce 2s infinite;
+      cursor: pointer;
+      user-select: none;
+      display: inline-block;
+      text-decoration:none;
+    }
     @keyframes bounce {
-      0%, 100% {
-        transform: translateY(0);
-      }
-      50% {
-        transform: translateY(10px);
-      }
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(10px); }
     }
 
+    /* ---------- Sections ---------- */
+    .section{
+      padding: 80px 18px;
+      background: black;
+    }
+    .section-inner{
+      max-width: var(--max);
+      margin: 0 auto;
+    }
+    .section-title{
+      display:flex; align-items:flex-end; justify-content:space-between;
+      gap: 14px; flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .section-title h2{
+      margin:0;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      letter-spacing: -0.4px;
+    }
+    .section-title p{
+      margin:0;
+      color: var(--muted2);
+      max-width: 62ch;
+      line-height: 1.5;
+    }
+
+    /* ---------- Projects Grid ---------- */
+    .projects-grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .project-card{
+      grid-column: span 6;
+      background: linear-gradient(180deg, var(--card), rgba(255,255,255,0.03));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: 180ms ease;
+      position: relative;
+      min-height: 220px;
+    }
+    .project-card:hover{
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.22);
+      background: linear-gradient(180deg, var(--card2), rgba(255,255,255,0.03));
+    }
+    .project-thumb{
+      height: 250px;
+      position: relative;
+      background: rgba(255,255,255,0.06);
+      border-bottom: 1px solid var(--line);
+      overflow:hidden;
+    }
+    .project-thumb img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display:block;
+      opacity: 0.92;
+      transform: scale(1.02);
+    }
+    .project-thumb::after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.05));
+      pointer-events:none;
+    }
+    .project-body{
+      padding: 14px 14px 16px;
+    }
+    .project-name{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      margin:0;
+      font-size: 1.1rem;
+      letter-spacing: -0.2px;
+    }
+    .project-sub{
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 0.98rem;
+    }
+    .chips{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .chip{
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.82);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 860px){
+      .project-card{ grid-column: span 12; }
+    }
+
+    /* ---------- Reel ---------- */
+    .video-section {
+      background-color: black;
+      padding: 72px 0;
+      text-align: center;
+    }
+    .video-section iframe { max-width: 100%; display: block; margin: 0 auto; }
+    .video-section h2 {
+      font-size: clamp(1.6rem, 3vw, 2.3rem);
+      margin-bottom: 18px;
+      color: white;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+    }
+
+    /* ---------- Bio ---------- */
     .bio {
-      padding: 4rem 2rem;
+      padding: 80px 18px;
       background-color: black;
       color: white;
+      border-top: 1px solid var(--line);
     }
-
     .bio-container {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      max-width: 900px;
+      max-width: var(--max);
       margin: 0 auto;
       gap: 2rem;
     }
-
     .bio-photo {
-      width: 250px;
-      height: 250px;
+      width: 240px; height: 240px;
       border-radius: 50%;
       object-fit: cover;
-      border: 2px solid white;
+      border: 2px solid rgba(255,255,255,0.8);
       flex-shrink: 0;
     }
+    .bio-text { flex: 1; min-width: 260px; }
+    .bio-text h2 { margin-top: 0; font-size: 2rem; letter-spacing: -0.4px; }
+    .bio-text p { color: var(--muted); line-height: 1.75; }
+    .bio-text a { color: #cccccc; text-decoration: underline; }
+    .bio-text a:hover { color: #aaa; }
 
-    .bio-text {
-      flex: 1;
-      min-width: 250px;
+    /* ---------- Art Swiper ---------- */
+    .swiper { width: 100%; padding-top: 20px; padding-bottom: 40px; }
+    .swiper.mySwiper {
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      height: auto;
+      position: relative;
+    }
+    .swiper-slide {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .swiper-slide-active { opacity: 1; }
+    .swiper-slide iframe { width: 100%; height: 100%; border: none; object-fit: contain; }
+    .swiper-pagination { margin-top: 12px; }
+    .swiper-pagination-bullet { background-color: grey; opacity: 1; }
+    .swiper-pagination-bullet-active { background-color: white; }
+    .swiper-button-next, .swiper-button-prev {
+      color: white;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      z-index: 10;
+      position: absolute;
+    }
+    @media (min-width: 768px) {
+      .swiper.mySwiper { overflow: visible; }
+      .swiper-button-next { right: -50px; left: auto; }
+      .swiper-button-prev { left: -50px; right: auto; }
+    }
+    @media (max-width: 767px) {
+      .swiper.mySwiper { overflow: hidden; }
+      .swiper-button-next { right: 10px; left: auto; }
+      .swiper-button-prev { left: 10px; right: auto; }
     }
 
-    .bio-text h2 {
-      margin-top: 0;
+    /* ---------- Modal (Project Detail) ---------- */
+    .modal{
+      position: fixed; inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0,0,0,0.72);
+      z-index: 2000;
     }
-
-    .bio-text a {
-      color: #cccccc;
-      text-decoration: underline;
+    .modal.open{ display:flex; }
+    .modal-panel{
+      width: min(980px, 96vw);
+      max-height: min(86vh, 900px);
+      overflow:auto;
+      background: rgba(10,10,10,0.92);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow);
     }
-
-    .bio-text a:hover {
-      color: #888;
+    .modal-header{
+      position: sticky; top: 0;
+      backdrop-filter: blur(12px);
+      background: rgba(10,10,10,0.88);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px;
+      display:flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
     }
-      
-      .video-section {
-        background-color: black;
-      }
-      .video-section iframe {
-        max-width: 100%;
-        display: block;
-        margin: 0 auto;
-      }
-      
-      .swiper {
-        width: 100%;
-        padding-top: 20px;
-        padding-bottom: 40px;
-      }
-
-      .swiper.mySwiper {
-        width: 100%;
-        max-width: 400px;
-        margin: 0 auto;
-        aspect-ratio: 9 / 16;
-        overflow: hidden;
-        height: auto;
-      }
-
-      .swiper-slide {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-        opacity: 0;
-        transition: opacity 0.4s ease;
-      }
-      
-      .swiper-slide-active {
-        opacity: 1;
-      }
-
-      .swiper-slide iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-        object-fit: contain;
-      }
-      
-      .swiper-pagination {
-        margin-top: 12px;
-      }
-      
-      .swiper-pagination-bullet {
-        background-color: grey;
-        opacity: 1;
-      }
-
-      .swiper-pagination-bullet-active {
-        background-color: white;
-      }
-      
-      .video-section {
-        padding: 60px 0;
-        text-align: center;
-      }
-
-      .video-section h2 {
-        font-size: 2.5rem;
-        margin-bottom: 30px;
-        color: white;
-        font-weight: bold;
-      }
-      
-      .swiper-button-next,
-            .swiper-button-prev {
-              color: white;
-              top: 50%;
-              transform: translateY(-50%);
-              width: 40px;
-              height: 40px;
-              z-index: 10;
-              position: absolute;
-            }
-
-      .swiper-button-next {
-        right: -50px;
-      }
-
-      .swiper-button-prev {
-        left: -50px;
-      }
-
-      .swiper.mySwiper {
-        position: relative;
-        overflow: visible;
-      }
-      
-      @media (min-width: 768px) {
-              .swiper.mySwiper {
-                overflow: visible;
-              }
-
-              .swiper-button-next {
-                right: -50px;
-                left: auto;
-              }
-
-              .swiper-button-prev {
-                left: -50px;
-                right: auto;
-              }
-            }
-
-            @media (max-width: 767px) {
-              .swiper.mySwiper {
-                overflow: hidden;
-              }
-
-              .swiper-button-next {
-                right: 10px;
-                left: auto;
-              }
-
-              .swiper-button-prev {
-                left: 10px;
-                right: auto;
-              }
-            }
+    .modal-title{
+      margin:0;
+      font-size: 1.15rem;
+      letter-spacing: -0.2px;
+    }
+    .close-btn{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 180ms ease;
+    }
+    .close-btn:hover{
+      background: rgba(255,255,255,0.08);
+      transform: translateY(-1px);
+    }
+    .modal-content{
+      padding: 16px;
+    }
+    .modal-grid{
+      display:grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+    }
+    @media (max-width: 860px){
+      .modal-grid{ grid-template-columns: 1fr; }
+    }
+    .detail-card{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      border-radius: var(--radius);
+      overflow:hidden;
+    }
+    .detail-media{
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }
+    .detail-media iframe,
+    .detail-media img{
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      display:block;
+      border: 0;
+      object-fit: cover;
+    }
+    .detail-body{
+      padding: 14px;
+    }
+    .kicker{ color: var(--muted2); font-size: 0.9rem; margin: 0 0 6px; }
+    .detail-desc{ color: var(--muted); line-height: 1.7; margin: 0; }
+    .stack{
+      display:flex; flex-wrap:wrap; gap: 8px;
+    }
+    .stack .chip{ background: rgba(255,255,255,0.06); }
+    .links{
+      display:flex; flex-direction: column; gap: 10px;
+    }
+    .link-row{
+      display:flex; gap: 10px; flex-wrap: wrap;
+    }
+    .link-row a{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      text-decoration:none;
+      font-weight: 600;
+      transition: 180ms ease;
+    }
+    .link-row a:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.18);
+    }
+    .footer{
+      padding: 40px 18px 60px;
+      color: var(--muted2);
+      border-top: 1px solid var(--line);
+      text-align:center;
+    }
   </style>
 </head>
+
 <body>
 
-  <!-- Hero Cinematic Video -->
+  <!-- Nav -->
+  <div class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top">
+        <span>Sam Proctor</span>
+      </a>
+      <div class="nav-right">
+        <a class="link" href="#projects">Work</a>
+        <a class="link" href="#reel">Reel</a>
+        <a class="link" href="#art">Art</a>
+        <a class="link" href="#about">About</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="top" class="spacer"></div>
+
+  <!-- Hero -->
   <div class="hero">
     <video autoplay muted loop playsinline>
       <source src="trees.mp4" type="video/mp4" />
       Your browser does not support the video tag.
     </video>
+    <div class="hero-overlay"></div>
+
     <div class="hero-content">
       <h1>Sam Proctor</h1>
-      <h2>Gameplay Engineer & Digital Artist</h2>
-      <p>Creating interactive experiences at the edge of XR, code, and sound.</p>
-      <a href="#reel" class="scroll-indicator">↓</a>
+      <h2>Gameplay Engineer & XR Engineer</h2>
+      <p>Interactive experiences at the edge of XR, code, and sound.</p>
+
+      <div class="hero-ctas">
+        <a class="btn primary" href="#projects">View Projects</a>
+        <a class="btn" href="#reel">Watch Reel</a>
+<!--        <a class="btn" href="SamProctor_Resume.pdf" target="_blank" rel="noopener">Resume (PDF)</a>-->
+      </div>
+
+      <a href="#projects" class="scroll-indicator">↓</a>
     </div>
   </div>
 
-  <!-- Vimeo Section -->
-  <div id="reel" class="video-section">
-    <div style="padding:56.25% 0 0 0;position:relative;">
-      <iframe src="https://player.vimeo.com/video/1142596776?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Sam Proctor - Gameplay Engineering Demo Reel 2025"></iframe>
-    </div>
-    <script src="https://player.vimeo.com/api/player.js"></script>
-  </div>
-  
-  <div id="reel" class="video-section">
-    <div style="padding:56.25% 0 0 0;position:relative;">
-      <iframe src="https://player.vimeo.com/video/1098646547?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Sam Proctor - Gameplay Engineering Demo Reel 2025"></iframe>
-    </div>
-    <script src="https://player.vimeo.com/api/player.js"></script>
-  </div>
-  
-  <div class="video-section">
-    <div style="padding:56.25% 0 0 0;position:relative;">
-      <iframe src="https://player.vimeo.com/video/1131471013?badge=0&amp;autopause=0&amp;player_id=1&amp;app_id=58479"
-        frameborder="0"
-        allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-        style="position:absolute;top:0;left:0;width:100%;height:100%;"
-        title="Journey to the Samba-Verse - A Mobile AR Minigame"></iframe>
-    </div>
-  </div>
-  
-  <section class="video-section">
-      <h2>Art</h2>
-      
-  <div class="swiper mySwiper">
-    <div class="swiper-wrapper">
-      <!-- Slide 1 -->
-      <div class="swiper-slide">
-        <iframe src="https://player.vimeo.com/video/1105714832" frameborder="0" allowfullscreen></iframe>
+  <!-- Projects -->
+  <section id="projects" class="section">
+    <div class="section-inner">
+      <div class="section-title">
+        <h2>Selected Work</h2>
+        <p>A selection of professional and independent projects spanning gameplay and AR.</p>
       </div>
-      <!-- Slide 2 -->
-      <div class="swiper-slide">
-        <iframe src="https://player.vimeo.com/video/1105718102" frameborder="0" allowfullscreen></iframe>
-      </div>
-    </div>
 
-    <div class="swiper-button-next"></div>
-    <div class="swiper-button-prev"></div>
-    <div class="swiper-pagination"></div>
-  </div>
-  
+      <div class="projects-grid" id="projectsGrid">
+        <!-- injected by JS -->
+      </div>
+    </div>
   </section>
-  
-  <!-- Bio Section -->
-  <div class="bio">
+
+  <!-- Reel -->
+  <div id="reel" class="video-section">
+    <div class="section-inner">
+      <h2>Demo Reel</h2>
+      <div style="padding:56.25% 0 0 0;position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);">
+        <iframe src="https://player.vimeo.com/video/1098646547?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
+          frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+          style="position:absolute;top:0;left:0;width:100%;height:100%;"
+          title="Sam Proctor - Gameplay Engineering Demo Reel 2025"></iframe>
+      </div>
+      <script src="https://player.vimeo.com/api/player.js"></script>
+    </div>
+  </div>
+
+  <!-- Art -->
+  <section id="art" class="video-section">
+    <div class="section-inner">
+      <h2>Art</h2>
+      <div class="swiper mySwiper">
+        <div class="swiper-wrapper">
+          <div class="swiper-slide">
+            <iframe src="https://player.vimeo.com/video/1105714832" frameborder="0" allowfullscreen></iframe>
+          </div>
+          <div class="swiper-slide">
+            <iframe src="https://player.vimeo.com/video/1105718102" frameborder="0" allowfullscreen></iframe>
+          </div>
+        </div>
+
+        <div class="swiper-button-next"></div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-pagination"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About + Contact -->
+  <div id="about" class="bio">
     <div class="bio-container">
       <img src="me.jpg" alt="Photo of Sam Proctor" class="bio-photo" />
 
       <div class="bio-text">
         <h2>Hi, I’m Sam.</h2>
         <p>
-          I’m a gameplay engineer with over five years of experience building XR games and interactive experiences.<br><br>
-          I have a background in Media Arts and Sciences, with a focus on XR and interactive media. Most of my work has centered on mobile AR, where I’ve developed engaging, real-time gameplay using Unity.<br><br>
-          Outside of engineering, I’m also a digital artist and musician. I love creating 3D point cloud visuals (as seen above), as well as producing electronic music and singing.<br><br>
-          Let’s connect!
+          I’m a gameplay/XR engineer with 5+ years of experience building interactive experiences in Unity—especially mobile AR.
+          I care about responsive systems, polished feel, and making technical work emotionally legible through visuals and sound.
         </p>
         <p>
-          📧 <a href="mailto:iamsamproctor@gmail.com">Email</a><br>
-          💼 <a href="https://linkedin.com/in/samdaproctor" target="_blank">LinkedIn</a><br>
-          🎧 <a href="https://soundcloud.com/sam-proctor-911180548?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing">SoundCloud</a><br>
+          Outside engineering, I’m also a digital artist and musician. I love building real-time visuals (point clouds, shaders),
+          and producing electronic music.
         </p>
+
+        <div id="contact">
+          <p style="margin-top:18px;">
+            📧 <a href="mailto:iamsamproctor@gmail.com">Email</a><br>
+            💼 <a href="https://linkedin.com/in/samdaproctor" target="_blank" rel="noopener">LinkedIn</a><br>
+            🎧 <a href="https://soundcloud.com/sam-proctor-911180548?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing" target="_blank" rel="noopener">SoundCloud</a><br>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    © <span id="year"></span> Sam Proctor • Built with love in real-time
+  </div>
+
+  <!-- Project Modal -->
+  <div class="modal" id="projectModal" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Project details">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Project</h3>
+        <button class="close-btn" id="closeModalBtn">Close</button>
+      </div>
+      <div class="modal-content" id="modalContent">
+        <!-- injected by JS -->
       </div>
     </div>
   </div>
 
   <!-- Swiper JS -->
   <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-  
+
   <script>
+    // ---------- ART SWIPER ----------
     const swiper = new Swiper(".mySwiper", {
       loop: true,
-      navigation: {
-        nextEl: ".swiper-button-next",
-        prevEl: ".swiper-button-prev",
-      },
-      pagination: {
-        el: ".swiper-pagination",
-        clickable: true,
-      },
+      navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
+      pagination: { el: ".swiper-pagination", clickable: true },
       spaceBetween: 30,
       centeredSlides: true,
       slidesPerView: 1,
     });
+
+    // ---------- PROJECT DATA ----------
+    // Add/edit your projects here.
+    // thumb = image path (recommended: a still frame or key art)
+    // videoEmbed = optional Vimeo embed URL (not the page URL)
+    const projects = [
+                      {
+                        title: "PANIC: AR Shooter (Jadu AR, Inc.)",
+                        oneLiner: "An AR shooter where creatures attack you at all angles, featuring dynamic combat and boss battles.",
+                        description:
+                        "At Jadu AR Inc., I engineered key gameplay systems for PANIC, a Unity ECS-based AR shooter. I developed animation and audio systems, weapon firing mechanics, and boss fights.",
+                        thumb: "Thumbnail_Panic.jpg",
+                        tech: ["Unity", "AR Foundation", "C#", "Mobile AR", "Gameplay Systems"],
+                        videoEmbed: "",
+                        links: [
+                           { label: "App Store", href: "https://apps.apple.com/us/app/panic-ar-shooter/id6742031888" },
+                        ],
+                      },
+                      {
+                        title: "Jadu: Fight Comes to Your Room (Jadu AR, Inc.)",
+                        oneLiner: "A multiplayer AR PvP fighting game bringing real-time combat into your room.",
+                        description:
+                          "At Jadu AR, Inc., as a gameplay engineer on Jadu: Fight Comes to Your Room, I developed core combat systems, AI behaviors for NPC fighters, and responsive player interactions. I led animation engineering and worked on on features ranging from integrating new fighter types, engineering attack and damage logic, and synchronizing animations and VFX using Normcore for real-time multiplayer AR battles.",
+                        tech: ["Unity", "AR Foundation", "C#", "Animation Engineering", "Normcore"],
+                        thumb: "Thumbnail_JaduFight.jpg",
+                        videoEmbed: "", // optional
+                        links: [
+                                { label: "App Store", href: "https://apps.apple.com/us/app/jadu/id6443662349" }
+                        ],
+                      },
+      {
+        title: "Journey to the Samba-Verse",
+        oneLiner: "A mobile AR obstacle-avoidance minigame and story focused on spatial readability.",
+        description:
+          "A mobile AR obstacle-avoidance minigame and story focused on spatial readability. Player plays Gazorpo, an alien who must dodge space rocks that bounce off of real-world surfaces, and catch energy crystals to bring power and life back to his planet.",
+        tech: ["Unity", "AR Foundation", "C#", "Mobile", "UX/Game Feel"],
+        thumb: "Thumbnail_JourneyToTheSambaVerse.jpg",
+        videoEmbed: "https://player.vimeo.com/video/1131471013",
+        links: [
+          { label: "Watch Video", href: "https://vimeo.com/1131471013" },
+          // { label: "GitHub", href: "https://github.com/..." },
+        ],
+      },
+      {
+        title: "Handheld Guy",
+        oneLiner: "Real-time hand-tracking–driven character animation system built in Lens Studio",
+        description:
+          "A real-time hand-tracking–driven character animation system built in Lens Studio with JavaScript. This lens translates hand velocity, orientation, and threshold logic into intent-based animation states (idle, jump, fall, balance)",
+        tech: ["Lens Studio", "JavaScript", "AR"],
+        thumb: "Thumbnail_HandheldGuy.jpg",
+        videoEmbed: "https://player.vimeo.com/video/1142596776",
+        links: [
+          { label: "Watch Clip", href: "https://vimeo.com/1105714832" },
+        ],
+      },
+    ];
+
+    // ---------- RENDER PROJECT GRID ----------
+    const grid = document.getElementById("projectsGrid");
+
+    function chipList(tech){
+      return tech.map(t => `<span class="chip">${t}</span>`).join("");
+    }
+
+    function projectCard(p, index){
+      const safeThumb = p.thumb ? p.thumb : "";
+      return `
+        <article class="project-card" data-index="${index}" tabindex="0" role="button" aria-label="Open ${p.title}">
+          <div class="project-thumb">
+            ${safeThumb ? `<img src="${safeThumb}" alt="${p.title} thumbnail">` : ``}
+          </div>
+          <div class="project-body">
+            <h3 class="project-name">${p.title}</h3>
+            <p class="project-sub">${p.oneLiner || ""}</p>
+            <div class="chips">${chipList(p.tech || [])}</div>
+          </div>
+        </article>
+      `;
+    }
+
+    grid.innerHTML = projects.map(projectCard).join("");
+
+    // ---------- MODAL ----------
+    const modal = document.getElementById("projectModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalContent = document.getElementById("modalContent");
+    const closeBtn = document.getElementById("closeModalBtn");
+
+    function openModal(project){
+      modalTitle.textContent = project.title;
+
+      const media = project.videoEmbed
+        ? `<div class="detail-media"><iframe src="${project.videoEmbed}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${project.title} video"></iframe></div>`
+        : (project.thumb ? `<div class="detail-media"><img src="${project.thumb}" alt="${project.title} image"></div>` : "");
+
+      const links = (project.links && project.links.length)
+        ? `<div class="link-row">${project.links.map(l => `<a href="${l.href}" target="_blank" rel="noopener">${l.label}</a>`).join("")}</div>`
+        : `<div class="kicker">Links</div><p class="detail-desc">Add links (video, case study, GitHub) in the project data.</p>`;
+
+      modalContent.innerHTML = `
+        <div class="modal-grid">
+          <div class="detail-card">
+            ${media}
+            <div class="detail-body">
+              <div class="kicker">Description</div>
+              <p class="detail-desc">${project.description || ""}</p>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <div class="detail-body">
+              <div class="kicker">Tech Stack</div>
+              <div class="stack">${chipList(project.tech || [])}</div>
+
+              <div style="height:14px;"></div>
+
+              <div class="kicker">Links</div>
+              <div class="links">
+                ${links}
+              </div>
+
+              <div style="height:14px;"></div>
+
+<!--              <div class="kicker">Role / Notes</div>-->
+<!--              <p class="detail-desc" style="color:rgba(255,255,255,0.65);">-->
+<!--                Tip: Add 1–3 bullets about ownership + a technical highlight (e.g., “Built ECS neighbor grid”, “Optimized for mobile AR performance”).-->
+<!--              </p>-->
+            </div>
+          </div>
+        </div>
+      `;
+
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal(){
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+      modalContent.innerHTML = "";
+    }
+
+    // click handlers
+    document.querySelectorAll(".project-card").forEach(card => {
+      card.addEventListener("click", () => {
+        const index = Number(card.getAttribute("data-index"));
+        openModal(projects[index]);
+      });
+
+      card.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          const index = Number(card.getAttribute("data-index"));
+          openModal(projects[index]);
+        }
+      });
+    });
+
+    closeBtn.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => {
+      if(e.target === modal) closeModal();
+    });
+    window.addEventListener("keydown", (e) => {
+      if(e.key === "Escape" && modal.classList.contains("open")) closeModal();
+    });
+
+    // footer year
+    document.getElementById("year").textContent = new Date().getFullYear();
   </script>
 </body>
 </html>
