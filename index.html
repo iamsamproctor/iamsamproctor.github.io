@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <title>Sam Proctor</title>
   <link rel="icon" href="favicon2.ico" />
 
@@ -313,14 +314,23 @@
       color: white;
       border-top: 1px solid var(--line);
     }
-    .bio-container {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      max-width: var(--max);
-      margin: 0 auto;
-      gap: 2rem;
-    }
+      .bio-container{
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 2rem;
+        align-items: start;
+        max-width: var(--max);
+        margin: 0 auto;
+      }
+
+      @media (max-width: 860px){
+        .bio-container{
+          grid-template-columns: 1fr;
+          justify-items: center;
+          text-align: left;
+        }
+      }
+
     .bio-photo {
       width: 240px; height: 240px;
       border-radius: 50%;
@@ -494,6 +504,67 @@
       border-top: 1px solid var(--line);
       text-align:center;
     }
+      /* ---------- Connect / Social Icons ---------- */
+      .connect-title{
+        margin: 1.4rem 0 0.65rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: var(--muted2);
+      }
+
+      .social-icons{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: flex-start;
+        margin-top: 8px;
+      }
+
+      .social-icons a{
+        width: 44px;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.04);
+        color: rgba(255,255,255,0.78);
+        text-decoration: none;
+        transition: 180ms ease;
+      }
+
+      .social-icons a:hover{
+        transform: translateY(-1px);
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(255,255,255,0.18);
+        color: rgba(255,255,255,0.95);
+      }
+
+      .social-icons i{
+        font-size: 1.25rem;
+      }
+
+      /* optional: a tiny helper line under the title */
+      .connect-sub{
+        margin: 0 0 10px;
+        color: var(--muted2);
+        line-height: 1.6;
+      }
+      
+      .contact-row{
+        margin-top: 10px;
+        display: inline-flex;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255,255,255,0.03);
+        gap: 10px;
+      }
+
   </style>
 </head>
 
@@ -599,17 +670,27 @@
         I’m a gameplay engineer with over five years of experience building XR games and interactive experiences. I have a background in Media Arts and Sciences, with a focus on XR and interactive media. Most of my work has centered on mobile AR, where I’ve developed engaging, real-time gameplay using Unity.
         </p>
         <p>
-        Outside of engineering, I’m also a digital artist and musician. I love creating 3D point cloud visuals (as seen above), as well as producing electronic music and singing.
+        Outside of engineering, I’m also a digital artist and musician. I love creating 3D point cloud visuals (as seen above), as well as producing electronic music.
         </p>
         <p>
-        Let’s connect!
+        If you want to collaborate or chat, please feel free to reach out!
         </p>
-        <div id="contact">
-          <p style="margin-top:18px;">
-            📧 <a href="mailto:iamsamproctor@gmail.com">Email</a><br>
-            💼 <a href="https://linkedin.com/in/samdaproctor" target="_blank" rel="noopener">LinkedIn</a><br>
-            🎧 <a href="https://soundcloud.com/sam-proctor-911180548?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing" target="_blank" rel="noopener">SoundCloud</a><br>
-          </p>
+        
+    
+        <h3 class="connect-title">Find me here:</h3>
+        <div id="contact" class="social-icons" aria-label="Social links">
+            <a href="https://linkedin.com/in/samdaproctor" target="_blank" rel="noopener" aria-label="LinkedIn">
+              <i class="fa-brands fa-linkedin-in"></i>
+            </a>
+          
+          <a href="mailto:iamsamproctor@gmail.com" aria-label="Email">
+            <i class="fa-solid fa-envelope"></i>
+          </a>
+
+          <a href="https://soundcloud.com/sam-proctor-911180548?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing"
+             target="_blank" rel="noopener" aria-label="SoundCloud">
+            <i class="fa-brands fa-soundcloud"></i>
+          </a>
         </div>
       </div>
     </div>
