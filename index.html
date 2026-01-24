@@ -570,6 +570,59 @@
       background: rgba(255,255,255,0.03);
       gap: 10px;
     }
+      
+      html.lenis {
+          height: auto;
+        }
+
+        .lenis.lenis-smooth {
+          scroll-behavior: auto !important;
+        }
+
+        .lenis.lenis-smooth [data-lenis-prevent] {
+          overscroll-behavior: contain;
+        }
+
+        .lenis.lenis-stopped {
+          overflow: hidden;
+        }
+
+        .lenis.lenis-scrolling iframe {
+          pointer-events: none;
+        }
+      
+      * {
+        cursor: none;
+      }
+      
+      .custom-cursor{
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.9);
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        transition:
+          width 180ms ease,
+          height 180ms ease,
+          background 180ms ease,
+          opacity 180ms ease;
+      }
+      
+      @media (hover: none) and (pointer: coarse) {
+        .custom-cursor {
+          display: none;
+        }
+        * {
+          cursor: auto;
+        }
+      }
+
+
   </style>
 </head>
 
@@ -669,7 +722,7 @@
       <div class="bio-text">
         <h2>Hi, I’m Sam.</h2>
         <p>
-        I’m a gameplay engineer with over five years of experience building XR games and interactive experiences. I have a background in Media Arts and Sciences, with a focus on XR and interactive media. Most of my work has centered on mobile AR, where I’ve developed engaging, real-time gameplay using Unity.
+        I’m a gameplay engineer with over five years of experience building XR games and interactive experiences. I have a background in Media Arts and Sciences, with a focus on XR and interactive media. Most of my work has centered on mobile AR, where I’ve developed real-time gameplay using Unity and C#.
         </p>
         <p>
         Outside of engineering, I’m also a digital artist and musician. I love creating 3D point cloud visuals (as seen above), as well as producing electronic music.
@@ -887,5 +940,93 @@
 
     document.getElementById("year").textContent = new Date().getFullYear();
   </script>
+<!--  -->
+<!--  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/bundled/lenis.min.js"></script>-->
+<!--  <script>-->
+<!--    const lenis = new Lenis({-->
+<!--      duration: q0,-->
+<!--      easing: (t) => 1 - Math.pow(1 - t, 3),-->
+<!--      smoothWheel: true,-->
+<!--      smoothTouch: false-->
+<!--    });-->
+<!---->
+<!--    function raf(time) {-->
+<!--      lenis.raf(time);-->
+<!--      requestAnimationFrame(raf);-->
+<!--    }-->
+<!--    requestAnimationFrame(raf);-->
+<!--  </script>-->
+  <script src="https://unpkg.com/@studio-freight/lenis@1.0.34/dist/lenis.min.js"></script>
+  <script>
+    const lenis = new Lenis({
+      // Optional configuration
+      duration: 1,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Easing function
+      direction: 'vertical', // vertical, horizontal
+      gestureDirection: 'vertical', // vertical, horizontal, both
+      smooth: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+      infinite: false,
+      // ... other options
+    });
+
+    // Integrate with the browser's requestAnimationFrame for smooth updates
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+  </script>
+  <div class="custom-cursor"></div>
+  <script>
+    const cursor = document.querySelector(".custom-cursor");
+
+    let mouseX = 0, mouseY = 0;
+    let cursorX = 0, cursorY = 0;
+
+    document.addEventListener("mousemove", (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    function animateCursor(){
+      cursorX += (mouseX - cursorX) * 0.18;
+      cursorY += (mouseY - cursorY) * 0.18;
+
+      cursor.style.transform =
+        `translate(${cursorX - 5}px, ${cursorY - 5}px)`;
+
+      requestAnimationFrame(animateCursor);
+    }
+
+    animateCursor();
+  </script>
+  <script>
+    const hoverTargets = [
+      "a",
+      "button",
+      ".btn",
+      ".project-card"
+    ];
+
+    hoverTargets.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        el.addEventListener("mouseenter", () => {
+          cursor.style.width = "26px";
+          cursor.style.height = "26px";
+          cursor.style.opacity = "0.5";
+        });
+
+        el.addEventListener("mouseleave", () => {
+          cursor.style.width = "10px";
+          cursor.style.height = "10px";
+          cursor.style.opacity = "1";
+        });
+      });
+    });
+  </script>
+
 </body>
 </html>
