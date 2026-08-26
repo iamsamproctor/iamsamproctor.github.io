@@ -3,10 +3,62 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>San Francisco Botanical Gardens</title>
+    <title>SAM PROCTOR</title>
     <style>
+      html,
       body {
         margin: 0;
+        background: #101820;
+      }
+
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+      }
+
+      #page-content {
+        position: relative;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      #page-content a {
+        pointer-events: auto;
+      }
+
+      .hero {
+        min-height: 100vh;
+      }
+
+      .title-block {
+        padding: 32px 24px 80px;
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.8) 0%,
+          rgba(0, 0, 0, 0.4) 60%,
+          rgba(0, 0, 0, 0) 100%
+        );
+        text-align: center;
+      }
+
+      .site-title {
+        margin: 0;
+        color: #ffffff;
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: clamp(28px, 5vw, 48px);
+        font-weight: 600;
+        letter-spacing: 0.3em;
+      }
+
+      .site-subtitle {
+        margin: 12px 0 0;
+        color: #ffffff;
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: clamp(12px, 1.6vw, 16px);
+        font-weight: 400;
+        letter-spacing: 0.2em;
       }
 
       a,
@@ -15,14 +67,24 @@
       }
 
       footer {
-        position: absolute;
+        position: relative;
         margin: 10px;
-        bottom: 0;
       }
     </style>
   </head>
 
   <body>
+    <div id="page-content">
+      <section class="hero">
+        <div class="title-block">
+          <h1 class="site-title">SAM PROCTOR</h1>
+          <p class="site-subtitle">XR DEVELOPER | GAME DEVELOPER | ARTIST</p>
+        </div>
+      </section>
+      <!-- placeholder for scroll testing; replace with real next section -->
+      <section style="min-height: 100vh"></section>
+    </div>
+
     <script type="importmap">
       {
         "imports": {

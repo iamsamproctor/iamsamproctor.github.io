@@ -1,5 +1,9 @@
 import * as THREE from "three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
+
+const debugMode = new URLSearchParams(window.location.search).has("debug");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x101820);
@@ -17,14 +21,13 @@ const baseRotation = {
   x: camera.rotation.x,
   y: camera.rotation.y,
 };
-const maxYaw = THREE.MathUtils.degToRad(35);
+const maxYaw = THREE.MathUtils.degToRad(22);
 const maxPitch = THREE.MathUtils.degToRad(22);
-const cameraSmoothing = 50;
-const cameraPositionSmoothing = 0.4;
+const cameraSmoothing = 1;
+const cameraPositionSmoothing = 1;
 const splatSpinSpeed = 0.03; // radians per second
 const baseCameraY = camera.position.y;
-const maxScrollDrop = 1.5;
-const scrollSensitivity = 0.002;
+const scrollSensitivity = 0.003; // scene units per pixel of document scroll
 let targetYaw = 0;
 let targetPitch = 0;
 let targetScrollDrop = 0;
@@ -37,33 +40,101 @@ document.body.appendChild(renderer.domElement);
 const spark = new SparkRenderer({ renderer });
 scene.add(spark);
 
-const splatUrls = [
-  "assets/splats/sfbotanicalgardens.spz",
-  "assets/splats/desert.spz",
-];
+let debugCamera;
+let debugControls;
+let cameraHelper;
+if (debugMode) {
+  debugCamera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    100,
+  );
+  debugCamera.position.set(4, 3, 4);
+
+  debugControls = new OrbitControls(debugCamera, renderer.domElement);
+  debugControls.target.set(0, 0, -5);
+  debugControls.update();
+
+  cameraHelper = new THREE.CameraHelper(camera);
+  scene.add(cameraHelper);
+  scene.add(new THREE.AxesHelper(2));
+  scene.add(new THREE.GridHelper(20, 20));
+}
+
+const splatLibrary = {
+  mom: "assets/splats/mom.spz",
+  sfbotanicalgardens: "assets/splats/sfbotanicalgardens.spz",
+  desert: "assets/splats/desert.spz",
+};
+const landingPageSplatNames = ["sfbotanicalgardens", "desert"];
 const splatSwitchInterval = 10; // seconds
 let splatIndex = 0;
 let timeSinceSplatSwitch = 0;
 
-let splat = new SplatMesh({ url: splatUrls[splatIndex] });
-splat.position.set(0, 0, -3);
-scene.add(splat);
+// MOM
+let splatLandingPage = new SplatMesh({ url: splatLibrary.mom });
+splatLandingPage.position.set(0, -1.5, -2.5);
+scene.add(splatLandingPage);
+
+let transformControls;
+let transformReadout;
+if (debugMode) {
+  transformControls = new TransformControls(debugCamera, renderer.domElement);
+  transformControls.attach(splatLandingPage);
+  scene.add(transformControls.getHelper());
+
+  transformControls.addEventListener("dragging-changed", (event) => {
+    debugControls.enabled = !event.value;
+  });
+
+  transformReadout = document.createElement("pre");
+  Object.assign(transformReadout.style, {
+    position: "fixed",
+    top: "10px",
+    left: "10px",
+    margin: "0",
+    padding: "8px 10px",
+    background: "rgba(0, 0, 0, 0.6)",
+    color: "#0f0",
+    font: "12px/1.4 monospace",
+    pointerEvents: "none",
+    whiteSpace: "pre",
+    zIndex: "10",
+  });
+  document.body.appendChild(transformReadout);
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "w") transformControls.setMode("translate");
+    if (event.key === "e") transformControls.setMode("rotate");
+    if (event.key === "r") transformControls.setMode("scale");
+  });
+}
 
 function switchSplat() {
-  scene.remove(splat);
-  splat.dispose();
+  scene.remove(splatLandingPage);
+  splatLandingPage.dispose();
 
-  splatIndex = (splatIndex + 1) % splatUrls.length;
-  splat = new SplatMesh({ url: splatUrls[splatIndex] });
-  splat.position.set(0, 0, -3);
-  scene.add(splat);
+  splatIndex = (splatIndex + 1) % landingPageSplatNames.length;
+  splatLandingPage = new SplatMesh({ url: splatLibrary[landingPageSplatNames[splatIndex]] });
+  splatLandingPage.position.set(0, 0, -3);
+  scene.add(splatLandingPage);
+
+  if (transformControls) {
+    transformControls.attach(splatLandingPage);
+  }
 }
 
 function handleResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+  if (debugCamera) {
+    debugCamera.aspect = window.innerWidth / window.innerHeight;
+    debugCamera.updateProjectionMatrix();
+  }
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
+
 
 window.addEventListener("resize", handleResize);
 
@@ -89,13 +160,9 @@ window.addEventListener("pointerleave", () => {
 });
 
 window.addEventListener(
-  "wheel",
-  (event) => {
-    targetScrollDrop = THREE.MathUtils.clamp(
-      targetScrollDrop + event.deltaY * scrollSensitivity,
-      0,
-      maxScrollDrop,
-    );
+  "scroll",
+  () => {
+    targetScrollDrop = window.scrollY * scrollSensitivity;
   },
   { passive: true },
 );
@@ -125,13 +192,29 @@ renderer.setAnimationLoop(() => {
     positionSmoothing,
   );
 
-  splat.rotation.y += splatSpinSpeed * deltaTime;
+  // splatLandingPage.rotation.y += splatSpinSpeed * deltaTime;
 
-  timeSinceSplatSwitch += deltaTime;
-  if (timeSinceSplatSwitch >= splatSwitchInterval) {
-    timeSinceSplatSwitch -= splatSwitchInterval;
-    switchSplat();
+  // timeSinceSplatSwitch += deltaTime;
+  // if (timeSinceSplatSwitch >= splatSwitchInterval) {
+  //   timeSinceSplatSwitch -= splatSwitchInterval;
+  //   switchSplat();
+  // }
+
+  if (debugMode) {
+    cameraHelper.update();
+    debugControls.update();
+
+    const p = splatLandingPage.position;
+    const r = splatLandingPage.rotation;
+    const s = splatLandingPage.scale;
+    transformReadout.textContent =
+      `position: ${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}\n` +
+      `rotation: ${THREE.MathUtils.radToDeg(r.x).toFixed(1)}, ${THREE.MathUtils.radToDeg(r.y).toFixed(1)}, ${THREE.MathUtils.radToDeg(r.z).toFixed(1)}\n` +
+      `scale:    ${s.x.toFixed(2)}, ${s.y.toFixed(2)}, ${s.z.toFixed(2)}\n` +
+      `(w: move, e: rotate, r: scale)`;
+
+    renderer.render(scene, debugCamera);
+  } else {
+    renderer.render(scene, camera);
   }
-
-  renderer.render(scene, camera);
 });
