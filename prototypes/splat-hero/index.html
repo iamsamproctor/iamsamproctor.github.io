@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAM PROCTOR</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #101820;
+      }
+
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+      }
+
+      #page-content {
+        position: relative;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      #page-content a {
+        pointer-events: auto;
+      }
+
+      .hero {
+        min-height: 100vh;
+      }
+
+      .title-block {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        padding: 24px 32px 64px;
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.8) 0%,
+          rgba(0, 0, 0, 0.4) 60%,
+          rgba(0, 0, 0, 0) 100%
+        );
+        text-align: left;
+      }
+
+      .site-title {
+        margin: 0;
+        color: #ffffff;
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: clamp(18px, 2.4vw, 26px);
+        font-weight: 600;
+        letter-spacing: 0.2em;
+      }
+
+      .site-subtitle {
+        margin: 6px 0 0;
+        color: #ffffff;
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: clamp(10px, 1.2vw, 13px);
+        font-weight: 400;
+        letter-spacing: 0.15em;
+      }
+
+      a,
+      footer {
+        color: #797979;
+      }
+
+      footer {
+        position: relative;
+        margin: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="page-content">
+      <section class="hero">
+        <div class="title-block">
+          <h1 class="site-title">SAM PROCTOR</h1>
+          <p class="site-subtitle">XR DEVELOPER | GAME DEVELOPER | ARTIST</p>
+        </div>
+      </section>
+      <footer style="position: fixed; bottom: 0; left: 0; z-index: 2;">
+        <a href="../../index.html">&larr; back to prototypes</a>
+      </footer>
+      <!-- dedicated scroll timeline for the camera animation; Motion tracks progress through this element -->
+      <section id="scroll-track" style="min-height: 600vh"></section>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+          "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.1.0/spark.module.js",
+          "motion": "https://cdn.jsdelivr.net/npm/motion@11/+esm"
+        }
+      }
+    </script>
+
+    <script type="module" src="index.js"></script>
+  </body>
+</html>

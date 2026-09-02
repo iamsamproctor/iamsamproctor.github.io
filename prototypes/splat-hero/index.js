@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { scroll } from "motion";
 
 const debugMode = new URLSearchParams(window.location.search).has("debug");
 
@@ -27,10 +28,22 @@ const cameraSmoothing = 1;
 const cameraPositionSmoothing = 1;
 const splatSpinSpeed = 0.03; // radians per second
 const baseCameraY = camera.position.y;
-const scrollSensitivity = 0.003; // scene units per pixel of document scroll
+const baseCameraZ = camera.position.z;
+const rotationTurns = 1; // full rotations across the rotation phase
+const maxCameraDrop = 0.15; // scene units the camera descends during the descend phase
+const maxCameraForward = 1.5; // scene units the camera moves forward during the forward phase
+const rotationSmoothing = 1;
+
+// Scroll timeline phases, as fractions of progress through #scroll-track (0 to 1).
+const descendPhaseEnd = 0.25;
+const rotatePhaseEnd = 0.55;
+
 let targetYaw = 0;
 let targetPitch = 0;
 let targetScrollDrop = 0;
+let targetSplatRotation = 0;
+let targetCameraForward = 0;
+let spinAccumulator = 0;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -39,6 +52,23 @@ document.body.appendChild(renderer.domElement);
 
 const spark = new SparkRenderer({ renderer });
 scene.add(spark);
+
+// TEMP: on-screen camera position readout, remove when done debugging.
+const cameraPositionReadout = document.createElement("div");
+Object.assign(cameraPositionReadout.style, {
+  position: "fixed",
+  bottom: "10px",
+  left: "10px",
+  margin: "0",
+  padding: "6px 10px",
+  background: "rgba(0, 0, 0, 0.6)",
+  color: "#0f0",
+  font: "12px/1.4 monospace",
+  pointerEvents: "none",
+  whiteSpace: "pre",
+  zIndex: "10",
+});
+document.body.appendChild(cameraPositionReadout);
 
 let debugCamera;
 let debugControls;
@@ -63,17 +93,17 @@ if (debugMode) {
 }
 
 const splatLibrary = {
-  mom: "assets/splats/mom.spz",
-  sfbotanicalgardens: "assets/splats/sfbotanicalgardens.spz",
-  desert: "assets/splats/desert.spz",
+  mom: "../../assets/splats/mom.spz",
+  sfbotanicalgardens: "../../assets/splats/sfbotanicalgardens.spz",
+  desert: "../../assets/splats/desert.spz",
 };
 const landingPageSplatNames = ["sfbotanicalgardens", "desert"];
 const splatSwitchInterval = 10; // seconds
 let splatIndex = 0;
 let timeSinceSplatSwitch = 0;
 
-// MOM
-let splatLandingPage = new SplatMesh({ url: splatLibrary.mom });
+// Scene
+let splatLandingPage = new SplatMesh({ url: splatLibrary.desert });
 splatLandingPage.position.set(0, -1.5, -2.5);
 scene.add(splatLandingPage);
 
@@ -159,13 +189,44 @@ window.addEventListener("pointerleave", () => {
   targetPitch = 0;
 });
 
-window.addEventListener(
-  "scroll",
-  () => {
-    targetScrollDrop = window.scrollY * scrollSensitivity;
+// Drives the camera/splat animation off scroll progress (0 to 1) through #scroll-track,
+// broken into three phases: descend, then rotate, then move forward.
+let scrollProgress = 0;
+const scrollTrack = document.getElementById("scroll-track");
+
+scroll(
+  (progress) => {
+    scrollProgress = progress;
+
+    if (progress <= descendPhaseEnd) {
+      const t = progress / descendPhaseEnd;
+      targetScrollDrop = t * maxCameraDrop;
+      targetSplatRotation = 0;
+      targetCameraForward = 0;
+    } else if (progress <= rotatePhaseEnd) {
+      targetScrollDrop = maxCameraDrop;
+      const t = (progress - descendPhaseEnd) / (rotatePhaseEnd - descendPhaseEnd);
+      targetSplatRotation = t * rotationTurns * Math.PI * 2;
+      targetCameraForward = 0;
+    } else {
+      targetScrollDrop = maxCameraDrop;
+      targetSplatRotation = rotationTurns * Math.PI * 2;
+      const t = (progress - rotatePhaseEnd) / (1 - rotatePhaseEnd);
+      targetCameraForward = t * maxCameraForward;
+    }
   },
-  { passive: true },
+  { target: scrollTrack, offset: ["start start", "end end"] },
 );
+
+window.__debugState = () => ({
+  scrollProgress,
+  cameraY: camera.position.y,
+  cameraZ: camera.position.z,
+  splatRotationY: splatLandingPage.rotation.y,
+  targetScrollDrop,
+  targetSplatRotation,
+  targetCameraForward,
+});
 
 let previousTime = performance.now();
 renderer.setAnimationLoop(() => {
@@ -191,8 +252,24 @@ renderer.setAnimationLoop(() => {
     baseCameraY - targetScrollDrop,
     positionSmoothing,
   );
+  camera.position.z = THREE.MathUtils.lerp(
+    camera.position.z,
+    baseCameraZ - targetCameraForward,
+    positionSmoothing,
+  );
 
-  // splatLandingPage.rotation.y += splatSpinSpeed * deltaTime;
+  spinAccumulator += splatSpinSpeed * deltaTime;
+
+  const rotationSmoothingFactor = 1 - Math.exp(-rotationSmoothing * deltaTime);
+  splatLandingPage.rotation.y = THREE.MathUtils.lerp(
+    splatLandingPage.rotation.y,
+    targetSplatRotation + spinAccumulator,
+    rotationSmoothingFactor,
+  );
+
+  cameraPositionReadout.textContent =
+    `splat position: ${splatLandingPage.position.x.toFixed(2)}, ${splatLandingPage.position.y.toFixed(2)}, ${splatLandingPage.position.z.toFixed(2)}\n` +
+    `splat rotation: ${THREE.MathUtils.radToDeg(splatLandingPage.rotation.x).toFixed(1)}, ${THREE.MathUtils.radToDeg(splatLandingPage.rotation.y).toFixed(1)}, ${THREE.MathUtils.radToDeg(splatLandingPage.rotation.z).toFixed(1)}`;
 
   // timeSinceSplatSwitch += deltaTime;
   // if (timeSinceSplatSwitch >= splatSwitchInterval) {

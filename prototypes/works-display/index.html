@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prototype • Works Display</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000000;
+      }
+
+      a,
+      footer {
+        color: #797979;
+      }
+
+      footer {
+        position: fixed;
+        margin: 10px;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <footer><a href="../../index.html">&larr; back to prototypes</a></footer>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+          "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        50,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000,
+      );
+      camera.position.set(0, 0, 6.5);
+      camera.lookAt(0, 0, 0);
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(new THREE.Color(0x000000), 1);
+
+      const spark = new SparkRenderer({ renderer });
+      scene.add(spark);
+
+      document.body.appendChild(renderer.domElement);
+
+      window.addEventListener("resize", onWindowResize, false);
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // Centered subject
+      const centerpiece = new SplatMesh({ url: "../../assets/splats/mom.spz" });
+      centerpiece.quaternion.set(0, 0, 0, 0);
+      centerpiece.position.set(0, 0, 0);
+      scene.add(centerpiece);
+
+      // Curved wall of screens, arced in front of the centerpiece toward the camera.
+      const SCREEN_COUNT = 20;
+      const ARC_RADIUS = 1.524; // ~5 feet, in meters
+      const ARC_SPAN = Math.PI * 0.85; // how much of the circle the wall wraps around
+      const SCREEN_HEIGHT = 0.7;
+      const VERTICAL_SCATTER = 2;
+      const WALL_HEIGHT_OFFSET = 1; // raises the whole wall relative to the centerpiece
+      const SCREEN_GAP = 0.05; // minimum gap kept between screens, in meters
+      const MAX_PLACEMENT_ATTEMPTS = 500;
+      const FLOAT_AMOUNT_HORIZONTAL = 0.05; // meters of drift along the arc
+      const FLOAT_AMOUNT_VERTICAL = 0.08; // meters of drift up/down
+      const FLOAT_SPEED_MIN = 0.15; // Hz-ish
+      const FLOAT_SPEED_MAX = 0.4;
+
+      // Footprints of screens already placed, in unwrapped arc coordinates:
+      // u = position along the arc (approximated as arc length), v = height.
+      const placedFootprints = [];
+
+      function findOpenSpot(halfWidth, halfHeight) {
+        for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; attempt++) {
+          const theta = THREE.MathUtils.randFloatSpread(ARC_SPAN);
+          const y =
+            WALL_HEIGHT_OFFSET + THREE.MathUtils.randFloatSpread(VERTICAL_SCATTER);
+          const u = theta * ARC_RADIUS;
+
+          const overlapsExisting = placedFootprints.some(
+            (other) =>
+              Math.abs(u - other.u) < halfWidth + other.halfWidth &&
+              Math.abs(y - other.v) < halfHeight + other.halfHeight,
+          );
+
+          if (!overlapsExisting) return { theta, y, u };
+        }
+        return null; // giving up; caller places it wherever it last tried
+      }
+
+      const screens = [];
+      for (let i = 0; i < SCREEN_COUNT; i++) {
+        const isVertical = Math.random() < 0.5;
+        const aspect = isVertical
+          ? THREE.MathUtils.randFloat(0.5, 0.65) // phone-ish
+          : THREE.MathUtils.randFloat(1.5, 1.9); // landscape-ish
+        const width = SCREEN_HEIGHT * aspect;
+        const halfWidth = width / 2 + SCREEN_GAP / 2;
+        const halfHeight = SCREEN_HEIGHT / 2 + SCREEN_GAP / 2;
+
+        const spot = findOpenSpot(halfWidth, halfHeight);
+        if (!spot) {
+          console.warn(
+            `works-display: no open spot found for screen ${i}, increase VERTICAL_SCATTER or reduce SCREEN_COUNT`,
+          );
+          continue;
+        }
+        placedFootprints.push({ u: spot.u, v: spot.y, halfWidth, halfHeight });
+
+        const geometry = new THREE.PlaneGeometry(width, SCREEN_HEIGHT);
+        const material = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(Math.random(), Math.random(), Math.random()),
+          side: THREE.DoubleSide,
+        });
+        const screen = new THREE.Mesh(geometry, material);
+
+        screen.position.set(
+          Math.sin(spot.theta) * ARC_RADIUS,
+          spot.y,
+          Math.cos(spot.theta) * ARC_RADIUS,
+        );
+        // Default plane normal is +z; rotating by theta about Y keeps it
+        // tangent to the arc and facing outward, toward the camera.
+        screen.rotation.y = spot.theta;
+
+        scene.add(screen);
+        screens.push({
+          mesh: screen,
+          baseTheta: spot.theta,
+          baseY: spot.y,
+          // Randomized per screen so the wall drifts like independent
+          // floating memories rather than moving in lockstep.
+          phaseH: Math.random() * Math.PI * 2,
+          phaseV: Math.random() * Math.PI * 2,
+          speedH: THREE.MathUtils.randFloat(FLOAT_SPEED_MIN, FLOAT_SPEED_MAX),
+          speedV: THREE.MathUtils.randFloat(FLOAT_SPEED_MIN, FLOAT_SPEED_MAX),
+        });
+      }
+
+      // Setup mouse controls to orbit the camera around
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 0, 0);
+      controls.minDistance = 0.3;
+      controls.maxDistance = 20;
+      controls.update();
+
+      renderer.setAnimationLoop(function animate(time) {
+        controls.update();
+
+        const t = time / 1000;
+        for (const screen of screens) {
+          const thetaDrift =
+            (Math.sin(t * screen.speedH + screen.phaseH) * FLOAT_AMOUNT_HORIZONTAL) /
+            ARC_RADIUS;
+          const theta = screen.baseTheta + thetaDrift;
+          const y =
+            screen.baseY +
+            Math.sin(t * screen.speedV + screen.phaseV) * FLOAT_AMOUNT_VERTICAL;
+
+          screen.mesh.position.set(
+            Math.sin(theta) * ARC_RADIUS,
+            y,
+            Math.cos(theta) * ARC_RADIUS,
+          );
+          screen.mesh.rotation.y = theta;
+        }
+
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+</html>
