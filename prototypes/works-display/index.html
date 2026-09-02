@@ -23,11 +23,49 @@
         left: 0;
         z-index: 1;
       }
+
+      .screen-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.35s ease;
+        z-index: 20;
+      }
+
+      .screen-modal-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* Position/size are driven directly from JS (left/top/width/height)
+         so the panel can FLIP-animate from the clicked plane's exact
+         on-screen rect to the centered modal layout, and back again. */
+      .screen-modal-panel {
+        position: fixed;
+        border-radius: 4px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        overflow: hidden;
+      }
+
+      .screen-modal-panel img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
     </style>
   </head>
 
   <body>
     <footer><a href="../../index.html">&larr; back to prototypes</a></footer>
+
+    <div class="screen-modal-backdrop" id="screen-modal-backdrop">
+      <div class="screen-modal-panel" id="screen-modal-panel">
+        <img id="screen-modal-image" alt="" />
+      </div>
+    </div>
 
     <script type="importmap">
       {
@@ -44,7 +82,9 @@
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       import { TransformControls } from "three/addons/controls/TransformControls.js";
 
-      const debugMode = new URLSearchParams(window.location.search).has("debug");
+      const debugMode = new URLSearchParams(window.location.search).has(
+        "debug",
+      );
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
@@ -90,6 +130,15 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
+      // Background environment
+      const background = new SplatMesh({
+        url: "../../assets/splats/driveway.spz",
+      });
+      background.rotation.z = Math.PI; // flip upside down
+      background.scale.setScalar(2.8); // 30% bigger, then another 60% on top
+      background.position.y = 1;
+      scene.add(background);
+
       // Centered subject
       const centerpiece = new SplatMesh({ url: "../../assets/splats/mom.spz" });
       centerpiece.quaternion.set(0, 0, 0, 0);
@@ -107,10 +156,28 @@
       scene.add(centerpieceHitbox);
 
       // Curved wall of screens, arced in front of the centerpiece toward the camera.
-      const SCREEN_COUNT = 20;
+      const SPRITE_FILES = [
+        "1.png",
+        "2.png",
+        "3.png",
+        "4.png",
+        "5.jpg",
+        "6.jpg",
+        "7.png",
+        "8.png",
+        "1.png",
+        "2.png",
+        "3.png",
+        "4.png",
+        "5.jpg",
+        "6.jpg",
+        "7.png",
+        "8.png",
+      ];
+      const SCREEN_COUNT = SPRITE_FILES.length;
       const ARC_RADIUS = 1; // ~5 feet, in meters
       const ARC_SPAN = Math.PI * 0.6; // how much of the circle the wall wraps around
-      const SCREEN_HEIGHT = 0.2;
+      const SCREEN_HEIGHT = 0.5;
       const VERTICAL_SCATTER = 1;
       const WALL_HEIGHT_OFFSET = 0.25; // raises the whole wall relative to the centerpiece
       const SCREEN_GAP = 0.02; // minimum gap kept between screens, in meters
@@ -121,9 +188,10 @@
       const FLOAT_SPEED_MAX = 0.4;
       const HOVER_SCALE = 1.15; // how much the hovered screen grows
       const NEIGHBOR_SCALE = 0.92; // how much every other screen shrinks while one is hovered
-      const HOVER_TINT_AMOUNT = 0.5; // how far the hovered screen's color shifts toward white
+      const NEIGHBOR_DIM_AMOUNT = 0.6; // how far non-hovered screens dim toward NEIGHBOR_DIM_COLOR
       const HOVER_TRANSITION_SMOOTHING = 10;
-      const HOVER_TINT_COLOR = new THREE.Color(0xffffff);
+      const NEIGHBOR_DIM_COLOR = new THREE.Color(0x1a1a1a);
+      const SCREEN_ROTATION_OFFSET = Math.PI; // flips each screen 180° on the y-axis
 
       // Footprints of screens already placed, in unwrapped arc coordinates:
       // u = position along the arc (approximated as arc length), v = height.
@@ -148,12 +216,20 @@
         return null; // giving up; caller places it wherever it last tried
       }
 
+      const textureLoader = new THREE.TextureLoader();
+      const spriteTextures = await Promise.all(
+        SPRITE_FILES.map((file) =>
+          textureLoader.loadAsync(`../../assets/sprites/${file}`),
+        ),
+      );
+      for (const texture of spriteTextures) {
+        texture.colorSpace = THREE.SRGBColorSpace;
+      }
+
       const screens = [];
       for (let i = 0; i < SCREEN_COUNT; i++) {
-        const isVertical = Math.random() < 0.5;
-        const aspect = isVertical
-          ? THREE.MathUtils.randFloat(0.5, 0.65) // phone-ish
-          : THREE.MathUtils.randFloat(1.5, 1.9); // landscape-ish
+        const texture = spriteTextures[i];
+        const aspect = texture.image.width / texture.image.height;
         const width = SCREEN_HEIGHT * aspect;
         const halfWidth = width / 2 + SCREEN_GAP / 2;
         const halfHeight = SCREEN_HEIGHT / 2 + SCREEN_GAP / 2;
@@ -169,7 +245,7 @@
 
         const geometry = new THREE.PlaneGeometry(width, SCREEN_HEIGHT);
         const material = new THREE.MeshBasicMaterial({
-          color: new THREE.Color(Math.random(), Math.random(), Math.random()),
+          map: texture,
           side: THREE.DoubleSide,
         });
         const screen = new THREE.Mesh(geometry, material);
@@ -180,16 +256,20 @@
           Math.cos(spot.theta) * ARC_RADIUS,
         );
         // Default plane normal is +z; rotating by theta about Y keeps it
-        // tangent to the arc and facing outward, toward the camera.
-        screen.rotation.y = spot.theta;
+        // tangent to the arc and facing outward, toward the camera. The
+        // extra offset flips each image 180° so it reads right-way-round.
+        screen.rotation.y = spot.theta + SCREEN_ROTATION_OFFSET;
 
         scene.add(screen);
 
         const screenState = {
           mesh: screen,
+          spriteFile: SPRITE_FILES[i],
           baseTheta: spot.theta,
           baseY: spot.y,
-          baseColor: material.color.clone(),
+          // Material color is a multiplier over the texture; white = the
+          // image at full, untinted brightness.
+          baseColor: new THREE.Color(0xffffff),
           currentScale: 1,
           // Randomized per screen so the wall drifts like independent
           // floating memories rather than moving in lockstep.
@@ -210,8 +290,8 @@
       // controls.update() (see the render loop below).
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.target.set(0, 0, 0);
-      controls.minDistance = 0.3;
-      controls.maxDistance = 20;
+      controls.minDistance = 2;
+      controls.maxDistance = 3;
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.6;
       controls.update();
@@ -332,14 +412,138 @@
         );
       }
 
+      // Clicking a floating screen while in POV mode opens it as a flat
+      // "modal" — a placeholder for the real artwork later. The panel FLIPs:
+      // it snaps to the clicked plane's exact on-screen rect, then animates
+      // to the centered modal layout (and reverses on close), so the 2D
+      // view feels like a continuation of the 3D screen rather than a
+      // separate popup.
+      const screenModalBackdrop = document.getElementById(
+        "screen-modal-backdrop",
+      );
+      const screenModalPanel = document.getElementById("screen-modal-panel");
+      const screenModalImage = document.getElementById("screen-modal-image");
+      const MODAL_TRANSITION_DURATION = 0.4; // seconds
+      let modalOpen = false;
+      let modalScreenState = null;
+
+      // Projects a plane mesh's 4 corners into CSS pixel space, giving the
+      // exact rect it occupies on screen right now (accounts for its
+      // current world position/rotation/scale, not just its base size).
+      function getScreenPixelRect(mesh) {
+        mesh.updateMatrixWorld();
+        const { width, height } = mesh.geometry.parameters;
+        const halfWidth = width / 2;
+        const halfHeight = height / 2;
+        const corners = [
+          [-halfWidth, -halfHeight],
+          [halfWidth, -halfHeight],
+          [halfWidth, halfHeight],
+          [-halfWidth, halfHeight],
+        ];
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        const corner = new THREE.Vector3();
+        for (const [x, y] of corners) {
+          corner.set(x, y, 0).applyMatrix4(mesh.matrixWorld).project(camera);
+          const pixelX = (corner.x * 0.5 + 0.5) * window.innerWidth;
+          const pixelY = (1 - (corner.y * 0.5 + 0.5)) * window.innerHeight;
+          minX = Math.min(minX, pixelX);
+          maxX = Math.max(maxX, pixelX);
+          minY = Math.min(minY, pixelY);
+          maxY = Math.max(maxY, pixelY);
+        }
+        return {
+          left: minX,
+          top: minY,
+          width: maxX - minX,
+          height: maxY - minY,
+        };
+      }
+
+      function getCenteredModalRect(aspect) {
+        const maxHeight = window.innerHeight * 0.7;
+        const maxWidth = window.innerWidth * 0.85;
+        let height = maxHeight;
+        let width = height * aspect;
+        if (width > maxWidth) {
+          width = maxWidth;
+          height = width / aspect;
+        }
+        return {
+          left: (window.innerWidth - width) / 2,
+          top: (window.innerHeight - height) / 2,
+          width,
+          height,
+        };
+      }
+
+      function applyModalRect(rect) {
+        screenModalPanel.style.left = `${rect.left}px`;
+        screenModalPanel.style.top = `${rect.top}px`;
+        screenModalPanel.style.width = `${rect.width}px`;
+        screenModalPanel.style.height = `${rect.height}px`;
+      }
+
+      function openScreenModal(screenState) {
+        if (modalOpen) return;
+        modalOpen = true;
+        modalScreenState = screenState;
+
+        const { width, height } = screenState.mesh.geometry.parameters;
+
+        screenModalImage.src = `../../assets/sprites/${screenState.spriteFile}`;
+
+        // Snap to the plane's exact current on-screen rect first, with
+        // transitions off, so the swap from 3D to 2D is invisible...
+        screenModalPanel.style.transition = "none";
+        applyModalRect(getScreenPixelRect(screenState.mesh));
+        screenModalBackdrop.classList.add("open");
+
+        // ...then force a reflow so the browser registers that snapped
+        // state before we animate away from it — otherwise both style
+        // changes collapse into one and nothing appears to move.
+        screenModalPanel.getBoundingClientRect();
+
+        screenModalPanel.style.transition = `left ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.22, 1, 0.36, 1), top ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.22, 1, 0.36, 1), width ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.22, 1, 0.36, 1), height ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.22, 1, 0.36, 1)`;
+        applyModalRect(getCenteredModalRect(width / height));
+      }
+
+      function closeScreenModal() {
+        if (!modalOpen || !modalScreenState) return;
+        const screenState = modalScreenState;
+        modalOpen = false;
+        modalScreenState = null;
+
+        screenModalPanel.style.transition = `left ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.4, 0, 1, 1), top ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.4, 0, 1, 1), width ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.4, 0, 1, 1), height ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.4, 0, 1, 1)`;
+        applyModalRect(getScreenPixelRect(screenState.mesh));
+        screenModalBackdrop.classList.remove("open");
+      }
+
+      screenModalBackdrop.addEventListener("click", () => closeScreenModal());
+      screenModalPanel.addEventListener("click", (event) =>
+        event.stopPropagation(),
+      );
+
       renderer.domElement.addEventListener("click", (event) => {
-        if (povMode || cameraTransition) return;
+        if (cameraTransition || modalOpen) return;
 
         const rect = renderer.domElement.getBoundingClientRect();
         pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
         raycaster.setFromCamera(pointerNDC, camera);
+
+        if (povMode) {
+          const hits = raycaster.intersectObjects(screenMeshes);
+          if (hits.length > 0) {
+            openScreenModal(hits[0].object.userData.screenState);
+          }
+          return;
+        }
+
         const hits = raycaster.intersectObject(centerpieceHitbox);
         if (hits.length > 0) enterPovMode();
       });
@@ -348,7 +552,7 @@
         pointerNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
         pointerNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        if (!povMode) return;
+        if (!povMode || modalOpen) return;
         const horizontal = THREE.MathUtils.clamp(
           (event.clientX / window.innerWidth) * 2 - 1,
           -1,
@@ -364,7 +568,12 @@
       });
 
       window.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") exitPovMode();
+        if (event.key !== "Escape") return;
+        if (modalOpen) {
+          closeScreenModal();
+        } else {
+          exitPovMode();
+        }
       });
 
       let hoveredScreen = null;
@@ -418,10 +627,11 @@
           controls.update(deltaTime);
         }
 
-        if (povMode && !cameraTransition) {
+        if (povMode && !cameraTransition && !modalOpen) {
           raycaster.setFromCamera(pointerNDC, camera);
           const hits = raycaster.intersectObjects(screenMeshes);
-          hoveredScreen = hits.length > 0 ? hits[0].object.userData.screenState : null;
+          hoveredScreen =
+            hits.length > 0 ? hits[0].object.userData.screenState : null;
         } else {
           hoveredScreen = null;
         }
@@ -442,10 +652,11 @@
             y,
             Math.cos(theta) * ARC_RADIUS,
           );
-          screen.mesh.rotation.y = theta;
+          screen.mesh.rotation.y = theta + SCREEN_ROTATION_OFFSET;
 
           // Highlight whichever screen is under the cursor in POV mode: it
-          // grows and brightens, while its neighbors shrink back subtly.
+          // grows and stays full-brightness, while every other screen
+          // shrinks and dims back subtly, like a spotlight.
           const isHovered = screen === hoveredScreen;
           const targetScale = hoveredScreen
             ? isHovered
@@ -461,9 +672,12 @@
           );
           screen.mesh.scale.setScalar(screen.currentScale);
 
-          const targetColor = isHovered
-            ? screen.baseColor.clone().lerp(HOVER_TINT_COLOR, HOVER_TINT_AMOUNT)
-            : screen.baseColor;
+          const targetColor =
+            hoveredScreen && !isHovered
+              ? screen.baseColor
+                  .clone()
+                  .lerp(NEIGHBOR_DIM_COLOR, NEIGHBOR_DIM_AMOUNT)
+              : screen.baseColor;
           screen.mesh.material.color.lerp(targetColor, hoverSmoothing);
         }
 
