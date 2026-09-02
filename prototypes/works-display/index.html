@@ -42,6 +42,9 @@
       import * as THREE from "three";
       import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { TransformControls } from "three/addons/controls/TransformControls.js";
+
+      const debugMode = new URLSearchParams(window.location.search).has("debug");
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
@@ -52,6 +55,7 @@
       );
       camera.position.set(0, 0, 6.5);
       camera.lookAt(0, 0, 0);
+      camera.rotation.order = "YXZ";
 
       const renderer = new THREE.WebGLRenderer();
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -61,6 +65,23 @@
       scene.add(spark);
 
       document.body.appendChild(renderer.domElement);
+
+      // TEMP: on-screen camera position readout, remove when done debugging.
+      const cameraPositionReadout = document.createElement("div");
+      Object.assign(cameraPositionReadout.style, {
+        position: "fixed",
+        bottom: "10px",
+        right: "10px",
+        margin: "0",
+        padding: "6px 10px",
+        background: "rgba(0, 0, 0, 0.6)",
+        color: "#0f0",
+        font: "12px/1.4 monospace",
+        pointerEvents: "none",
+        whiteSpace: "pre",
+        zIndex: "10",
+      });
+      document.body.appendChild(cameraPositionReadout);
 
       window.addEventListener("resize", onWindowResize, false);
       function onWindowResize() {
@@ -75,19 +96,34 @@
       centerpiece.position.set(0, 0, 0);
       scene.add(centerpiece);
 
+      // Invisible hitbox so the centerpiece is clickable regardless of the
+      // splat's actual (irregular) geometry.
+      const centerpieceHitbox = new THREE.Mesh(
+        new THREE.SphereGeometry(0.9, 16, 16),
+        new THREE.MeshBasicMaterial(),
+      );
+      centerpieceHitbox.visible = false;
+      centerpieceHitbox.position.copy(centerpiece.position);
+      scene.add(centerpieceHitbox);
+
       // Curved wall of screens, arced in front of the centerpiece toward the camera.
       const SCREEN_COUNT = 20;
-      const ARC_RADIUS = 1.524; // ~5 feet, in meters
-      const ARC_SPAN = Math.PI * 0.85; // how much of the circle the wall wraps around
-      const SCREEN_HEIGHT = 0.7;
-      const VERTICAL_SCATTER = 2;
-      const WALL_HEIGHT_OFFSET = 1; // raises the whole wall relative to the centerpiece
-      const SCREEN_GAP = 0.05; // minimum gap kept between screens, in meters
+      const ARC_RADIUS = 1; // ~5 feet, in meters
+      const ARC_SPAN = Math.PI * 0.6; // how much of the circle the wall wraps around
+      const SCREEN_HEIGHT = 0.2;
+      const VERTICAL_SCATTER = 1;
+      const WALL_HEIGHT_OFFSET = 0.25; // raises the whole wall relative to the centerpiece
+      const SCREEN_GAP = 0.02; // minimum gap kept between screens, in meters
       const MAX_PLACEMENT_ATTEMPTS = 500;
-      const FLOAT_AMOUNT_HORIZONTAL = 0.05; // meters of drift along the arc
-      const FLOAT_AMOUNT_VERTICAL = 0.08; // meters of drift up/down
+      const FLOAT_AMOUNT_HORIZONTAL = 0.02; // meters of drift along the arc
+      const FLOAT_AMOUNT_VERTICAL = 0.05; // meters of drift up/down
       const FLOAT_SPEED_MIN = 0.15; // Hz-ish
       const FLOAT_SPEED_MAX = 0.4;
+      const HOVER_SCALE = 1.15; // how much the hovered screen grows
+      const NEIGHBOR_SCALE = 0.92; // how much every other screen shrinks while one is hovered
+      const HOVER_TINT_AMOUNT = 0.5; // how far the hovered screen's color shifts toward white
+      const HOVER_TRANSITION_SMOOTHING = 10;
+      const HOVER_TINT_COLOR = new THREE.Color(0xffffff);
 
       // Footprints of screens already placed, in unwrapped arc coordinates:
       // u = position along the arc (approximated as arc length), v = height.
@@ -97,7 +133,8 @@
         for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; attempt++) {
           const theta = THREE.MathUtils.randFloatSpread(ARC_SPAN);
           const y =
-            WALL_HEIGHT_OFFSET + THREE.MathUtils.randFloatSpread(VERTICAL_SCATTER);
+            WALL_HEIGHT_OFFSET +
+            THREE.MathUtils.randFloatSpread(VERTICAL_SCATTER);
           const u = theta * ARC_RADIUS;
 
           const overlapsExisting = placedFootprints.some(
@@ -147,33 +184,253 @@
         screen.rotation.y = spot.theta;
 
         scene.add(screen);
-        screens.push({
+
+        const screenState = {
           mesh: screen,
           baseTheta: spot.theta,
           baseY: spot.y,
+          baseColor: material.color.clone(),
+          currentScale: 1,
           // Randomized per screen so the wall drifts like independent
           // floating memories rather than moving in lockstep.
           phaseH: Math.random() * Math.PI * 2,
           phaseV: Math.random() * Math.PI * 2,
           speedH: THREE.MathUtils.randFloat(FLOAT_SPEED_MIN, FLOAT_SPEED_MAX),
           speedV: THREE.MathUtils.randFloat(FLOAT_SPEED_MIN, FLOAT_SPEED_MAX),
-        });
+        };
+        // Lets the hover raycast (which hits the mesh) look up its state.
+        screen.userData.screenState = screenState;
+        screens.push(screenState);
       }
 
-      // Setup mouse controls to orbit the camera around
+      const screenMeshes = screens.map((screen) => screen.mesh);
+
+      // Setup mouse controls to orbit the camera around; auto-rotates on its
+      // own when idle, and simply pauses whenever POV mode stops calling
+      // controls.update() (see the render loop below).
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.target.set(0, 0, 0);
       controls.minDistance = 0.3;
       controls.maxDistance = 20;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.6;
       controls.update();
 
+      // Click the centerpiece to snap into her POV, looking out toward the
+      // screens; look around with the cursor (like splat-hero), Esc to exit.
+      const raycaster = new THREE.Raycaster();
+      const pointerNDC = new THREE.Vector2();
+
+      let povMode = false;
+      const ORBIT_FOV = camera.fov;
+      const POV_FOV = 70; // wider lens so the screen wall fits without much look-around
+      const povBaseRotation = { x: 0, y: Math.PI }; // her forward is +z
+      const povMaxYaw = THREE.MathUtils.degToRad(22);
+      const povMaxPitch = THREE.MathUtils.degToRad(22);
+      const povRotationSmoothing = 4;
+      let povTargetYaw = 0;
+      let povTargetPitch = 0;
+
+      const povQuaternion = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(povBaseRotation.x, povBaseRotation.y, 0, "YXZ"),
+      );
+      const POV_EYE_HEIGHT = 0.25; // offset above the centerpiece's origin, in meters
+      const povPosition = centerpiece.position
+        .clone()
+        .add(new THREE.Vector3(0, POV_EYE_HEIGHT, 0));
+
+      // Debug gizmo: drag the arrows to preview a different eye position;
+      // open with ?debug in the URL. Doesn't persist — read the printed
+      // position off the on-screen readout and copy it into POV_EYE_HEIGHT.
+      let eyeGizmo, eyeGizmoControls;
+      if (debugMode) {
+        eyeGizmo = new THREE.Object3D();
+        eyeGizmo.position.copy(povPosition);
+        scene.add(eyeGizmo);
+
+        eyeGizmoControls = new TransformControls(camera, renderer.domElement);
+        eyeGizmoControls.setMode("translate");
+        eyeGizmoControls.setSize(0.6);
+        eyeGizmoControls.attach(eyeGizmo);
+        scene.add(eyeGizmoControls.getHelper());
+
+        eyeGizmoControls.addEventListener("dragging-changed", (event) => {
+          controls.enabled = !event.value;
+        });
+      }
+
+      const savedCameraPosition = new THREE.Vector3();
+      const savedCameraQuaternion = new THREE.Quaternion();
+
+      // Camera flight between the orbit view and the POV view. While this is
+      // active, neither OrbitControls nor the POV look-around drive the camera.
+      const TRANSITION_DURATION = 0.9; // seconds
+      let cameraTransition = null;
+
+      function easeInOutCubic(x) {
+        return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+      }
+
+      function startCameraTransition(
+        fromPos,
+        fromQuat,
+        toPos,
+        toQuat,
+        fromFov,
+        toFov,
+        onComplete,
+      ) {
+        cameraTransition = {
+          fromPos: fromPos.clone(),
+          toPos: toPos.clone(),
+          fromQuat: fromQuat.clone(),
+          toQuat: toQuat.clone(),
+          fromFov,
+          toFov,
+          startTime: performance.now(),
+          onComplete,
+        };
+      }
+
+      function enterPovMode() {
+        if (povMode || cameraTransition) return;
+        povMode = true;
+        savedCameraPosition.copy(camera.position);
+        savedCameraQuaternion.copy(camera.quaternion);
+
+        controls.enabled = false;
+        povTargetYaw = 0;
+        povTargetPitch = 0;
+        centerpiece.visible = false;
+
+        startCameraTransition(
+          camera.position,
+          camera.quaternion,
+          povPosition,
+          povQuaternion,
+          camera.fov,
+          POV_FOV,
+        );
+      }
+
+      function exitPovMode() {
+        if (!povMode || cameraTransition) return;
+        povMode = false;
+
+        startCameraTransition(
+          camera.position,
+          camera.quaternion,
+          savedCameraPosition,
+          savedCameraQuaternion,
+          camera.fov,
+          ORBIT_FOV,
+          () => {
+            controls.enabled = true;
+            controls.update();
+            centerpiece.visible = true;
+          },
+        );
+      }
+
+      renderer.domElement.addEventListener("click", (event) => {
+        if (povMode || cameraTransition) return;
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(pointerNDC, camera);
+        const hits = raycaster.intersectObject(centerpieceHitbox);
+        if (hits.length > 0) enterPovMode();
+      });
+
+      window.addEventListener("pointermove", (event) => {
+        pointerNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointerNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        if (!povMode) return;
+        const horizontal = THREE.MathUtils.clamp(
+          (event.clientX / window.innerWidth) * 2 - 1,
+          -1,
+          1,
+        );
+        const vertical = THREE.MathUtils.clamp(
+          1 - (event.clientY / window.innerHeight) * 2,
+          -1,
+          1,
+        );
+        povTargetYaw = -horizontal * povMaxYaw;
+        povTargetPitch = vertical * povMaxPitch;
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") exitPovMode();
+      });
+
+      let hoveredScreen = null;
+
+      let previousTime = performance.now();
       renderer.setAnimationLoop(function animate(time) {
-        controls.update();
+        const currentTime = performance.now();
+        const deltaTime = Math.min((currentTime - previousTime) / 1000, 0.1);
+        previousTime = currentTime;
+
+        if (cameraTransition) {
+          const elapsed = (currentTime - cameraTransition.startTime) / 1000;
+          const linearT = Math.min(elapsed / TRANSITION_DURATION, 1);
+          const easedT = easeInOutCubic(linearT);
+
+          camera.position.lerpVectors(
+            cameraTransition.fromPos,
+            cameraTransition.toPos,
+            easedT,
+          );
+          camera.quaternion.slerpQuaternions(
+            cameraTransition.fromQuat,
+            cameraTransition.toQuat,
+            easedT,
+          );
+          camera.fov = THREE.MathUtils.lerp(
+            cameraTransition.fromFov,
+            cameraTransition.toFov,
+            easedT,
+          );
+          camera.updateProjectionMatrix();
+
+          if (linearT >= 1) {
+            const completed = cameraTransition;
+            cameraTransition = null;
+            completed.onComplete?.();
+          }
+        } else if (povMode) {
+          const smoothing = 1 - Math.exp(-povRotationSmoothing * deltaTime);
+          camera.rotation.y = THREE.MathUtils.lerp(
+            camera.rotation.y,
+            povBaseRotation.y + povTargetYaw,
+            smoothing,
+          );
+          camera.rotation.x = THREE.MathUtils.lerp(
+            camera.rotation.x,
+            povBaseRotation.x + povTargetPitch,
+            smoothing,
+          );
+        } else {
+          controls.update(deltaTime);
+        }
+
+        if (povMode && !cameraTransition) {
+          raycaster.setFromCamera(pointerNDC, camera);
+          const hits = raycaster.intersectObjects(screenMeshes);
+          hoveredScreen = hits.length > 0 ? hits[0].object.userData.screenState : null;
+        } else {
+          hoveredScreen = null;
+        }
 
         const t = time / 1000;
         for (const screen of screens) {
           const thetaDrift =
-            (Math.sin(t * screen.speedH + screen.phaseH) * FLOAT_AMOUNT_HORIZONTAL) /
+            (Math.sin(t * screen.speedH + screen.phaseH) *
+              FLOAT_AMOUNT_HORIZONTAL) /
             ARC_RADIUS;
           const theta = screen.baseTheta + thetaDrift;
           const y =
@@ -186,7 +443,39 @@
             Math.cos(theta) * ARC_RADIUS,
           );
           screen.mesh.rotation.y = theta;
+
+          // Highlight whichever screen is under the cursor in POV mode: it
+          // grows and brightens, while its neighbors shrink back subtly.
+          const isHovered = screen === hoveredScreen;
+          const targetScale = hoveredScreen
+            ? isHovered
+              ? HOVER_SCALE
+              : NEIGHBOR_SCALE
+            : 1;
+          const hoverSmoothing =
+            1 - Math.exp(-HOVER_TRANSITION_SMOOTHING * deltaTime);
+          screen.currentScale = THREE.MathUtils.lerp(
+            screen.currentScale,
+            targetScale,
+            hoverSmoothing,
+          );
+          screen.mesh.scale.setScalar(screen.currentScale);
+
+          const targetColor = isHovered
+            ? screen.baseColor.clone().lerp(HOVER_TINT_COLOR, HOVER_TINT_AMOUNT)
+            : screen.baseColor;
+          screen.mesh.material.color.lerp(targetColor, hoverSmoothing);
         }
+
+        if (debugMode) povPosition.copy(eyeGizmo.position);
+
+        cameraPositionReadout.textContent =
+          `mode: ${povMode ? "POV" : "orbit"}\n` +
+          `eye height (y): ${camera.position.y.toFixed(3)}\n` +
+          `camera position: ${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}` +
+          (debugMode
+            ? `\ngizmo eye pos: ${eyeGizmo.position.x.toFixed(2)}, ${eyeGizmo.position.y.toFixed(2)}, ${eyeGizmo.position.z.toFixed(2)}`
+            : "");
 
         renderer.render(scene, camera);
       });
