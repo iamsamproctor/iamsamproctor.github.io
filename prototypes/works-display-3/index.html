@@ -1,0 +1,372 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prototype • Works Display 3</title>
+    <style>
+      @font-face {
+        font-family: "Poetical";
+        src:
+          url("../../assets/fonts/Poetical Regular.otf") format("opentype"),
+          url("../../assets/fonts/Poetical Regular.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000000;
+        overflow: hidden;
+        font-family: "Poetical", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Helvetica, Arial, sans-serif;
+      }
+
+      a,
+      footer {
+        color: #797979;
+      }
+
+      footer {
+        position: fixed;
+        margin: 10px;
+        bottom: 0;
+        left: 0;
+        z-index: 2;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.5);
+      }
+
+      .page {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .page-header {
+        flex: 0 0 auto;
+        padding: 2.4vh 4vw 1.6vh;
+      }
+
+      .page-title {
+        margin: 0;
+        color: #ffffff;
+        font-size: clamp(14px, 1.8vw, 20px);
+        font-weight: 600;
+        letter-spacing: 0.35em;
+      }
+
+      .page-content {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+      }
+
+      .menu-pane {
+        position: relative;
+        flex: 11 1 0;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      /* Fades the menu to black at the top and bottom edges of the pane
+         so cards scroll in/out rather than clipping abruptly. */
+      .menu-fade {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 1;
+        background: linear-gradient(
+          to bottom,
+          #000 0%,
+          transparent 15%,
+          transparent 85%,
+          #000 100%
+        );
+      }
+
+      .menu-scroll {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        touch-action: none;
+      }
+
+      .menu-list {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        will-change: transform;
+      }
+
+      .menu-item {
+        display: block;
+        padding: 2.6vh 4vw;
+        color: #6b6b6b;
+        text-decoration: none;
+        border-bottom: 1px solid #161616;
+        transition:
+          color 0.25s ease,
+          padding-left 0.25s ease,
+          background 0.25s ease;
+      }
+
+      .menu-item .title {
+        font-size: clamp(18px, 2.6vw, 30px);
+        font-weight: 300;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+      }
+
+      .menu-item:hover {
+        color: #ffffff;
+        padding-left: 5.5vw;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .preview-pane {
+        position: relative;
+        flex: 9 1 0;
+        min-width: 0;
+        min-height: 0;
+        background: #000;
+        border-left: 1px solid #161616;
+        overflow: hidden;
+      }
+
+      .preview-img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+
+      .preview-img.active {
+        opacity: 1;
+      }
+
+      /* Side-by-side columns get too narrow to read in portrait/mobile
+         widths, so stack the panes instead: menu on top, image below. */
+      @media (max-width: 700px) {
+        .page-content {
+          flex-direction: column;
+        }
+
+        .menu-pane {
+          flex: 1.2 1 0;
+        }
+
+        .preview-pane {
+          flex: 1 1 0;
+          border-left: none;
+          border-top: 1px solid #161616;
+        }
+
+        .menu-item {
+          padding: 2vh 5vw;
+        }
+
+        .menu-item:hover {
+          padding-left: 6.5vw;
+        }
+
+        .menu-item .title {
+          font-size: clamp(16px, 5.5vw, 22px);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <footer><a href="../../index.html">&larr; back to prototypes</a></footer>
+
+    <div class="page">
+      <header class="page-header">
+        <p class="page-title">PROJECTS</p>
+      </header>
+      <div class="page-content">
+        <div class="menu-pane">
+          <div class="menu-scroll" id="menu-scroll">
+            <div class="menu-list" id="menu-list"></div>
+          </div>
+          <div class="menu-fade"></div>
+        </div>
+        <div class="preview-pane">
+          <img class="preview-img" id="preview-img-a" alt="" />
+          <img class="preview-img" id="preview-img-b" alt="" />
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const WORKS = [
+        { title: "PANIC: AR Shooter", image: "../../Thumbnail_Panic.jpg" },
+        {
+          title: "Jadu: Fight Comes to Your Room",
+          image: "../../Thumbnail_JaduFight.jpg",
+        },
+        {
+          title: "Journey to the Samba-Verse",
+          image: "../../Thumbnail_JourneyToTheSambaVerse.jpg",
+        },
+        {
+          title: "Handheld Guy",
+          image: "../../Thumbnail_HandheldGuy.jpg",
+        },
+      ];
+
+      // Rendered several times back-to-back so the periodic wrap below
+      // always has real content to show, however far the offset drifts.
+      const REPEAT_COUNT = 24;
+      const SCROLL_SMOOTHING = 8; // higher = snappier catch-up to the target
+      const DRIFT_GUARD_MULTIPLIER = 4; // keeps the running offsets from growing unbounded
+
+      const menuScroll = document.getElementById("menu-scroll");
+      const menuList = document.getElementById("menu-list");
+
+      menuList.innerHTML = Array.from({ length: REPEAT_COUNT })
+        .map(() =>
+          WORKS.map(
+            (work) => `
+              <a class="menu-item" href="#" data-image="${work.image}">
+                <span class="title">${work.title}</span>
+              </a>
+            `,
+          ).join(""),
+        )
+        .join("");
+
+      // Two stacked layers crossfade between thumbnails: the next image is
+      // loaded into whichever layer is currently hidden, then faded in once
+      // it's ready, so hovering never flashes a blank/half-loaded frame.
+      const previewLayers = [
+        document.getElementById("preview-img-a"),
+        document.getElementById("preview-img-b"),
+      ];
+      let activeLayerIndex = 0;
+      let currentPreviewImage = null;
+
+      function showPreview(image) {
+        if (!image || image === currentPreviewImage) return;
+        currentPreviewImage = image;
+
+        const nextLayerIndex = 1 - activeLayerIndex;
+        const nextLayer = previewLayers[nextLayerIndex];
+        const currentLayer = previewLayers[activeLayerIndex];
+
+        nextLayer.onload = () => {
+          nextLayer.classList.add("active");
+          currentLayer.classList.remove("active");
+          activeLayerIndex = nextLayerIndex;
+        };
+        nextLayer.src = image;
+      }
+
+      menuList.addEventListener("mouseover", (event) => {
+        const item = event.target.closest(".menu-item");
+        if (item) showPreview(item.dataset.image);
+      });
+
+      // Show the first work by default so the panel isn't blank on load.
+      showPreview(WORKS[0].image);
+
+      let setHeight = 0;
+
+      function measureSetHeight() {
+        // Height of one full pass through WORKS, in pixels, taken from the
+        // rendered items rather than assumed, so it stays correct across
+        // font/layout changes and viewport widths.
+        const items = menuList.querySelectorAll(".menu-item");
+        const perSet = WORKS.length;
+        const first = items[0];
+        const afterFirstSet = items[perSet];
+        setHeight = afterFirstSet.offsetTop - first.offsetTop;
+      }
+
+      measureSetHeight();
+
+      // The list content repeats every setHeight px, so rendering the
+      // translateY as (offset mod setHeight) makes the wrap invisible —
+      // there's no snapping-back moment to smooth over, unlike scrollTop
+      // resets. targetOffset moves instantly with input; currentOffset
+      // eases toward it every frame, which is where the smoothness comes
+      // from.
+      let targetOffset = 0;
+      let currentOffset = 0;
+
+      menuScroll.addEventListener(
+        "wheel",
+        (event) => {
+          event.preventDefault();
+          targetOffset += event.deltaY;
+        },
+        { passive: false },
+      );
+
+      // Wheel events don't fire from touch, so dragging is the touch
+      // equivalent — mouse clicks are left alone to keep the menu items
+      // actually clickable.
+      let touchDragging = false;
+      let touchStartY = 0;
+      let touchStartOffset = 0;
+
+      menuScroll.addEventListener("pointerdown", (event) => {
+        if (event.pointerType !== "touch") return;
+        touchDragging = true;
+        touchStartY = event.clientY;
+        touchStartOffset = targetOffset;
+        menuScroll.setPointerCapture(event.pointerId);
+      });
+
+      menuScroll.addEventListener("pointermove", (event) => {
+        if (!touchDragging) return;
+        targetOffset = touchStartOffset + (touchStartY - event.clientY);
+      });
+
+      menuScroll.addEventListener("pointerup", () => {
+        touchDragging = false;
+      });
+
+      window.addEventListener("resize", measureSetHeight);
+
+      let previousTime = performance.now();
+      requestAnimationFrame(function tick(time) {
+        const deltaTime = Math.min((time - previousTime) / 1000, 0.1);
+        previousTime = time;
+
+        const smoothing = 1 - Math.exp(-SCROLL_SMOOTHING * deltaTime);
+        currentOffset += (targetOffset - currentOffset) * smoothing;
+
+        // Keep the raw offsets from drifting to huge numbers over a long
+        // session, without disturbing the in-flight easing distance.
+        const driftBound = setHeight * DRIFT_GUARD_MULTIPLIER;
+        if (currentOffset > driftBound) {
+          currentOffset -= setHeight;
+          targetOffset -= setHeight;
+          touchStartOffset -= setHeight;
+        } else if (currentOffset < -driftBound) {
+          currentOffset += setHeight;
+          targetOffset += setHeight;
+          touchStartOffset += setHeight;
+        }
+
+        const wrappedOffset =
+          ((currentOffset % setHeight) + setHeight) % setHeight;
+        menuList.style.transform = `translateY(${-wrappedOffset}px)`;
+
+        requestAnimationFrame(tick);
+      });
+    </script>
+  </body>
+</html>

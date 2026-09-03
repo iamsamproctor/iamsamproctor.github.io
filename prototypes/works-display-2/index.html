@@ -1,0 +1,813 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prototype • Works Display</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000000;
+      }
+
+      a,
+      footer {
+        color: #797979;
+      }
+
+      footer {
+        position: fixed;
+        margin: 10px;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+      }
+
+      .screen-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.35s ease;
+        z-index: 20;
+      }
+
+      .screen-modal-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* Position/size are driven directly from JS (left/top/width/height)
+         so the panel can FLIP-animate from the clicked plane's exact
+         on-screen rect to the centered modal layout, and back again. */
+      .screen-modal-panel {
+        position: fixed;
+        border-radius: 4px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        overflow: hidden;
+      }
+
+      .screen-modal-panel img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    </style>
+  </head>
+
+  <body>
+    <footer><a href="../../index.html">&larr; back to prototypes</a></footer>
+
+    <div class="screen-modal-backdrop" id="screen-modal-backdrop">
+      <div class="screen-modal-panel" id="screen-modal-panel">
+        <img id="screen-modal-image" alt="" />
+      </div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+          "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { TransformControls } from "three/addons/controls/TransformControls.js";
+
+      const debugMode = new URLSearchParams(window.location.search).has(
+        "debug",
+      );
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        50,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000,
+      );
+      camera.position.set(0, 0, 6.5);
+      camera.lookAt(0, 0, 0);
+      camera.rotation.order = "YXZ";
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(new THREE.Color(0x000000), 1);
+
+      const spark = new SparkRenderer({ renderer });
+      scene.add(spark);
+
+      document.body.appendChild(renderer.domElement);
+
+      // TEMP: on-screen camera position readout, remove when done debugging.
+      const cameraPositionReadout = document.createElement("div");
+      Object.assign(cameraPositionReadout.style, {
+        position: "fixed",
+        bottom: "10px",
+        right: "10px",
+        margin: "0",
+        padding: "6px 10px",
+        background: "rgba(0, 0, 0, 0.6)",
+        color: "#0f0",
+        font: "12px/1.4 monospace",
+        pointerEvents: "none",
+        whiteSpace: "pre",
+        zIndex: "10",
+      });
+      document.body.appendChild(cameraPositionReadout);
+
+      window.addEventListener("resize", onWindowResize, false);
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // Background environment
+      const background = new SplatMesh({
+        url: "../../assets/splats/driveway.spz",
+      });
+      background.rotation.z = Math.PI; // flip upside down
+      background.scale.setScalar(2.8); // 30% bigger, then another 60% on top
+      background.position.y = 1;
+      scene.add(background);
+
+      // Centered subject
+      const centerpiece = new SplatMesh({ url: "../../assets/splats/mom.spz" });
+      centerpiece.quaternion.set(0, 0, 0, 0);
+      centerpiece.position.set(0, 0, 0);
+      scene.add(centerpiece);
+
+      // Invisible hitbox so the centerpiece is clickable regardless of the
+      // splat's actual (irregular) geometry.
+      const centerpieceHitbox = new THREE.Mesh(
+        new THREE.SphereGeometry(0.9, 16, 16),
+        new THREE.MeshBasicMaterial(),
+      );
+      centerpieceHitbox.visible = false;
+      centerpieceHitbox.position.copy(centerpiece.position);
+      scene.add(centerpieceHitbox);
+
+      // Curved wall of screens: one continuous cylindrical surface arced in
+      // front of the centerpiece, with every work's image "projected" onto
+      // it as a tile of a single texture atlas (rather than separate flat
+      // planes floating in front of it).
+      const SPRITE_FILES = [
+        "1.png",
+        "2.png",
+        "3.png",
+        "4.png",
+        "5.jpg",
+        "6.jpg",
+        "7.png",
+        "8.png",
+        "1.png",
+        "2.png",
+        "3.png",
+        "4.png",
+        "5.jpg",
+        "6.jpg",
+        "7.png",
+        "8.png",
+      ];
+      const SCREEN_COUNT = SPRITE_FILES.length;
+      const ARC_RADIUS = 1; // ~5 feet, in meters
+      const ARC_SPAN = Math.PI * 0.6; // how much of the circle the wall wraps around
+      const WALL_HEIGHT_OFFSET = 0.25; // raises the whole wall relative to the centerpiece
+      const CYLINDER_HEIGHT = 1.1; // total vertical extent of the curved screen
+      const GRID_ROWS = 2;
+      const GRID_COLS = Math.ceil(SCREEN_COUNT / GRID_ROWS);
+      const CELL_PADDING = 0.08; // fraction of a cell kept as margin around its image
+      const WIDTH_SEGMENTS = GRID_COLS * 6; // smoothness of the horizontal curve
+      const ATLAS_CELL_PX = 512; // atlas resolution per cell, before aspect correction
+      const HOVER_BULGE = 0.05; // meters the hovered card bulges outward off the screen
+      const HOVER_EDGE_SOFTNESS = 0.35; // fraction of a cell's width used to soften the bulge/dim edge
+      const NEIGHBOR_DIM_AMOUNT = 0.6; // how far non-hovered area dims toward NEIGHBOR_DIM_COLOR
+      const NEIGHBOR_DIM_COLOR = new THREE.Color(0x1a1a1a);
+      const HOVER_TRANSITION_SMOOTHING = 10;
+      const RIPPLE_AMPLITUDE = 0.004; // subtle life in the screen surface, in meters
+      const RIPPLE_FREQUENCY = 20;
+      const RIPPLE_SPEED = 0.5;
+
+      const CYLINDER_TOP = WALL_HEIGHT_OFFSET + CYLINDER_HEIGHT / 2;
+      const THETA_START = -ARC_SPAN / 2;
+
+      // Maps the wall's own (u, v) parameterization — u along the arc
+      // [0, 1], v down the height [0 (top), 1 (bottom)] — to a local-space
+      // position on the curved surface. Shared by geometry generation and
+      // by the on-screen rect projection used for the modal FLIP animation.
+      function wallPositionAt(u, v, target) {
+        const theta = THETA_START + u * ARC_SPAN;
+        target.set(
+          Math.sin(theta) * ARC_RADIUS,
+          CYLINDER_TOP - v * CYLINDER_HEIGHT,
+          Math.cos(theta) * ARC_RADIUS,
+        );
+        return target;
+      }
+
+      const textureLoader = new THREE.TextureLoader();
+      const spriteTextures = await Promise.all(
+        SPRITE_FILES.map((file) =>
+          textureLoader.loadAsync(`../../assets/sprites/${file}`),
+        ),
+      );
+
+      // Build a single texture atlas: a canvas grid where each cell holds
+      // one work's image, "contain"-fit and centered with a small margin.
+      const cellPhysicalAspect =
+        (ARC_SPAN * ARC_RADIUS) / GRID_COLS / (CYLINDER_HEIGHT / GRID_ROWS);
+      const cellPxWidth = ATLAS_CELL_PX * cellPhysicalAspect;
+      const cellPxHeight = ATLAS_CELL_PX;
+      const atlasCanvas = document.createElement("canvas");
+      atlasCanvas.width = cellPxWidth * GRID_COLS;
+      atlasCanvas.height = cellPxHeight * GRID_ROWS;
+      const atlasCtx = atlasCanvas.getContext("2d");
+      atlasCtx.fillStyle = "#000000";
+      atlasCtx.fillRect(0, 0, atlasCanvas.width, atlasCanvas.height);
+
+      const cards = [];
+      for (let i = 0; i < SCREEN_COUNT; i++) {
+        const texture = spriteTextures[i];
+        const image = texture.image;
+        const col = i % GRID_COLS;
+        const row = Math.floor(i / GRID_COLS);
+
+        const cellX = col * cellPxWidth;
+        const cellY = row * cellPxHeight;
+        const pad = Math.min(cellPxWidth, cellPxHeight) * CELL_PADDING;
+        const availWidth = cellPxWidth - pad * 2;
+        const availHeight = cellPxHeight - pad * 2;
+        const imageAspect = image.width / image.height;
+        let drawWidth = availWidth;
+        let drawHeight = drawWidth / imageAspect;
+        if (drawHeight > availHeight) {
+          drawHeight = availHeight;
+          drawWidth = drawHeight * imageAspect;
+        }
+        atlasCtx.drawImage(
+          image,
+          cellX + (cellPxWidth - drawWidth) / 2,
+          cellY + (cellPxHeight - drawHeight) / 2,
+          drawWidth,
+          drawHeight,
+        );
+
+        cards.push({
+          spriteFile: SPRITE_FILES[i],
+          aspect: imageAspect,
+          uMin: col / GRID_COLS,
+          uMax: (col + 1) / GRID_COLS,
+          vMin: row / GRID_ROWS,
+          vMax: (row + 1) / GRID_ROWS,
+        });
+      }
+
+      const atlasTexture = new THREE.CanvasTexture(atlasCanvas);
+      // The geometry's own v runs top (0) to bottom (1) to match how the
+      // atlas was drawn; disabling flipY keeps the raw shader sampling in
+      // that same orientation instead of WebGL's default bottom-up UVs.
+      atlasTexture.flipY = false;
+      atlasTexture.needsUpdate = true;
+
+      // A curved "bent plane": flat top-to-bottom, but swept along the arc
+      // so it hugs the same radius as the old scattered planes did. Built
+      // by hand (rather than CylinderGeometry) to keep full control over
+      // the uv parameterization used above for the atlas and cell lookups.
+      const wallPositions = [];
+      const wallNormals = [];
+      const wallUvs = [];
+      const wallIndices = [];
+      for (let j = 0; j <= 1; j++) {
+        const v = j;
+        const y = CYLINDER_TOP - v * CYLINDER_HEIGHT;
+        for (let i = 0; i <= WIDTH_SEGMENTS; i++) {
+          const u = i / WIDTH_SEGMENTS;
+          const theta = THETA_START + u * ARC_SPAN;
+          const sinT = Math.sin(theta);
+          const cosT = Math.cos(theta);
+          wallPositions.push(sinT * ARC_RADIUS, y, cosT * ARC_RADIUS);
+          wallNormals.push(sinT, 0, cosT);
+          wallUvs.push(u, v);
+        }
+      }
+      const rowStride = WIDTH_SEGMENTS + 1;
+      for (let i = 0; i < WIDTH_SEGMENTS; i++) {
+        const topLeft = i;
+        const topRight = i + 1;
+        const bottomLeft = rowStride + i;
+        const bottomRight = rowStride + i + 1;
+        wallIndices.push(topLeft, bottomLeft, topRight);
+        wallIndices.push(topRight, bottomLeft, bottomRight);
+      }
+
+      const wallGeometry = new THREE.BufferGeometry();
+      wallGeometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(wallPositions, 3),
+      );
+      wallGeometry.setAttribute(
+        "normal",
+        new THREE.Float32BufferAttribute(wallNormals, 3),
+      );
+      wallGeometry.setAttribute(
+        "uv",
+        new THREE.Float32BufferAttribute(wallUvs, 2),
+      );
+      wallGeometry.setIndex(wallIndices);
+
+      // Unlit custom shader (rather than MeshBasicMaterial) so the hovered
+      // card can bulge outward and its neighbors dim, all driven by uv-space
+      // cell bounds rather than per-mesh transforms — there's only one mesh.
+      const wallMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          map: { value: atlasTexture },
+          uHoverMin: { value: new THREE.Vector2(0, 0) },
+          uHoverMax: { value: new THREE.Vector2(0, 0) },
+          uHoverBlend: { value: 0 },
+          uEdgeSoftness: { value: HOVER_EDGE_SOFTNESS / GRID_COLS },
+          uBulgeAmount: { value: HOVER_BULGE },
+          uDimColor: { value: NEIGHBOR_DIM_COLOR },
+          uDimAmount: { value: NEIGHBOR_DIM_AMOUNT },
+          uTime: { value: 0 },
+          uRippleAmplitude: { value: RIPPLE_AMPLITUDE },
+          uRippleFrequency: { value: RIPPLE_FREQUENCY },
+          uRippleSpeed: { value: RIPPLE_SPEED },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          uniform vec2 uHoverMin;
+          uniform vec2 uHoverMax;
+          uniform float uHoverBlend;
+          uniform float uEdgeSoftness;
+          uniform float uBulgeAmount;
+          uniform float uTime;
+          uniform float uRippleAmplitude;
+          uniform float uRippleFrequency;
+          uniform float uRippleSpeed;
+
+          void main() {
+            vUv = uv;
+            vec2 center = (uHoverMin + uHoverMax) * 0.5;
+            vec2 halfSize = (uHoverMax - uHoverMin) * 0.5;
+            vec2 d = abs(uv - center) - halfSize;
+            float inside = 1.0 - smoothstep(0.0, uEdgeSoftness, max(d.x, d.y));
+            float bulge = inside * uHoverBlend * uBulgeAmount;
+            float ripple = sin(uv.x * uRippleFrequency + uTime * uRippleSpeed) * uRippleAmplitude;
+            vec3 displaced = position + normal * (bulge + ripple);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          uniform sampler2D map;
+          uniform vec2 uHoverMin;
+          uniform vec2 uHoverMax;
+          uniform float uHoverBlend;
+          uniform float uEdgeSoftness;
+          uniform vec3 uDimColor;
+          uniform float uDimAmount;
+
+          vec3 srgbToLinear(vec3 srgb) {
+            return mix(
+              srgb / 12.92,
+              pow((srgb + 0.055) / 1.055, vec3(2.4)),
+              step(0.0031308, srgb)
+            );
+          }
+
+          void main() {
+            vec4 texel = texture2D(map, vUv);
+            vec3 color = srgbToLinear(texel.rgb);
+
+            vec2 center = (uHoverMin + uHoverMax) * 0.5;
+            vec2 halfSize = (uHoverMax - uHoverMin) * 0.5;
+            vec2 d = abs(vUv - center) - halfSize;
+            float inside = 1.0 - smoothstep(0.0, uEdgeSoftness, max(d.x, d.y));
+
+            vec3 dimmed = mix(color, uDimColor, uDimAmount);
+            color = mix(dimmed, color, mix(1.0, inside, uHoverBlend));
+
+            gl_FragColor = vec4(color, texel.a);
+          }
+        `,
+        side: THREE.DoubleSide,
+      });
+
+      const wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+      scene.add(wallMesh);
+
+      // Setup mouse controls to orbit the camera around; auto-rotates on its
+      // own when idle, and simply pauses whenever POV mode stops calling
+      // controls.update() (see the render loop below).
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 0, 0);
+      controls.minDistance = 2;
+      controls.maxDistance = 3;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.6;
+      controls.update();
+
+      // Click the centerpiece to snap into her POV, looking out toward the
+      // screens; look around with the cursor (like splat-hero), Esc to exit.
+      const raycaster = new THREE.Raycaster();
+      const pointerNDC = new THREE.Vector2();
+
+      let povMode = false;
+      const ORBIT_FOV = camera.fov;
+      const POV_FOV = 70; // wider lens so the screen wall fits without much look-around
+      const povBaseRotation = { x: 0, y: Math.PI }; // her forward is +z
+      const povMaxYaw = THREE.MathUtils.degToRad(22);
+      const povMaxPitch = THREE.MathUtils.degToRad(22);
+      const povRotationSmoothing = 4;
+      let povTargetYaw = 0;
+      let povTargetPitch = 0;
+
+      const povQuaternion = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(povBaseRotation.x, povBaseRotation.y, 0, "YXZ"),
+      );
+      const POV_EYE_HEIGHT = 0.25; // offset above the centerpiece's origin, in meters
+      const povPosition = centerpiece.position
+        .clone()
+        .add(new THREE.Vector3(0, POV_EYE_HEIGHT, 0));
+
+      // Debug gizmo: drag the arrows to preview a different eye position;
+      // open with ?debug in the URL. Doesn't persist — read the printed
+      // position off the on-screen readout and copy it into POV_EYE_HEIGHT.
+      let eyeGizmo, eyeGizmoControls;
+      if (debugMode) {
+        eyeGizmo = new THREE.Object3D();
+        eyeGizmo.position.copy(povPosition);
+        scene.add(eyeGizmo);
+
+        eyeGizmoControls = new TransformControls(camera, renderer.domElement);
+        eyeGizmoControls.setMode("translate");
+        eyeGizmoControls.setSize(0.6);
+        eyeGizmoControls.attach(eyeGizmo);
+        scene.add(eyeGizmoControls.getHelper());
+
+        eyeGizmoControls.addEventListener("dragging-changed", (event) => {
+          controls.enabled = !event.value;
+        });
+      }
+
+      const savedCameraPosition = new THREE.Vector3();
+      const savedCameraQuaternion = new THREE.Quaternion();
+
+      // Camera flight between the orbit view and the POV view. While this is
+      // active, neither OrbitControls nor the POV look-around drive the camera.
+      const TRANSITION_DURATION = 0.9; // seconds
+      let cameraTransition = null;
+
+      function easeInOutCubic(x) {
+        return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+      }
+
+      function startCameraTransition(
+        fromPos,
+        fromQuat,
+        toPos,
+        toQuat,
+        fromFov,
+        toFov,
+        onComplete,
+      ) {
+        cameraTransition = {
+          fromPos: fromPos.clone(),
+          toPos: toPos.clone(),
+          fromQuat: fromQuat.clone(),
+          toQuat: toQuat.clone(),
+          fromFov,
+          toFov,
+          startTime: performance.now(),
+          onComplete,
+        };
+      }
+
+      function enterPovMode() {
+        if (povMode || cameraTransition) return;
+        povMode = true;
+        savedCameraPosition.copy(camera.position);
+        savedCameraQuaternion.copy(camera.quaternion);
+
+        controls.enabled = false;
+        povTargetYaw = 0;
+        povTargetPitch = 0;
+        centerpiece.visible = false;
+
+        startCameraTransition(
+          camera.position,
+          camera.quaternion,
+          povPosition,
+          povQuaternion,
+          camera.fov,
+          POV_FOV,
+        );
+      }
+
+      function exitPovMode() {
+        if (!povMode || cameraTransition) return;
+        povMode = false;
+
+        startCameraTransition(
+          camera.position,
+          camera.quaternion,
+          savedCameraPosition,
+          savedCameraQuaternion,
+          camera.fov,
+          ORBIT_FOV,
+          () => {
+            controls.enabled = true;
+            controls.update();
+            centerpiece.visible = true;
+          },
+        );
+      }
+
+      // Clicking a card on the curved screen while in POV mode opens it as a
+      // flat "modal" — a placeholder for the real artwork later. The panel
+      // FLIPs: it snaps to the clicked card's exact on-screen rect (sampled
+      // along the curve, since it isn't a flat quad), then animates to the
+      // centered modal layout (and reverses on close), so the 2D view feels
+      // like a continuation of the curved screen rather than a separate
+      // popup.
+      const screenModalBackdrop = document.getElementById(
+        "screen-modal-backdrop",
+      );
+      const screenModalPanel = document.getElementById("screen-modal-panel");
+      const screenModalImage = document.getElementById("screen-modal-image");
+      const MODAL_TRANSITION_DURATION = 0.4; // seconds
+      const MODAL_RECT_SAMPLES = 5; // points sampled along each of the cell's top/bottom edges
+      let modalOpen = false;
+      let modalCard = null;
+
+      // Projects a card's curved footprint into CSS pixel space, giving the
+      // rect it occupies on screen right now. Sampled at several points
+      // along the top and bottom edges (rather than just 4 corners) since
+      // the surface bows between them.
+      function getCardPixelRect(card) {
+        wallMesh.updateMatrixWorld();
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        const corner = new THREE.Vector3();
+        for (const v of [card.vMin, card.vMax]) {
+          for (let k = 0; k <= MODAL_RECT_SAMPLES; k++) {
+            const u = THREE.MathUtils.lerp(
+              card.uMin,
+              card.uMax,
+              k / MODAL_RECT_SAMPLES,
+            );
+            wallPositionAt(u, v, corner);
+            corner.applyMatrix4(wallMesh.matrixWorld).project(camera);
+            const pixelX = (corner.x * 0.5 + 0.5) * window.innerWidth;
+            const pixelY = (1 - (corner.y * 0.5 + 0.5)) * window.innerHeight;
+            minX = Math.min(minX, pixelX);
+            maxX = Math.max(maxX, pixelX);
+            minY = Math.min(minY, pixelY);
+            maxY = Math.max(maxY, pixelY);
+          }
+        }
+        return {
+          left: minX,
+          top: minY,
+          width: maxX - minX,
+          height: maxY - minY,
+        };
+      }
+
+      function getCenteredModalRect(aspect) {
+        const maxHeight = window.innerHeight * 0.7;
+        const maxWidth = window.innerWidth * 0.85;
+        let height = maxHeight;
+        let width = height * aspect;
+        if (width > maxWidth) {
+          width = maxWidth;
+          height = width / aspect;
+        }
+        return {
+          left: (window.innerWidth - width) / 2,
+          top: (window.innerHeight - height) / 2,
+          width,
+          height,
+        };
+      }
+
+      function applyModalRect(rect) {
+        screenModalPanel.style.left = `${rect.left}px`;
+        screenModalPanel.style.top = `${rect.top}px`;
+        screenModalPanel.style.width = `${rect.width}px`;
+        screenModalPanel.style.height = `${rect.height}px`;
+      }
+
+      function openScreenModal(card) {
+        if (modalOpen) return;
+        modalOpen = true;
+        modalCard = card;
+
+        screenModalImage.src = `../../assets/sprites/${card.spriteFile}`;
+
+        // Snap to the card's exact current on-screen rect first, with
+        // transitions off, so the swap from 3D to 2D is invisible...
+        screenModalPanel.style.transition = "none";
+        applyModalRect(getCardPixelRect(card));
+        screenModalBackdrop.classList.add("open");
+
+        // ...then force a reflow so the browser registers that snapped
+        // state before we animate away from it — otherwise both style
+        // changes collapse into one and nothing appears to move.
+        screenModalPanel.getBoundingClientRect();
+
+        screenModalPanel.style.transition = `left ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.22, 1, 0.36, 1), top ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.22, 1, 0.36, 1), width ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.22, 1, 0.36, 1), height ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.22, 1, 0.36, 1)`;
+        applyModalRect(getCenteredModalRect(card.aspect));
+      }
+
+      function closeScreenModal() {
+        if (!modalOpen || !modalCard) return;
+        const card = modalCard;
+        modalOpen = false;
+        modalCard = null;
+
+        screenModalPanel.style.transition = `left ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.4, 0, 1, 1), top ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.4, 0, 1, 1), width ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.4, 0, 1, 1), height ${MODAL_TRANSITION_DURATION}s cubic-bezier(0.4, 0, 1, 1)`;
+        applyModalRect(getCardPixelRect(card));
+        screenModalBackdrop.classList.remove("open");
+      }
+
+      screenModalBackdrop.addEventListener("click", () => closeScreenModal());
+      screenModalPanel.addEventListener("click", (event) =>
+        event.stopPropagation(),
+      );
+
+      // Looks up which card a uv hit on the wall mesh landed in.
+      function cardAtUv(uv) {
+        const col = THREE.MathUtils.clamp(
+          Math.floor(uv.x * GRID_COLS),
+          0,
+          GRID_COLS - 1,
+        );
+        const row = THREE.MathUtils.clamp(
+          Math.floor(uv.y * GRID_ROWS),
+          0,
+          GRID_ROWS - 1,
+        );
+        const index = row * GRID_COLS + col;
+        return index < cards.length ? cards[index] : null;
+      }
+
+      renderer.domElement.addEventListener("click", (event) => {
+        if (cameraTransition || modalOpen) return;
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointerNDC, camera);
+
+        if (povMode) {
+          const hits = raycaster.intersectObject(wallMesh);
+          if (hits.length > 0 && hits[0].uv) {
+            const card = cardAtUv(hits[0].uv);
+            if (card) openScreenModal(card);
+          }
+          return;
+        }
+
+        const hits = raycaster.intersectObject(centerpieceHitbox);
+        if (hits.length > 0) enterPovMode();
+      });
+
+      window.addEventListener("pointermove", (event) => {
+        pointerNDC.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointerNDC.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        if (!povMode || modalOpen) return;
+        const horizontal = THREE.MathUtils.clamp(
+          (event.clientX / window.innerWidth) * 2 - 1,
+          -1,
+          1,
+        );
+        const vertical = THREE.MathUtils.clamp(
+          1 - (event.clientY / window.innerHeight) * 2,
+          -1,
+          1,
+        );
+        povTargetYaw = -horizontal * povMaxYaw;
+        povTargetPitch = vertical * povMaxPitch;
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        if (modalOpen) {
+          closeScreenModal();
+        } else {
+          exitPovMode();
+        }
+      });
+
+      let hoveredCard = null;
+      let hoverBlend = 0;
+
+      let previousTime = performance.now();
+      renderer.setAnimationLoop(function animate(time) {
+        const currentTime = performance.now();
+        const deltaTime = Math.min((currentTime - previousTime) / 1000, 0.1);
+        previousTime = currentTime;
+
+        if (cameraTransition) {
+          const elapsed = (currentTime - cameraTransition.startTime) / 1000;
+          const linearT = Math.min(elapsed / TRANSITION_DURATION, 1);
+          const easedT = easeInOutCubic(linearT);
+
+          camera.position.lerpVectors(
+            cameraTransition.fromPos,
+            cameraTransition.toPos,
+            easedT,
+          );
+          camera.quaternion.slerpQuaternions(
+            cameraTransition.fromQuat,
+            cameraTransition.toQuat,
+            easedT,
+          );
+          camera.fov = THREE.MathUtils.lerp(
+            cameraTransition.fromFov,
+            cameraTransition.toFov,
+            easedT,
+          );
+          camera.updateProjectionMatrix();
+
+          if (linearT >= 1) {
+            const completed = cameraTransition;
+            cameraTransition = null;
+            completed.onComplete?.();
+          }
+        } else if (povMode) {
+          const smoothing = 1 - Math.exp(-povRotationSmoothing * deltaTime);
+          camera.rotation.y = THREE.MathUtils.lerp(
+            camera.rotation.y,
+            povBaseRotation.y + povTargetYaw,
+            smoothing,
+          );
+          camera.rotation.x = THREE.MathUtils.lerp(
+            camera.rotation.x,
+            povBaseRotation.x + povTargetPitch,
+            smoothing,
+          );
+        } else {
+          controls.update(deltaTime);
+        }
+
+        if (povMode && !cameraTransition && !modalOpen) {
+          raycaster.setFromCamera(pointerNDC, camera);
+          const hits = raycaster.intersectObject(wallMesh);
+          hoveredCard =
+            hits.length > 0 && hits[0].uv ? cardAtUv(hits[0].uv) : null;
+        } else {
+          hoveredCard = null;
+        }
+
+        // Spotlight whichever card is under the cursor in POV mode: it
+        // bulges off the curved screen and stays full-brightness, while
+        // the rest of the wall dims back subtly.
+        const hoverSmoothing =
+          1 - Math.exp(-HOVER_TRANSITION_SMOOTHING * deltaTime);
+        hoverBlend = THREE.MathUtils.lerp(
+          hoverBlend,
+          hoveredCard ? 1 : 0,
+          hoverSmoothing,
+        );
+        if (hoveredCard) {
+          wallMaterial.uniforms.uHoverMin.value.set(
+            hoveredCard.uMin,
+            hoveredCard.vMin,
+          );
+          wallMaterial.uniforms.uHoverMax.value.set(
+            hoveredCard.uMax,
+            hoveredCard.vMax,
+          );
+        }
+        wallMaterial.uniforms.uHoverBlend.value = hoverBlend;
+        wallMaterial.uniforms.uTime.value = time / 1000;
+
+        if (debugMode) povPosition.copy(eyeGizmo.position);
+
+        cameraPositionReadout.textContent =
+          `mode: ${povMode ? "POV" : "orbit"}\n` +
+          `eye height (y): ${camera.position.y.toFixed(3)}\n` +
+          `camera position: ${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}` +
+          (debugMode
+            ? `\ngizmo eye pos: ${eyeGizmo.position.x.toFixed(2)}, ${eyeGizmo.position.y.toFixed(2)}, ${eyeGizmo.position.z.toFixed(2)}`
+            : "");
+
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+</html>
