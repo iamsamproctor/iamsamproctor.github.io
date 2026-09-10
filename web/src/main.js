@@ -19,18 +19,80 @@ camera.rotation.order = "YXZ";
 camera.rotation.x = THREE.MathUtils.degToRad(-60);
 
 const orbitCenter = new THREE.Vector3(0, 0.0, 0);
-const orbitRadius = 3;
+const orbitRadius = 5;
 const orbitHeight = 1;
 const orbitSpeed = THREE.MathUtils.degToRad(1); // radians per second
 let orbitAngle = 0;
 
+// Additional points of interest the camera dollies between as the user
+// scrolls, continuing to orbit around whichever point is currently active.
+const focusCenter = new THREE.Vector3(0, 0.7, 0);
+const focusRadius = 1.5;
+const focusHeight = 0.1;
+
+// Third point high above the scene, looking down at it.
+const skyCenter = new THREE.Vector3(0, 0, 0);
+const skyRadius = 4;
+const skyHeight = 9;
+
+const orbitKeyframes = [
+  { center: orbitCenter, radius: orbitRadius, height: orbitHeight },
+  { center: focusCenter, radius: focusRadius, height: focusHeight },
+  { center: skyCenter, radius: skyRadius, height: skyHeight },
+];
+
+const activeCenter = orbitCenter.clone();
+let activeRadius = orbitRadius;
+let activeHeight = orbitHeight;
+
+let scrollProgress = 0; // raw 0-1 across the full keyframe sequence
+let scrollBlend = 0; // smoothed toward scrollProgress each frame
+const scrollRange = 2400; // px of scroll to move through all keyframes
+
+const introEl = document.querySelector(".intro");
+const introRevealAt = 0.25; // fraction of scrollRange after which the intro text appears
+const introMoveEnd = 0.45; // fraction by which it has scrolled up to its max travel
+const introFadeStart = 0.35; // fraction where it starts fading (still moving, mid-travel)
+const introFadeEnd = 0.45; // fraction where it's fully faded away
+const introMoveDistance = 500; // px it travels upward over the move range
+
+function handleScroll() {
+  scrollProgress = THREE.MathUtils.clamp(window.scrollY / scrollRange, 0, 1);
+  if (introEl) {
+    const isVisible = scrollProgress >= introRevealAt;
+    introEl.classList.toggle("is-visible", isVisible);
+
+    if (isVisible) {
+      const moveT = THREE.MathUtils.clamp(
+        (scrollProgress - introRevealAt) / (introMoveEnd - introRevealAt),
+        0,
+        1,
+      );
+      const fadeT = THREE.MathUtils.clamp(
+        (scrollProgress - introFadeStart) / (introFadeEnd - introFadeStart),
+        0,
+        1,
+      );
+      introEl.style.transform = `translateY(${-moveT * introMoveDistance}px)`;
+      introEl.style.opacity = String(1 - fadeT);
+    } else {
+      introEl.style.transform = "";
+      introEl.style.opacity = "";
+    }
+  }
+}
+window.addEventListener("scroll", handleScroll);
+handleScroll();
+
 const maxYaw = THREE.MathUtils.degToRad(22);
 const maxPitch = THREE.MathUtils.degToRad(22);
-const cameraSmoothing = 0.1;
+const cameraSmoothing = 0.8;
 let targetYaw = 0;
 let targetPitch = 0;
 let currentYaw = 0;
 let currentPitch = 0;
+
+const cursorDot = document.querySelector(".cursor-dot");
 
 window.addEventListener("pointermove", (event) => {
   const horizontalPosition = THREE.MathUtils.clamp(
@@ -46,11 +108,20 @@ window.addEventListener("pointermove", (event) => {
 
   targetYaw = -horizontalPosition * maxYaw;
   targetPitch = verticalPosition * maxPitch;
+
+  if (cursorDot) {
+    cursorDot.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
+    cursorDot.style.opacity = "1";
+  }
 });
 
 window.addEventListener("pointerleave", () => {
   targetYaw = 0;
   targetPitch = 0;
+
+  if (cursorDot) {
+    cursorDot.style.opacity = "0";
+  }
 });
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -61,11 +132,11 @@ document.body.appendChild(renderer.domElement);
 const spark = new SparkRenderer({ renderer });
 scene.add(spark);
 
-const splat = new SplatMesh({ url: "/assets/splats/cholla.spz" });
-splat.position.set(-1, 0.5, 2);
-splat.rotation.z = THREE.MathUtils.degToRad(180); // adjust to rotate the splat
-splat.rotation.y = THREE.MathUtils.degToRad(180); 
-scene.add(splat);
+const environmentSplat = new SplatMesh({ url: "/assets/splats/cholla.spz" });
+environmentSplat.position.set(-1, 0, 2);
+environmentSplat.rotation.z = THREE.MathUtils.degToRad(180); // adjust to rotate the splat
+environmentSplat.rotation.y = THREE.MathUtils.degToRad(180); 
+scene.add(environmentSplat);
 
 // Waves shader effect: pulses color and displaces splats along a sine field
 // over time, adapted from https://github.com/sparkjsdev/spark/blob/main/examples/splat-shader-effects/index.html
@@ -76,7 +147,7 @@ const cursorInfluence = dyno.dynoFloat(0);
 const cursorRadius = dyno.dynoFloat(0.9);
 const scaleAmplitude = dyno.dynoFloat(0.3);
 const scaleSpeed = dyno.dynoFloat(2.0);
-splat.objectModifier = dyno.dynoBlock(
+environmentSplat.objectModifier = dyno.dynoBlock(
   { gsplat: dyno.Gsplat },
   { gsplat: dyno.Gsplat },
   ({ gsplat }) => {
@@ -138,11 +209,70 @@ splat.objectModifier = dyno.dynoBlock(
     return { gsplat };
   },
 );
-splat.updateGenerator();
+environmentSplat.updateGenerator();
 
 const momSplat = new SplatMesh({ url: "/assets/splats/mom.spz" });
 momSplat.position.set(0, 0, 0);
-// scene.add(momSplat);
+scene.add(momSplat);
+
+// Keep mom.spz in a constant abstract "scattering" state: each splat drifts
+// outward and back along its own random direction, flickering toward white
+// at the peak of its drift.
+// Pattern adapted from https://github.com/sparkjsdev/spark/blob/main/examples/splat-dissolve-effects/index.html
+const scatterTime = dyno.dynoFloat(0);
+const scatterAmount = dyno.dynoFloat(0.4); // how far splats drift at the peak
+const scatterSpeed = dyno.dynoFloat(0.1); // oscillations per second, roughly
+
+momSplat.worldModifier = dyno.dynoBlock(
+  { gsplat: dyno.Gsplat },
+  { gsplat: dyno.Gsplat },
+  ({ gsplat }) => {
+    const d = new dyno.Dyno({
+      inTypes: {
+        gsplat: dyno.Gsplat,
+        t: "float",
+        amount: "float",
+        speed: "float",
+      },
+      outTypes: { gsplat: dyno.Gsplat },
+      globals: () => [
+        dyno.unindent(/* glsl */ `
+          vec3 hash(vec3 p) {
+            return fract(sin(p * 123.456) * 123.456);
+          }
+        `),
+      ],
+      statements: ({ inputs, outputs }) => dyno.unindentLines(/* glsl */ `
+        ${outputs.gsplat} = ${inputs.gsplat};
+
+        vec3 localPos = ${inputs.gsplat}.center;
+        vec3 hashVal = hash(localPos);
+
+        vec3 moveDirection = normalize(hashVal - 0.5);
+        float phase = hashVal.x * 6.28;
+        float oscillation = sin(${inputs.t} * ${inputs.speed} * 6.28 + phase) * 0.5 + 0.5;
+        float drift = oscillation * ${inputs.amount};
+
+        ${outputs.gsplat}.center = localPos + moveDirection * drift;
+
+        vec3 scattered = mix(${inputs.gsplat}.rgba.rgb, vec3(1.0), oscillation * 0.7);
+
+        ${outputs.gsplat}.rgba.rgb = scattered;
+        ${outputs.gsplat}.rgba.a *= mix(1.0, 0.03, oscillation);
+        ${outputs.gsplat}.scales = ${inputs.gsplat}.scales * (1.0 + oscillation * 0.6);
+      `),
+    });
+
+    gsplat = d.apply({
+      gsplat,
+      t: scatterTime,
+      amount: scatterAmount,
+      speed: scatterSpeed,
+    }).gsplat;
+    return { gsplat };
+  },
+);
+momSplat.updateGenerator();
 
 let debugCamera;
 let debugControls;
@@ -167,7 +297,7 @@ if (debugMode) {
   scene.add(cameraHelper);
 
   transformControls = new TransformControls(debugCamera, renderer.domElement);
-  transformControls.attach(splat);
+  transformControls.attach(environmentSplat);
   scene.add(transformControls.getHelper());
 
   transformControls.addEventListener("dragging-changed", (event) => {
@@ -215,15 +345,18 @@ renderer.setAnimationLoop(() => {
   previousTime = currentTime;
 
   waveTime.value = currentTime / 1000;
-  splat.updateVersion();
+  environmentSplat.updateVersion();
+
+  scatterTime.value = currentTime / 1000;
+  momSplat.updateVersion();
 
   if (debugMode) {
     debugControls.update();
     cameraHelper.update();
 
-    const p = splat.position;
-    const r = splat.rotation;
-    const s = splat.scale;
+    const p = environmentSplat.position;
+    const r = environmentSplat.rotation;
+    const s = environmentSplat.scale;
     transformReadout.textContent =
       `position: ${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}\n` +
       `rotation: ${THREE.MathUtils.radToDeg(r.x).toFixed(1)}, ${THREE.MathUtils.radToDeg(r.y).toFixed(1)}, ${THREE.MathUtils.radToDeg(r.z).toFixed(1)}\n` +
@@ -233,12 +366,27 @@ renderer.setAnimationLoop(() => {
     renderer.render(scene, debugCamera);
   } else {
     orbitAngle += orbitSpeed * deltaTime;
+
+    const scrollSmoothing = 1 - Math.exp(-3 * deltaTime);
+    scrollBlend = THREE.MathUtils.lerp(scrollBlend, scrollProgress, scrollSmoothing);
+
+    const segmentCount = orbitKeyframes.length - 1;
+    const segmentProgress = THREE.MathUtils.clamp(scrollBlend, 0, 1) * segmentCount;
+    const segmentIndex = Math.min(Math.floor(segmentProgress), segmentCount - 1);
+    const segmentT = THREE.MathUtils.smoothstep(segmentProgress - segmentIndex, 0, 1);
+    const fromKeyframe = orbitKeyframes[segmentIndex];
+    const toKeyframe = orbitKeyframes[segmentIndex + 1];
+
+    activeCenter.lerpVectors(fromKeyframe.center, toKeyframe.center, segmentT);
+    activeRadius = THREE.MathUtils.lerp(fromKeyframe.radius, toKeyframe.radius, segmentT);
+    activeHeight = THREE.MathUtils.lerp(fromKeyframe.height, toKeyframe.height, segmentT);
+
     camera.position.set(
-      orbitCenter.x + orbitRadius * Math.sin(orbitAngle),
-      orbitCenter.y + orbitHeight,
-      orbitCenter.z + orbitRadius * Math.cos(orbitAngle),
+      activeCenter.x + activeRadius * Math.sin(orbitAngle),
+      activeCenter.y + activeHeight,
+      activeCenter.z + activeRadius * Math.cos(orbitAngle),
     );
-    camera.lookAt(orbitCenter);
+    camera.lookAt(activeCenter);
 
     const smoothing = 1 - Math.exp(-cameraSmoothing * deltaTime);
     currentYaw = THREE.MathUtils.lerp(currentYaw, targetYaw, smoothing);
