@@ -45,19 +45,32 @@ const activeCenter = orbitCenter.clone();
 let activeRadius = orbitRadius;
 let activeHeight = orbitHeight;
 
-let scrollProgress = 0; // raw 0-1 across the full keyframe sequence
+let scrollProgress = 0; // raw 0-1 across the camera keyframe sequence
 let scrollBlend = 0; // smoothed toward scrollProgress each frame
-const scrollRange = 2400; // px of scroll to move through all keyframes
+const cameraScrollRange = 2400; // px of scroll to move through all camera keyframes
 
 const introEl = document.querySelector(".intro");
-const introRevealAt = 0.25; // fraction of scrollRange after which the intro text appears
+const introRevealAt = 0.25; // fraction of cameraScrollRange after which the intro text appears
 const introMoveEnd = 0.45; // fraction by which it has scrolled up to its max travel
 const introFadeStart = 0.35; // fraction where it starts fading (still moving, mid-travel)
 const introFadeEnd = 0.45; // fraction where it's fully faded away
 const introMoveDistance = 500; // px it travels upward over the move range
 
+// Past the last camera keyframe (the sky point), continuing to scroll shrinks
+// the 3D view into a "window" with page padding around it, then slides that
+// window up off-screen — a test of transitioning from the 3D scene into a
+// flat 2D page. CSS-only: the wrapper is visually scaled/moved, the WebGL
+// canvas itself is never resized.
+const sceneWindowEl = document.querySelector(".scene-window");
+const windowScrollRange = 1200; // px of scroll, after cameraScrollRange, for this phase
+const windowShrinkEnd = 0.5; // fraction of windowScrollRange by which shrink completes
+const windowSlideStart = 0.5; // fraction where the shrunk window starts sliding away
+const windowSlideEnd = 1; // fraction where it's fully off-screen
+const windowTargetScale = 0.55;
+const windowTargetRadius = 24; // px
+
 function handleScroll() {
-  scrollProgress = THREE.MathUtils.clamp(window.scrollY / scrollRange, 0, 1);
+  scrollProgress = THREE.MathUtils.clamp(window.scrollY / cameraScrollRange, 0, 1);
   if (introEl) {
     const isVisible = scrollProgress >= introRevealAt;
     introEl.classList.toggle("is-visible", isVisible);
@@ -79,6 +92,27 @@ function handleScroll() {
       introEl.style.transform = "";
       introEl.style.opacity = "";
     }
+  }
+
+  if (sceneWindowEl) {
+    const windowProgress = THREE.MathUtils.clamp(
+      (window.scrollY - cameraScrollRange) / windowScrollRange,
+      0,
+      1,
+    );
+    const shrinkT = THREE.MathUtils.clamp(windowProgress / windowShrinkEnd, 0, 1);
+    const slideT = THREE.MathUtils.clamp(
+      (windowProgress - windowSlideStart) / (windowSlideEnd - windowSlideStart),
+      0,
+      1,
+    );
+
+    const scale = THREE.MathUtils.lerp(1, windowTargetScale, shrinkT);
+    const radius = THREE.MathUtils.lerp(0, windowTargetRadius, shrinkT);
+    const slideY = -slideT * window.innerHeight * 1.2;
+
+    sceneWindowEl.style.borderRadius = `${radius}px`;
+    sceneWindowEl.style.transform = `translateY(${slideY}px) scale(${scale})`;
   }
 }
 window.addEventListener("scroll", handleScroll);
@@ -127,7 +161,7 @@ window.addEventListener("pointerleave", () => {
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+document.querySelector(".scene-window").appendChild(renderer.domElement);
 
 const spark = new SparkRenderer({ renderer });
 scene.add(spark);

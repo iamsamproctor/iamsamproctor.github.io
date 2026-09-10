@@ -8,18 +8,25 @@
       html, body {
         margin: 0;
         padding: 0;
-        background: #000;
+        background: #121212;
       }
 
       .scroll-spacer {
-        height: 600vh;
+        height: 900vh;
       }
 
-      canvas {
+      .scene-window {
         position: fixed;
-        top: 0;
-        left: 0;
+        inset: 0;
         z-index: 0;
+        overflow: hidden;
+        background: #000;
+        transform-origin: 50% 50%;
+        will-change: transform;
+      }
+
+      .scene-window canvas {
+        display: block;
         cursor: none;
       }
 
@@ -107,6 +114,8 @@
     </style>
   </head>
   <body>
+    <div class="scene-window"></div>
+
     <div class="title-block">
       <h1 class="site-title">SAM PROCTOR</h1>
     </div>
