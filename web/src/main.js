@@ -69,6 +69,54 @@ const windowSlideEnd = 1; // fraction where it's fully off-screen
 const windowTargetScale = 0.55;
 const windowTargetRadius = 24; // px
 
+// The scroll-spacer exists purely to give the fixed hero/transition elements
+// room to animate; size it to exactly that distance so real page content
+// (the sections below) begins right as the transition ends.
+const scrollSpacerEl = document.querySelector(".scroll-spacer");
+if (scrollSpacerEl) {
+  scrollSpacerEl.style.height = `${cameraScrollRange + windowScrollRange}px`;
+}
+
+// Right-side dot navigation: jumps to and highlights the current section.
+const sectionNavEl = document.querySelector(".section-nav");
+if (sectionNavEl) {
+  const navButtons = Array.from(sectionNavEl.querySelectorAll("button[data-section]"));
+  const sectionTargets = navButtons.map((button) => {
+    const id = button.dataset.section;
+    const el = id === "hero" ? null : document.getElementById(id);
+    return { button, id, el };
+  });
+
+  navButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.section;
+      if (id === "hero") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      }
+    });
+  });
+
+  function updateActiveSection() {
+    const scrollY = window.scrollY;
+    let activeId = "hero";
+    for (const target of sectionTargets) {
+      if (!target.el) continue;
+      if (scrollY >= target.el.offsetTop - window.innerHeight / 2) {
+        activeId = target.id;
+      }
+    }
+    for (const { button, id } of sectionTargets) {
+      button.classList.toggle("is-active", id === activeId);
+    }
+  }
+
+  window.addEventListener("scroll", updateActiveSection);
+  window.addEventListener("resize", updateActiveSection);
+  updateActiveSection();
+}
+
 function handleScroll() {
   scrollProgress = THREE.MathUtils.clamp(window.scrollY / cameraScrollRange, 0, 1);
   if (introEl) {
@@ -118,9 +166,9 @@ function handleScroll() {
 window.addEventListener("scroll", handleScroll);
 handleScroll();
 
-const maxYaw = THREE.MathUtils.degToRad(22);
-const maxPitch = THREE.MathUtils.degToRad(22);
-const cameraSmoothing = 0.8;
+const maxYaw = THREE.MathUtils.degToRad(10);
+const maxPitch = THREE.MathUtils.degToRad(10);
+const cameraSmoothing = 0.1;
 let targetYaw = 0;
 let targetPitch = 0;
 let currentYaw = 0;

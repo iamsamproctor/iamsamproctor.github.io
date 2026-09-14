@@ -111,6 +111,155 @@
         line-height: 1.6;
         color: rgba(255, 255, 255, 0.8);
       }
+
+      .section-nav {
+        position: fixed;
+        top: 50%;
+        right: 28px;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        transform: translateY(-50%);
+      }
+
+      .section-nav button {
+        position: relative;
+        width: 10px;
+        height: 10px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        background: transparent;
+        cursor: pointer;
+        transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+      }
+
+      .section-nav button:hover {
+        border-color: #ffffff;
+      }
+
+      .section-nav button.is-active {
+        background: #ffffff;
+        border-color: #ffffff;
+        transform: scale(1.2);
+      }
+
+      .section-nav button .section-nav-label {
+        position: absolute;
+        right: 22px;
+        top: 50%;
+        transform: translateY(-50%);
+        white-space: nowrap;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .section-nav button:hover .section-nav-label {
+        opacity: 0.8;
+      }
+
+      .page-section {
+        position: relative;
+        z-index: 1;
+        background: #121212;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+        padding: 120px 32px;
+      }
+
+      .page-section-inner {
+        max-width: 860px;
+        margin: 0 auto;
+      }
+
+      .page-section h2 {
+        margin: 0 0 24px;
+        font-size: clamp(28px, 4vw, 44px);
+        font-weight: 300;
+        letter-spacing: 0.02em;
+      }
+
+      .page-section p {
+        margin: 0 0 16px;
+        font-size: clamp(14px, 1.4vw, 16px);
+        line-height: 1.7;
+        color: rgba(255, 255, 255, 0.75);
+        max-width: 560px;
+      }
+
+      .work-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-top: 48px;
+      }
+
+      .work-item {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        aspect-ratio: 16 / 10;
+        background: #1c1c1c;
+      }
+
+      .work-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.4s ease;
+      }
+
+      .work-item:hover img {
+        transform: scale(1.05);
+      }
+
+      .work-item-label {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 12px 16px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0));
+        font-size: 13px;
+        letter-spacing: 0.04em;
+      }
+
+      .contact-link {
+        display: inline-block;
+        margin-top: 12px;
+        color: #ffffff;
+        font-size: clamp(16px, 2vw, 20px);
+        text-decoration: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+        padding-bottom: 2px;
+      }
+
+      .contact-link:hover {
+        border-color: #ffffff;
+      }
+
+      @media (max-width: 640px) {
+        .work-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .section-nav {
+          right: 16px;
+        }
+
+        .section-nav .section-nav-label {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -130,7 +279,66 @@
 
     <div class="cursor-dot"></div>
 
+    <nav class="section-nav" aria-label="Section navigation">
+      <button type="button" data-section="hero" aria-label="Intro">
+        <span class="section-nav-label">Intro</span>
+      </button>
+      <button type="button" data-section="work" aria-label="Work">
+        <span class="section-nav-label">Work</span>
+      </button>
+      <button type="button" data-section="about" aria-label="About">
+        <span class="section-nav-label">About</span>
+      </button>
+      <button type="button" data-section="contact" aria-label="Contact">
+        <span class="section-nav-label">Contact</span>
+      </button>
+    </nav>
+
     <div class="scroll-spacer"></div>
+
+    <section id="work" class="page-section">
+      <div class="page-section-inner">
+        <h2>Work</h2>
+        <p>A few recent projects.</p>
+        <div class="work-grid">
+          <div class="work-item">
+            <img src="/assets/images/Thumbnail_JourneyToTheSambaVerse.jpg" alt="Journey to the Sambaverse" />
+            <div class="work-item-label">Journey to the Sambaverse</div>
+          </div>
+          <div class="work-item">
+            <img src="/assets/images/Thumbnail_JaduFight.jpg" alt="Jadu Fight" />
+            <div class="work-item-label">Jadu Fight</div>
+          </div>
+          <div class="work-item">
+            <img src="/assets/images/Thumbnail_HandheldGuy.jpg" alt="Handheld Guy" />
+            <div class="work-item-label">Handheld Guy</div>
+          </div>
+          <div class="work-item">
+            <img src="/assets/images/Thumbnail_Panic.jpg" alt="Panic" />
+            <div class="work-item-label">Panic</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="page-section">
+      <div class="page-section-inner">
+        <h2>About</h2>
+        <p>
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+          ad minim veniam, quis nostrud exercitation ullamco laboris.
+        </p>
+      </div>
+    </section>
+
+    <section id="contact" class="page-section">
+      <div class="page-section-inner">
+        <h2>Contact</h2>
+        <p>Say hello.</p>
+        <a class="contact-link" href="mailto:iamsamproctor@gmail.com">iamsamproctor@gmail.com</a>
+      </div>
+    </section>
 
     <script type="module" src="/src/main.js"></script>
   </body>
