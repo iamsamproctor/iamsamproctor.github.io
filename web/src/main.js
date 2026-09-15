@@ -70,15 +70,24 @@ const windowTargetScale = 0.55;
 const windowTargetRadius = 24; // px
 
 // The scroll-spacer exists purely to give the fixed hero/transition elements
-// room to animate; size it to exactly that distance so real page content
-// (the sections below) begins right as the transition ends.
+// room to animate. It needs to cover that scroll distance *plus* one extra
+// viewport height of buffer — otherwise the next section's opaque background
+// scrolls into view (and visually clips the shrinking/sliding frame) before
+// the slide-away animation has actually carried it off-screen.
 const scrollSpacerEl = document.querySelector(".scroll-spacer");
-if (scrollSpacerEl) {
-  scrollSpacerEl.style.height = `${cameraScrollRange + windowScrollRange}px`;
+function sizeScrollSpacer() {
+  if (scrollSpacerEl) {
+    scrollSpacerEl.style.height = `${cameraScrollRange + windowScrollRange + window.innerHeight}px`;
+  }
 }
+sizeScrollSpacer();
+window.addEventListener("resize", sizeScrollSpacer);
 
 // Right-side dot navigation: jumps to and highlights the current section.
+// Highlighting is applied once per rendered frame (see applyScrollEffects)
+// rather than on every raw scroll event, for the same reason as above.
 const sectionNavEl = document.querySelector(".section-nav");
+let updateActiveSection = () => {};
 if (sectionNavEl) {
   const navButtons = Array.from(sectionNavEl.querySelectorAll("button[data-section]"));
   const sectionTargets = navButtons.map((button) => {
@@ -98,8 +107,7 @@ if (sectionNavEl) {
     });
   });
 
-  function updateActiveSection() {
-    const scrollY = window.scrollY;
+  updateActiveSection = (scrollY) => {
     let activeId = "hero";
     for (const target of sectionTargets) {
       if (!target.el) continue;
@@ -110,15 +118,37 @@ if (sectionNavEl) {
     for (const { button, id } of sectionTargets) {
       button.classList.toggle("is-active", id === activeId);
     }
-  }
+  };
 
-  window.addEventListener("scroll", updateActiveSection);
-  window.addEventListener("resize", updateActiveSection);
-  updateActiveSection();
+  window.addEventListener("resize", () => updateActiveSection(window.scrollY));
+  updateActiveSection(window.scrollY);
 }
 
+// Scroll events on mobile can fire much more frequently than animation
+// frames. The listener itself just records the raw value (cheap); the actual
+// DOM writes below happen once per rendered frame in the animation loop, so
+// they don't compete with WebGL rendering for main-thread time mid-scroll.
+let latestScrollY = window.scrollY;
+// The idle orbit keeps the camera constantly moving, which forces a fresh
+// splat depth-sort every frame even when nothing else is happening. Freezing
+// it for the duration of a scroll (plus a short settle delay) removes that
+// extra motion during the exact moment mobile is already under load.
+let isScrolling = false;
+let scrollIdleTimer = null;
+const scrollIdleDelay = 150; // ms of no scroll events before orbit resumes
 function handleScroll() {
-  scrollProgress = THREE.MathUtils.clamp(window.scrollY / cameraScrollRange, 0, 1);
+  latestScrollY = window.scrollY;
+  isScrolling = true;
+  clearTimeout(scrollIdleTimer);
+  scrollIdleTimer = setTimeout(() => {
+    isScrolling = false;
+  }, scrollIdleDelay);
+}
+window.addEventListener("scroll", handleScroll, { passive: true });
+handleScroll();
+
+function applyScrollEffects(scrollY) {
+  scrollProgress = THREE.MathUtils.clamp(scrollY / cameraScrollRange, 0, 1);
   if (introEl) {
     const isVisible = scrollProgress >= introRevealAt;
     introEl.classList.toggle("is-visible", isVisible);
@@ -144,7 +174,7 @@ function handleScroll() {
 
   if (sceneWindowEl) {
     const windowProgress = THREE.MathUtils.clamp(
-      (window.scrollY - cameraScrollRange) / windowScrollRange,
+      (scrollY - cameraScrollRange) / windowScrollRange,
       0,
       1,
     );
@@ -162,9 +192,10 @@ function handleScroll() {
     sceneWindowEl.style.borderRadius = `${radius}px`;
     sceneWindowEl.style.transform = `translateY(${slideY}px) scale(${scale})`;
   }
+
+  updateActiveSection(scrollY);
 }
-window.addEventListener("scroll", handleScroll);
-handleScroll();
+applyScrollEffects(latestScrollY);
 
 const maxYaw = THREE.MathUtils.degToRad(10);
 const maxPitch = THREE.MathUtils.degToRad(10);
@@ -206,15 +237,20 @@ window.addEventListener("pointerleave", () => {
   }
 });
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// Splat rendering re-sorts and shades every splat each frame, so pixel count
+// and antialiasing cost matter a lot more here than in a typical scene.
+// Touch devices are assumed to be less powerful GPUs, so they get a lower
+// pixel ratio and no MSAA to keep frame time down.
+const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+const renderer = new THREE.WebGLRenderer({ antialias: !isTouchDevice });
+renderer.setPixelRatio(isTouchDevice ? 1 : Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.querySelector(".scene-window").appendChild(renderer.domElement);
 
 const spark = new SparkRenderer({ renderer });
 scene.add(spark);
 
-const environmentSplat = new SplatMesh({ url: "/assets/splats/cholla.spz" });
+const environmentSplat = new SplatMesh({ url: "/assets/splats/cholla2.spz" });
 environmentSplat.position.set(-1, 0, 2);
 environmentSplat.rotation.z = THREE.MathUtils.degToRad(180); // adjust to rotate the splat
 environmentSplat.rotation.y = THREE.MathUtils.degToRad(180); 
@@ -295,15 +331,18 @@ environmentSplat.updateGenerator();
 
 const momSplat = new SplatMesh({ url: "/assets/splats/mom.spz" });
 momSplat.position.set(0, 0, 0);
-scene.add(momSplat);
+// scene.add(momSplat);
 
-// Keep mom.spz in a constant abstract "scattering" state: each splat drifts
-// outward and back along its own random direction, flickering toward white
-// at the peak of its drift.
+// Breathe mom.spz between solid and a scattered, abstract state: a slow
+// global envelope eases from 0 (solid) to 1 (fully disintegrated) and back,
+// while each splat drifts outward along its own random direction and
+// flickers toward white at the peak of the cycle.
 // Pattern adapted from https://github.com/sparkjsdev/spark/blob/main/examples/splat-dissolve-effects/index.html
 const scatterTime = dyno.dynoFloat(0);
 const scatterAmount = dyno.dynoFloat(0.4); // how far splats drift at the peak
 const scatterSpeed = dyno.dynoFloat(0.1); // oscillations per second, roughly
+const scatterEnvelope = dyno.dynoFloat(0); // 0 = fully solid, 1 = fully disintegrated
+const scatterCyclePeriod = 16; // seconds for one full solid -> disintegrate -> solid cycle
 
 momSplat.worldModifier = dyno.dynoBlock(
   { gsplat: dyno.Gsplat },
@@ -315,6 +354,7 @@ momSplat.worldModifier = dyno.dynoBlock(
         t: "float",
         amount: "float",
         speed: "float",
+        envelope: "float",
       },
       outTypes: { gsplat: dyno.Gsplat },
       globals: () => [
@@ -333,6 +373,7 @@ momSplat.worldModifier = dyno.dynoBlock(
         vec3 moveDirection = normalize(hashVal - 0.5);
         float phase = hashVal.x * 6.28;
         float oscillation = sin(${inputs.t} * ${inputs.speed} * 6.28 + phase) * 0.5 + 0.5;
+        oscillation *= ${inputs.envelope};
         float drift = oscillation * ${inputs.amount};
 
         ${outputs.gsplat}.center = localPos + moveDirection * drift;
@@ -350,6 +391,7 @@ momSplat.worldModifier = dyno.dynoBlock(
       t: scatterTime,
       amount: scatterAmount,
       speed: scatterSpeed,
+      envelope: scatterEnvelope,
     }).gsplat;
     return { gsplat };
   },
@@ -430,6 +472,11 @@ renderer.setAnimationLoop(() => {
   environmentSplat.updateVersion();
 
   scatterTime.value = currentTime / 1000;
+  const scatterCyclePhase =
+    ((currentTime / 1000) % scatterCyclePeriod) / scatterCyclePeriod;
+  // Eased 0 -> 1 -> 0 breathing cycle: lingers calm near the solid ends and
+  // slowly dissolves through the middle, rather than jumping straight in.
+  scatterEnvelope.value = (1 - Math.cos(scatterCyclePhase * Math.PI * 2)) / 2;
   momSplat.updateVersion();
 
   if (debugMode) {
@@ -447,7 +494,11 @@ renderer.setAnimationLoop(() => {
 
     renderer.render(scene, debugCamera);
   } else {
-    orbitAngle += orbitSpeed * deltaTime;
+    applyScrollEffects(latestScrollY);
+
+    if (!isScrolling) {
+      orbitAngle += orbitSpeed * deltaTime;
+    }
 
     const scrollSmoothing = 1 - Math.exp(-3 * deltaTime);
     scrollBlend = THREE.MathUtils.lerp(scrollBlend, scrollProgress, scrollSmoothing);
