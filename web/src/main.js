@@ -3,6 +3,14 @@ import { SparkRenderer, SplatMesh, dyno } from "@sparkjsdev/spark";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { revealOnEnter } from "./textReveal.js";
+import { createLoadingScreen } from "./loadingScreen.js";
+
+const loadingScreen = createLoadingScreen({
+  assets: [
+    { id: "environment", bytes: 2359717 },
+    { id: "mom", bytes: 3296646 },
+  ],
+});
 
 const debugMode = new URLSearchParams(window.location.search).has("debug");
 
@@ -206,8 +214,6 @@ let targetPitch = 0;
 let currentYaw = 0;
 let currentPitch = 0;
 
-const cursorDot = document.querySelector(".cursor-dot");
-
 window.addEventListener("pointermove", (event) => {
   const horizontalPosition = THREE.MathUtils.clamp(
     (event.clientX / window.innerWidth) * 2 - 1,
@@ -222,20 +228,11 @@ window.addEventListener("pointermove", (event) => {
 
   targetYaw = -horizontalPosition * maxYaw;
   targetPitch = verticalPosition * maxPitch;
-
-  if (cursorDot) {
-    cursorDot.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
-    cursorDot.style.opacity = "1";
-  }
 });
 
 window.addEventListener("pointerleave", () => {
   targetYaw = 0;
   targetPitch = 0;
-
-  if (cursorDot) {
-    cursorDot.style.opacity = "0";
-  }
 });
 
 // Splat rendering re-sorts and shades every splat each frame, so pixel count
@@ -251,7 +248,11 @@ document.querySelector(".scene-window").appendChild(renderer.domElement);
 const spark = new SparkRenderer({ renderer });
 scene.add(spark);
 
-const environmentSplat = new SplatMesh({ url: "/assets/splats/cholla2.spz" });
+const environmentSplat = new SplatMesh({
+  url: "/assets/splats/cholla2.spz",
+  onProgress: (event) =>
+    loadingScreen.report("environment", event.loaded, event.total),
+});
 environmentSplat.position.set(-1, 0, 2);
 environmentSplat.rotation.z = THREE.MathUtils.degToRad(180); // adjust to rotate the splat
 environmentSplat.rotation.y = THREE.MathUtils.degToRad(180); 
@@ -330,8 +331,15 @@ environmentSplat.objectModifier = dyno.dynoBlock(
 );
 environmentSplat.updateGenerator();
 
-const momSplat = new SplatMesh({ url: "/assets/splats/mom.spz" });
+const momSplat = new SplatMesh({
+  url: "/assets/splats/mom.spz",
+  onProgress: (event) => loadingScreen.report("mom", event.loaded, event.total),
+});
 momSplat.position.set(0, 0, 0);
+
+Promise.all([environmentSplat.initialized, momSplat.initialized]).then(() =>
+  loadingScreen.finish(),
+);
 // scene.add(momSplat);
 
 // Breathe mom.spz between solid and a scattered, abstract state: a slow

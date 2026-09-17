@@ -28,22 +28,6 @@
 
       .scene-window canvas {
         display: block;
-        cursor: none;
-      }
-
-      .cursor-dot {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 10px;
-        height: 10px;
-        margin: -5px 0 0 -5px;
-        border-radius: 50%;
-        background: #ffffff;
-        pointer-events: none;
-        z-index: 2;
-        opacity: 0;
-        transition: opacity 0.2s ease;
       }
 
       .title-block {
@@ -418,15 +402,122 @@
           flex-grow: 0;
         }
 
-        .work-cell-bar,
-        .work-cell-meta {
-          flex-wrap: wrap;
-          white-space: normal;
+        .work-cell-bar {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
         }
 
         .work-cell-meta {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 6px;
+          white-space: normal;
           opacity: 1;
         }
+
+        .work-cell-title {
+          white-space: normal;
+        }
+
+        .work-cell-blurb {
+          white-space: normal;
+        }
+      }
+
+      .loader {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        background: #000000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+      }
+
+      .loader-mark {
+        position: absolute;
+        top: 24px;
+        left: 32px;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 12px;
+        font-weight: 400;
+        letter-spacing: 0.2em;
+      }
+
+      .loader-readout {
+        position: absolute;
+        left: 32px;
+        right: 32px;
+        bottom: 56px;
+      }
+
+      .loader-percent {
+        margin: 0 0 24px;
+        color: #ffffff;
+        font-size: clamp(56px, 11vw, 132px);
+        font-weight: 300;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+
+      .loader-bar {
+        height: 2px;
+        background: rgba(255, 255, 255, 0.15);
+        overflow: hidden;
+      }
+
+      .loader-bar-fill {
+        height: 100%;
+        background: #ffffff;
+        transform: scaleX(0);
+        transform-origin: 0 50%;
+      }
+
+      .loader-enter {
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: transparent;
+        color: #ffffff;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        opacity: 0;
+        pointer-events: none;
+        cursor: pointer;
+        transition:
+          background 0.3s ease,
+          color 0.3s ease,
+          border-color 0.3s ease;
+      }
+
+      .loader-enter.is-ready {
+        pointer-events: auto;
+      }
+
+      .loader-enter:hover {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #000000;
+      }
+
+      body.is-loading {
+        overflow: hidden;
+      }
+
+      .title-block {
+        transition: opacity 0.8s ease 0.2s;
+      }
+
+      body.is-loading .title-block {
+        opacity: 0;
       }
 
       @media (max-width: 640px) {
@@ -437,10 +528,29 @@
         .section-nav .section-nav-label {
           display: none;
         }
+
+        .loader-mark {
+          left: 20px;
+        }
+
+        .loader-readout {
+          left: 20px;
+          right: 20px;
+          bottom: 40px;
+        }
       }
     </style>
   </head>
   <body>
+    <div class="loader">
+      <span class="loader-mark">SAM PROCTOR</span>
+      <button type="button" class="loader-enter">Enter</button>
+      <div class="loader-readout">
+        <div class="loader-percent"><span class="loader-percent-value">0</span>%</div>
+        <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+      </div>
+    </div>
+
     <div class="scene-window"></div>
 
     <div class="title-block">
@@ -454,8 +564,6 @@
         tempor incididunt ut labore et dolore magna aliqua.
       </p>
     </div>
-
-    <div class="cursor-dot"></div>
 
     <nav class="section-nav" aria-label="Section navigation">
       <button type="button" data-section="hero" aria-label="Intro">
