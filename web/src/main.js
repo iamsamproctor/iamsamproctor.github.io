@@ -530,3 +530,24 @@ renderer.setAnimationLoop(() => {
     renderer.render(scene, camera);
   }
 });
+
+document.querySelectorAll('.work-cell').forEach((cell) => {
+  const video = cell.querySelector('video');
+
+  const activate = () => {
+    video.currentTime = 0;
+    video.play().catch(() => {});
+  };
+
+  const deactivate = () => {
+    video.pause();
+  };
+
+  cell.addEventListener('pointerenter', activate);
+  cell.addEventListener('focus', activate);
+  cell.addEventListener('pointerleave', deactivate);
+  cell.addEventListener('blur', deactivate);
+  cell.addEventListener('click', () => {
+    console.log(`Clicked ${cell.dataset.work}`);
+  });
+});
