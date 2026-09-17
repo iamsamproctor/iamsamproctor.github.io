@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { SparkRenderer, SplatMesh, dyno } from "@sparkjsdev/spark";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { revealOnEnter } from "./textReveal.js";
 
 const debugMode = new URLSearchParams(window.location.search).has("debug");
 
@@ -551,3 +552,8 @@ document.querySelectorAll('.work-cell').forEach((cell) => {
     console.log(`Clicked ${cell.dataset.work}`);
   });
 });
+
+const workIntro = document.querySelector(".work-intro");
+if (workIntro) {
+  revealOnEnter(workIntro, { lockWidths: false });
+}
