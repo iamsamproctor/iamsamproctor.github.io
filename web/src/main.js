@@ -39,10 +39,11 @@ const focusCenter = new THREE.Vector3(0, 0.7, 0);
 const focusRadius = 1.5;
 const focusHeight = 0.1;
 
-// Third point high above the scene, looking down at it.
+// Third point: high and far out, looking down at the scene from a distance
+// rather than straight overhead (bird's-eye).
 const skyCenter = new THREE.Vector3(0, 0, 0);
-const skyRadius = 4;
-const skyHeight = 9;
+const skyRadius = 10;
+const skyHeight = 4;
 
 const orbitKeyframes = [
   { center: orbitCenter, radius: orbitRadius, height: orbitHeight },
@@ -92,7 +93,7 @@ document.fonts.ready.then(measureIntroRise);
 // flat 2D page. CSS-only: the wrapper is visually scaled/moved, the WebGL
 // canvas itself is never resized.
 const sceneWindowEl = document.querySelector(".scene-window");
-const windowScrollRange = 1200; // px of scroll, after cameraScrollRange, for this phase
+const windowScrollRange = 450; // px of scroll, after cameraScrollRange, for this phase
 const windowShrinkEnd = 0.5; // fraction of windowScrollRange by which shrink completes
 const windowSlideStart = 0.5; // fraction where the shrunk window starts sliding away
 const windowSlideEnd = 1; // fraction where it's fully off-screen
@@ -593,3 +594,7 @@ const workIntro = document.querySelector(".work-intro");
 if (workIntro) {
   revealOnEnter(workIntro, { lockWidths: false });
 }
+
+document.querySelector(".contact-button")?.addEventListener("click", () => {
+  console.log("Clicked contact");
+});

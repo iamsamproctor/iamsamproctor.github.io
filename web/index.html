@@ -66,6 +66,40 @@
         letter-spacing: 0.15em;
       }
 
+      .contact-button {
+        position: fixed;
+        top: 20px;
+        right: 32px;
+        z-index: 4;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.2);
+        color: #ffffff;
+        cursor: pointer;
+        transition:
+          background 0.25s ease,
+          border-color 0.25s ease,
+          transform 0.25s ease;
+      }
+
+      .contact-button svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+      }
+
+      .contact-button:hover {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #000000;
+        transform: scale(1.08);
+      }
+
       .intro {
         position: fixed;
         left: 32px;
@@ -556,6 +590,18 @@
       }
 
       @media (max-width: 640px) {
+        .contact-button {
+          top: 16px;
+          right: 16px;
+          width: 38px;
+          height: 38px;
+        }
+
+        .contact-button svg {
+          width: 16px;
+          height: 16px;
+        }
+
         .section-nav {
           right: 16px;
         }
@@ -596,6 +642,12 @@
     <div class="title-block">
       <h1 class="site-title">SAM PROCTOR</h1>
     </div>
+
+    <button type="button" class="contact-button" aria-label="Contact">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.6 10.8c1.6 3.2 4.4 6 7.6 7.6l2.5-2.5c.3-.3.8-.4 1.2-.3 1.3.4 2.7.7 4.1.7.6 0 1 .4 1 1v3.6c0 .6-.4 1-1 1C10.9 22 2 13.1 2 2c0-.6.4-1 1-1h3.6c.6 0 1 .4 1 1 0 1.4.2 2.8.7 4.1.1.4 0 .9-.3 1.2z" />
+      </svg>
+    </button>
 
     <div class="intro">
       <h2 class="intro-heading">Hi, I'm Sam.</h2>
