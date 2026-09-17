@@ -52,15 +52,26 @@ export function createTextReveal(
   const fragment = document.createDocumentFragment();
   const chars = [];
 
+  // Characters are grouped into word wrappers so that locking their widths
+  // cannot introduce mid-word line breaks: inline-block boxes are atomic
+  // inlines, and lines may otherwise break between any two of them.
+  let word = null;
+
   for (const value of text) {
     if (value === " ") {
+      word = null;
       fragment.appendChild(document.createTextNode(" "));
       continue;
+    }
+    if (!word) {
+      word = document.createElement("span");
+      word.className = "reveal-word";
+      fragment.appendChild(word);
     }
     const span = document.createElement("span");
     span.className = "reveal-char";
     span.textContent = value;
-    fragment.appendChild(span);
+    word.appendChild(span);
     chars.push({ span, value, phase: DONE, lastSwap: -Infinity });
   }
 

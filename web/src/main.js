@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { SparkRenderer, SplatMesh, dyno } from "@sparkjsdev/spark";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
-import { revealOnEnter } from "./textReveal.js";
+import { createTextReveal, revealOnEnter } from "./textReveal.js";
 import { createLoadingScreen } from "./loadingScreen.js";
 
 const loadingScreen = createLoadingScreen({
@@ -59,11 +59,32 @@ let scrollBlend = 0; // smoothed toward scrollProgress each frame
 const cameraScrollRange = 2400; // px of scroll to move through all camera keyframes
 
 const introEl = document.querySelector(".intro");
+const introBodyEl = document.querySelector(".intro-body");
+const introBodyReveal = introBodyEl
+  ? createTextReveal(introBodyEl, { lockWidths: true })
+  : null;
+let introWasVisible = false;
 const introRevealAt = 0.25; // fraction of cameraScrollRange after which the intro text appears
-const introMoveEnd = 0.45; // fraction by which it has scrolled up to its max travel
-const introFadeStart = 0.35; // fraction where it starts fading (still moving, mid-travel)
-const introFadeEnd = 0.45; // fraction where it's fully faded away
-const introMoveDistance = 500; // px it travels upward over the move range
+const introSettleAt = 0.42; // fraction by which it has risen into its resting position
+const introFadeStart = 0.7; // holds full opacity all the way to here
+const introFadeEnd = 0.78; // fraction where it's fully faded away
+const introExitDistance = 220; // px it continues scrolling up while fading out
+
+// Rise far enough that the block's center lands on the viewport's vertical
+// center, so it locks there for the hold phase instead of stopping near the
+// top or bottom.
+let introRise = 0;
+
+function measureIntroRise() {
+  if (!introEl) return;
+  introRise = Math.max(
+    window.innerHeight / 2 - 64 - introEl.offsetHeight / 2,
+    0,
+  );
+}
+
+measureIntroRise();
+document.fonts.ready.then(measureIntroRise);
 
 // Past the last camera keyframe (the sky point), continuing to scroll shrinks
 // the 3D view into a "window" with page padding around it, then slides that
@@ -162,18 +183,24 @@ function applyScrollEffects(scrollY) {
     const isVisible = scrollProgress >= introRevealAt;
     introEl.classList.toggle("is-visible", isVisible);
 
+    if (isVisible && !introWasVisible && introBodyReveal) {
+      introBodyReveal.play();
+    }
+    introWasVisible = isVisible;
+
     if (isVisible) {
-      const moveT = THREE.MathUtils.clamp(
-        (scrollProgress - introRevealAt) / (introMoveEnd - introRevealAt),
+      const riseT = THREE.MathUtils.smoothstep(
+        (scrollProgress - introRevealAt) / (introSettleAt - introRevealAt),
         0,
         1,
       );
-      const fadeT = THREE.MathUtils.clamp(
+      const fadeT = THREE.MathUtils.smoothstep(
         (scrollProgress - introFadeStart) / (introFadeEnd - introFadeStart),
         0,
         1,
       );
-      introEl.style.transform = `translateY(${-moveT * introMoveDistance}px)`;
+      const travel = riseT * introRise + fadeT * introExitDistance;
+      introEl.style.transform = `translateY(${-travel}px)`;
       introEl.style.opacity = String(1 - fadeT);
     } else {
       introEl.style.transform = "";
@@ -340,7 +367,7 @@ momSplat.position.set(0, 0, 0);
 Promise.all([environmentSplat.initialized, momSplat.initialized]).then(() =>
   loadingScreen.finish(),
 );
-// scene.add(momSplat);
+scene.add(momSplat);
 
 // Breathe mom.spz between solid and a scattered, abstract state: a slow
 // global envelope eases from 0 (solid) to 1 (fully disintegrated) and back,
@@ -468,6 +495,7 @@ function handleResize() {
     debugCamera.updateProjectionMatrix();
   }
   renderer.setSize(window.innerWidth, window.innerHeight);
+  measureIntroRise();
 }
 window.addEventListener("resize", handleResize);
 
