@@ -10,6 +10,7 @@ export function createLoadingScreen({ assets, onEnter }) {
   const valueEl = root.querySelector(".loader-percent-value");
   const fillEl = root.querySelector(".loader-bar-fill");
   const enterEl = root.querySelector(".loader-enter");
+  const enterMutedEl = root.querySelector(".loader-enter-muted");
 
   const tracked = new Map(
     assets.map((asset) => [asset.id, { loaded: 0, total: asset.bytes }]),
@@ -38,17 +39,25 @@ export function createLoadingScreen({ assets, onEnter }) {
 
   const revealEnter = () => {
     enterEl.classList.add("is-ready");
-    gsap.to(enterEl, { opacity: 1, duration: 0.5, ease: "power2.out" });
+    enterMutedEl.classList.add("is-ready");
+    gsap.to([enterEl, enterMutedEl], {
+      opacity: 1,
+      duration: 0.5,
+      ease: "power2.out",
+    });
   };
 
-  enterEl.addEventListener("click", () => {
+  const enter = () => {
     gsap
       .timeline()
-      .to([valueEl.parentElement, fillEl.parentElement, enterEl], {
-        opacity: 0,
-        duration: 0.4,
-        ease: "power2.in",
-      })
+      .to(
+        [valueEl.parentElement, fillEl.parentElement, enterEl, enterMutedEl],
+        {
+          opacity: 0,
+          duration: 0.4,
+          ease: "power2.in",
+        },
+      )
       .to(root, {
         opacity: 0,
         duration: 0.8,
@@ -62,7 +71,10 @@ export function createLoadingScreen({ assets, onEnter }) {
           root.style.display = "none";
         },
       });
-  });
+  };
+
+  enterEl.addEventListener("click", enter);
+  enterMutedEl.addEventListener("click", enter);
 
   return {
     report(id, loaded, total) {

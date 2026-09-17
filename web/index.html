@@ -477,10 +477,17 @@
         transform-origin: 0 50%;
       }
 
+      .loader-enter-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+
       .loader-enter {
-        width: 132px;
-        height: 132px;
-        border-radius: 50%;
+        width: 220px;
+        height: 72px;
+        border-radius: 36px;
         border: 1px solid rgba(255, 255, 255, 0.5);
         background: transparent;
         color: #ffffff;
@@ -498,7 +505,8 @@
           border-color 0.3s ease;
       }
 
-      .loader-enter.is-ready {
+      .loader-enter.is-ready,
+      .loader-enter-muted.is-ready {
         pointer-events: auto;
       }
 
@@ -506,6 +514,26 @@
         background: #ffffff;
         border-color: #ffffff;
         color: #000000;
+      }
+
+      .loader-enter-muted {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        color: rgba(255, 255, 255, 0.5);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0;
+        pointer-events: none;
+        cursor: pointer;
+        transition: color 0.3s ease;
+      }
+
+      .loader-enter-muted:hover {
+        color: #ffffff;
       }
 
       body.is-loading {
@@ -544,7 +572,12 @@
   <body>
     <div class="loader">
       <span class="loader-mark">SAM PROCTOR</span>
-      <button type="button" class="loader-enter">Enter</button>
+      <div class="loader-enter-group">
+        <button type="button" class="loader-enter">Enter</button>
+        <button type="button" class="loader-enter-muted">
+          Enter without audio
+        </button>
+      </div>
       <div class="loader-readout">
         <div class="loader-percent"><span class="loader-percent-value">0</span>%</div>
         <div class="loader-bar"><div class="loader-bar-fill"></div></div>
