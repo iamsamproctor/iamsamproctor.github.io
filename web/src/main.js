@@ -4,12 +4,21 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { createTextReveal, revealOnEnter } from "./textReveal.js";
 import { createLoadingScreen } from "./loadingScreen.js";
+import { createRevealBurn } from "./revealBurn.js";
+import { createWorkModal } from "./workModal.js";
+
+const revealBurn = createRevealBurn();
 
 const loadingScreen = createLoadingScreen({
   assets: [
     { id: "environment", bytes: 2359717 },
     { id: "mom", bytes: 3296646 },
   ],
+  onEnter: () => {
+    revealBurn.play({
+      onReveal: () => document.body.classList.remove("is-loading"),
+    });
+  },
 });
 
 const debugMode = new URLSearchParams(window.location.search).has("debug");
@@ -58,6 +67,11 @@ let activeHeight = orbitHeight;
 let scrollProgress = 0; // raw 0-1 across the camera keyframe sequence
 let scrollBlend = 0; // smoothed toward scrollProgress each frame
 const cameraScrollRange = 2400; // px of scroll to move through all camera keyframes
+const scrollBlendSmoothing = 1.5; // rate scrollBlend chases scrollProgress; lower = more lag/slower dolly
+
+const heroHeadingEl = document.querySelector(".hero-heading");
+const heroFadeDistance = 500; // px of scroll over which it fully fades away
+const heroDriftDistance = 140; // px it drifts upward while fading
 
 const introEl = document.querySelector(".intro");
 const introBodyEl = document.querySelector(".intro-body");
@@ -66,26 +80,9 @@ const introBodyReveal = introBodyEl
   : null;
 let introWasVisible = false;
 const introRevealAt = 0.25; // fraction of cameraScrollRange after which the intro text appears
-const introSettleAt = 0.42; // fraction by which it has risen into its resting position
-const introFadeStart = 0.7; // holds full opacity all the way to here
+const introFadeStart = 0.7; // holds full opacity, anchored at its CSS position, all the way to here
 const introFadeEnd = 0.78; // fraction where it's fully faded away
-const introExitDistance = 220; // px it continues scrolling up while fading out
-
-// Rise far enough that the block's center lands on the viewport's vertical
-// center, so it locks there for the hold phase instead of stopping near the
-// top or bottom.
-let introRise = 0;
-
-function measureIntroRise() {
-  if (!introEl) return;
-  introRise = Math.max(
-    window.innerHeight / 2 - 64 - introEl.offsetHeight / 2,
-    0,
-  );
-}
-
-measureIntroRise();
-document.fonts.ready.then(measureIntroRise);
+const introExitDistance = 220; // px it scrolls up while fading out
 
 // Past the last camera keyframe (the sky point), continuing to scroll shrinks
 // the 3D view into a "window" with page padding around it, then slides that
@@ -180,6 +177,26 @@ handleScroll();
 
 function applyScrollEffects(scrollY) {
   scrollProgress = THREE.MathUtils.clamp(scrollY / cameraScrollRange, 0, 1);
+
+  if (heroHeadingEl) {
+    // Gated on is-loading rather than left to the CSS rule for it: this
+    // element's opacity is also driven inline below, and an inline style
+    // always wins over a class-based rule, so without this check it would
+    // pop in the instant the loader is removed instead of waiting for the
+    // reveal-burn's fade-in.
+    if (document.body.classList.contains("is-loading")) {
+      heroHeadingEl.style.opacity = "0";
+    } else {
+      const heroT = THREE.MathUtils.smoothstep(
+        THREE.MathUtils.clamp(scrollY / heroFadeDistance, 0, 1),
+        0,
+        1,
+      );
+      heroHeadingEl.style.opacity = String(1 - heroT);
+      heroHeadingEl.style.transform = `translateY(calc(-50% - ${heroT * heroDriftDistance}px))`;
+    }
+  }
+
   if (introEl) {
     const isVisible = scrollProgress >= introRevealAt;
     introEl.classList.toggle("is-visible", isVisible);
@@ -190,18 +207,12 @@ function applyScrollEffects(scrollY) {
     introWasVisible = isVisible;
 
     if (isVisible) {
-      const riseT = THREE.MathUtils.smoothstep(
-        (scrollProgress - introRevealAt) / (introSettleAt - introRevealAt),
-        0,
-        1,
-      );
       const fadeT = THREE.MathUtils.smoothstep(
         (scrollProgress - introFadeStart) / (introFadeEnd - introFadeStart),
         0,
         1,
       );
-      const travel = riseT * introRise + fadeT * introExitDistance;
-      introEl.style.transform = `translateY(${-travel}px)`;
+      introEl.style.transform = `translateY(${-fadeT * introExitDistance}px)`;
       introEl.style.opacity = String(1 - fadeT);
     } else {
       introEl.style.transform = "";
@@ -234,9 +245,9 @@ function applyScrollEffects(scrollY) {
 }
 applyScrollEffects(latestScrollY);
 
-const maxYaw = THREE.MathUtils.degToRad(10);
-const maxPitch = THREE.MathUtils.degToRad(10);
-const cameraSmoothing = 0.1;
+const maxYaw = THREE.MathUtils.degToRad(20);
+const maxPitch = THREE.MathUtils.degToRad(20);
+const cameraSmoothing = 0.2;
 let targetYaw = 0;
 let targetPitch = 0;
 let currentYaw = 0;
@@ -496,7 +507,7 @@ function handleResize() {
     debugCamera.updateProjectionMatrix();
   }
   renderer.setSize(window.innerWidth, window.innerHeight);
-  measureIntroRise();
+  revealBurn.setAspect(window.innerWidth / window.innerHeight);
 }
 window.addEventListener("resize", handleResize);
 
@@ -538,7 +549,7 @@ renderer.setAnimationLoop(() => {
       orbitAngle += orbitSpeed * deltaTime;
     }
 
-    const scrollSmoothing = 1 - Math.exp(-3 * deltaTime);
+    const scrollSmoothing = 1 - Math.exp(-scrollBlendSmoothing * deltaTime);
     scrollBlend = THREE.MathUtils.lerp(scrollBlend, scrollProgress, scrollSmoothing);
 
     const segmentCount = orbitKeyframes.length - 1;
@@ -567,17 +578,26 @@ renderer.setAnimationLoop(() => {
 
     renderer.render(scene, camera);
   }
+
+  revealBurn.setTime(currentTime / 1000);
+  revealBurn.render(renderer);
 });
+
+const workModal = createWorkModal();
 
 document.querySelectorAll('.work-cell').forEach((cell) => {
   const video = cell.querySelector('video');
 
+  // While the modal is open the card's video lives inside it, so the card's
+  // own hover/focus handlers must leave it alone.
   const activate = () => {
+    if (workModal.isOpenFor(cell)) return;
     video.currentTime = 0;
     video.play().catch(() => {});
   };
 
   const deactivate = () => {
+    if (workModal.isOpenFor(cell)) return;
     video.pause();
   };
 
@@ -585,9 +605,7 @@ document.querySelectorAll('.work-cell').forEach((cell) => {
   cell.addEventListener('focus', activate);
   cell.addEventListener('pointerleave', deactivate);
   cell.addEventListener('blur', deactivate);
-  cell.addEventListener('click', () => {
-    console.log(`Clicked ${cell.dataset.work}`);
-  });
+  cell.addEventListener('click', () => workModal.open(cell));
 });
 
 const workIntro = document.querySelector(".work-intro");

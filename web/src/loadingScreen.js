@@ -11,6 +11,7 @@ export function createLoadingScreen({ assets, onEnter }) {
   const fillEl = root.querySelector(".loader-bar-fill");
   const enterEl = root.querySelector(".loader-enter");
   const enterMutedEl = root.querySelector(".loader-enter-muted");
+  const markEl = root.querySelector(".loader-mark");
 
   const tracked = new Map(
     assets.map((asset) => [asset.id, { loaded: 0, total: asset.bytes }]),
@@ -47,29 +48,22 @@ export function createLoadingScreen({ assets, onEnter }) {
     });
   };
 
+  // The readout fades on its own, then the black overlay is swapped out in a
+  // single frame for the equally black reveal-burn covering the canvas. The
+  // handoff is invisible, and the burn takes over from there — so the loader
+  // never fades itself out, and `is-loading` stays on until the burn says so.
   const enter = () => {
     gsap
       .timeline()
-      .to(
-        [valueEl.parentElement, fillEl.parentElement, enterEl, enterMutedEl],
-        {
-          opacity: 0,
-          duration: 0.4,
-          ease: "power2.in",
-        },
-      )
-      .to(root, {
+      .to([markEl, valueEl.parentElement, fillEl.parentElement, enterEl, enterMutedEl], {
         opacity: 0,
-        duration: 0.8,
-        ease: "power2.inOut",
-        onStart: () => {
-          document.body.classList.remove("is-loading");
-          window.scrollTo(0, 0);
-          if (onEnter) onEnter();
-        },
-        onComplete: () => {
-          root.style.display = "none";
-        },
+        duration: 0.4,
+        ease: "power2.in",
+      })
+      .add(() => {
+        root.style.display = "none";
+        window.scrollTo(0, 0);
+        if (onEnter) onEnter();
       });
   };
 

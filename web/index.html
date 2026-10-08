@@ -84,7 +84,8 @@
         transition:
           background 0.25s ease,
           border-color 0.25s ease,
-          transform 0.25s ease;
+          transform 0.25s ease,
+          opacity 0.8s ease;
       }
 
       .contact-button svg {
@@ -100,9 +101,36 @@
         transform: scale(1.08);
       }
 
-      .intro {
+      .hero-heading {
         position: fixed;
         left: 32px;
+        right: 32px;
+        top: 50%;
+        z-index: 1;
+        max-width: 900px;
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        pointer-events: none;
+        transform: translateY(-50%);
+      }
+
+      .hero-heading h2 {
+        margin: 0;
+        font-size: clamp(36px, 6.5vw, 88px);
+        font-weight: 300;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+      }
+
+      .hero-heading h2 span {
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .intro {
+        position: fixed;
+        right: 110px;
         bottom: 64px;
         z-index: 1;
         max-width: 420px;
@@ -412,6 +440,263 @@
         color: rgba(255, 255, 255, 0.85);
       }
 
+      .work-cell.is-lifted {
+        visibility: hidden;
+      }
+
+      .work-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 8;
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+      }
+
+      .work-modal[hidden] {
+        display: none;
+      }
+
+      .work-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      .work-modal-panel {
+        position: absolute;
+        inset: 24px;
+        overflow: hidden;
+        border-radius: 16px;
+        background: #161616;
+      }
+
+      .work-modal-scroll {
+        height: 100%;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+
+      /* During the open/close morph the hero is transformed outside its box;
+         hiding overflow stops that from flashing a scrollbar. */
+      .work-modal.is-animating .work-modal-scroll {
+        overflow: hidden;
+      }
+
+      .work-modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 2;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.35);
+        color: #ffffff;
+        cursor: pointer;
+        transition:
+          background 0.25s ease,
+          border-color 0.25s ease,
+          color 0.25s ease,
+          transform 0.25s ease;
+      }
+
+      .work-modal-close svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+      }
+
+      .work-modal-close:hover {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #000000;
+        transform: scale(1.08);
+      }
+
+      .work-modal-hero {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        max-height: 78vh;
+        overflow: hidden;
+        background: #000000;
+        transform-origin: 50% 50%;
+      }
+
+      .work-modal-hero img,
+      .work-modal-hero video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .work-modal-hero::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 30%;
+        background: linear-gradient(to top, #161616, rgba(22, 22, 22, 0));
+        pointer-events: none;
+      }
+
+      .work-modal-body {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 40px 56px 120px;
+      }
+
+      .work-modal-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 32px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .work-modal-title {
+        margin: 0;
+        font-size: clamp(36px, 5.5vw, 76px);
+        font-weight: 300;
+        line-height: 1.05;
+        letter-spacing: -0.015em;
+      }
+
+      .work-modal-meta {
+        display: flex;
+        gap: 48px;
+        margin: 0;
+        flex: 0 0 auto;
+      }
+
+      .work-modal-meta dt {
+        margin-bottom: 8px;
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.45);
+      }
+
+      .work-modal-meta dd {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: 0.02em;
+      }
+
+      .work-modal-summary {
+        max-width: 62ch;
+        margin: 32px 0 0;
+        font-size: clamp(15px, 1.5vw, 18px);
+        line-height: 1.7;
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      .work-modal-callouts {
+        display: flex;
+        flex-direction: column;
+        gap: 96px;
+        margin-top: 104px;
+      }
+
+      .work-callout {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        align-items: center;
+        gap: 56px;
+      }
+
+      .work-callout:nth-child(even) .work-callout-media {
+        order: 2;
+      }
+
+      .work-callout-media {
+        aspect-ratio: 16 / 10;
+        overflow: hidden;
+        border-radius: 10px;
+        background: #1c1c1c;
+      }
+
+      .work-callout-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .work-callout-index {
+        display: block;
+        margin-bottom: 16px;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .work-callout-title {
+        margin: 0 0 14px;
+        font-size: clamp(20px, 2.2vw, 28px);
+        font-weight: 300;
+        letter-spacing: 0.01em;
+      }
+
+      .work-callout-body {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.7;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      @media (max-width: 900px) {
+        .work-modal-panel {
+          inset: 10px;
+          border-radius: 12px;
+        }
+
+        .work-modal-close {
+          top: 12px;
+          right: 12px;
+          width: 38px;
+          height: 38px;
+        }
+
+        .work-modal-body {
+          padding: 28px 20px 72px;
+        }
+
+        .work-modal-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 24px;
+        }
+
+        .work-modal-callouts {
+          gap: 56px;
+          margin-top: 64px;
+        }
+
+        .work-callout {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+
+        .work-callout:nth-child(even) .work-callout-media {
+          order: 0;
+        }
+      }
+
       .contact-link {
         display: inline-block;
         margin-top: 12px;
@@ -585,8 +870,21 @@
         transition: opacity 0.8s ease 0.2s;
       }
 
-      body.is-loading .title-block {
+      .section-nav {
+        transition: opacity 0.8s ease;
+      }
+
+      body.is-loading .title-block,
+      body.is-loading .contact-button,
+      body.is-loading .section-nav,
+      body.is-loading .hero-heading {
         opacity: 0;
+      }
+
+      @media (max-width: 640px) {
+        .hero-heading {
+          top: 42%;
+        }
       }
 
       @media (max-width: 640px) {
@@ -608,6 +906,10 @@
 
         .section-nav .section-nav-label {
           display: none;
+        }
+
+        .intro {
+          right: 40px;
         }
 
         .loader-mark {
@@ -632,7 +934,9 @@
         </button>
       </div>
       <div class="loader-readout">
-        <div class="loader-percent"><span class="loader-percent-value">0</span>%</div>
+        <div class="loader-percent">
+          <span class="loader-percent-value">0</span>%
+        </div>
         <div class="loader-bar"><div class="loader-bar-fill"></div></div>
       </div>
     </div>
@@ -644,10 +948,26 @@
     </div>
 
     <button type="button" class="contact-button" aria-label="Contact">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6.6 10.8c1.6 3.2 4.4 6 7.6 7.6l2.5-2.5c.3-.3.8-.4 1.2-.3 1.3.4 2.7.7 4.1.7.6 0 1 .4 1 1v3.6c0 .6-.4 1-1 1C10.9 22 2 13.1 2 2c0-.6.4-1 1-1h3.6c.6 0 1 .4 1 1 0 1.4.2 2.8.7 4.1.1.4 0 .9-.3 1.2z" />
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path
+          d="M6.6 10.8c1.6 3.2 4.4 6 7.6 7.6l2.5-2.5c.3-.3.8-.4 1.2-.3 1.3.4 2.7.7 4.1.7.6 0 1 .4 1 1v3.6c0 .6-.4 1-1 1C10.9 22 2 13.1 2 2c0-.6.4-1 1-1h3.6c.6 0 1 .4 1 1 0 1.4.2 2.8.7 4.1.1.4 0 .9-.3 1.2z"
+        />
       </svg>
     </button>
+
+    <div class="hero-heading">
+      <h2>
+        Bridging physical<br />
+        <span>and digital realities.</span>
+      </h2>
+    </div>
 
     <div class="intro">
       <h2 class="intro-heading">Hi, I'm Sam.</h2>
@@ -688,18 +1008,30 @@
       </header>
 
       <div class="work-cells">
-        <button type="button" class="work-cell" data-work="Journey to the Sambaverse">
+        <button
+          type="button"
+          class="work-cell"
+          data-work="Journey to the Sambaverse"
+        >
           <span class="work-cell-media">
             <img
               src="/assets/images/Thumbnail_JourneyToTheSambaVerse.jpg"
               alt="Journey to the Sambaverse"
             />
-            <video src="/assets/videos/trees.mp4" muted loop playsinline preload="none"></video>
+            <video
+              src="/assets/videos/trees.mp4"
+              muted
+              loop
+              playsinline
+              preload="none"
+            ></video>
           </span>
           <span class="work-cell-bar">
             <span class="work-cell-title">Journey to the Sambaverse</span>
             <span class="work-cell-meta">
-              <span class="work-cell-blurb">An interactive music video you move through.</span>
+              <span class="work-cell-blurb"
+                >An interactive music video you move through.</span
+              >
               <span class="work-cell-cta">Click to explore &rarr;</span>
             </span>
           </span>
@@ -707,13 +1039,24 @@
 
         <button type="button" class="work-cell" data-work="Jadu Fight">
           <span class="work-cell-media">
-            <img src="/assets/images/Thumbnail_JaduFight.jpg" alt="Jadu Fight" />
-            <video src="/assets/videos/trees.mp4" muted loop playsinline preload="none"></video>
+            <img
+              src="/assets/images/Thumbnail_JaduFight.jpg"
+              alt="Jadu Fight"
+            />
+            <video
+              src="/assets/videos/trees.mp4"
+              muted
+              loop
+              playsinline
+              preload="none"
+            ></video>
           </span>
           <span class="work-cell-bar">
             <span class="work-cell-title">Jadu Fight</span>
             <span class="work-cell-meta">
-              <span class="work-cell-blurb">Real-time avatar combat built for the browser.</span>
+              <span class="work-cell-blurb"
+                >Real-time avatar combat built for the browser.</span
+              >
               <span class="work-cell-cta">Click to explore &rarr;</span>
             </span>
           </span>
@@ -721,13 +1064,24 @@
 
         <button type="button" class="work-cell" data-work="Handheld Guy">
           <span class="work-cell-media">
-            <img src="/assets/images/Thumbnail_HandheldGuy.jpg" alt="Handheld Guy" />
-            <video src="/assets/videos/trees.mp4" muted loop playsinline preload="none"></video>
+            <img
+              src="/assets/images/Thumbnail_HandheldGuy.jpg"
+              alt="Handheld Guy"
+            />
+            <video
+              src="/assets/videos/trees.mp4"
+              muted
+              loop
+              playsinline
+              preload="none"
+            ></video>
           </span>
           <span class="work-cell-bar">
             <span class="work-cell-title">Handheld Guy</span>
             <span class="work-cell-meta">
-              <span class="work-cell-blurb">A character study in miniature hardware.</span>
+              <span class="work-cell-blurb"
+                >A character study in miniature hardware.</span
+              >
               <span class="work-cell-cta">Click to explore &rarr;</span>
             </span>
           </span>
@@ -736,12 +1090,20 @@
         <button type="button" class="work-cell" data-work="Panic">
           <span class="work-cell-media">
             <img src="/assets/images/Thumbnail_Panic.jpg" alt="Panic" />
-            <video src="/assets/videos/trees.mp4" muted loop playsinline preload="none"></video>
+            <video
+              src="/assets/videos/trees.mp4"
+              muted
+              loop
+              playsinline
+              preload="none"
+            ></video>
           </span>
           <span class="work-cell-bar">
             <span class="work-cell-title">Panic</span>
             <span class="work-cell-meta">
-              <span class="work-cell-blurb">Short-form motion work under a tight clock.</span>
+              <span class="work-cell-blurb"
+                >Short-form motion work under a tight clock.</span
+              >
               <span class="work-cell-cta">Click to explore &rarr;</span>
             </span>
           </span>
@@ -769,6 +1131,44 @@
         >
       </div>
     </section>
+
+    <div class="work-modal" hidden>
+      <div class="work-modal-backdrop"></div>
+      <div
+        class="work-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="work-modal-title"
+      >
+        <button type="button" class="work-modal-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+        <div class="work-modal-scroll">
+          <div class="work-modal-hero">
+            <img class="work-modal-poster" alt="" />
+          </div>
+          <div class="work-modal-body">
+            <header class="work-modal-header">
+              <h2 class="work-modal-title" id="work-modal-title" data-reveal></h2>
+              <dl class="work-modal-meta" data-reveal>
+                <div>
+                  <dt>Year</dt>
+                  <dd class="work-modal-year"></dd>
+                </div>
+                <div>
+                  <dt>Company</dt>
+                  <dd class="work-modal-company"></dd>
+                </div>
+              </dl>
+            </header>
+            <p class="work-modal-summary" data-reveal></p>
+            <div class="work-modal-callouts"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.js"></script>
   </body>
