@@ -9,6 +9,12 @@ import { createWorkModal } from "./workModal.js";
 
 const revealBurn = createRevealBurn();
 
+const heroHeadingTitleEl = document.querySelector(".hero-heading h2");
+const heroHeadingSubEl = document.querySelector(".hero-heading p");
+const heroHeadingReveal = heroHeadingTitleEl
+  ? createTextReveal(heroHeadingTitleEl, { lockWidths: true })
+  : null;
+
 const loadingScreen = createLoadingScreen({
   assets: [
     { id: "environment", bytes: 2359717 },
@@ -16,7 +22,13 @@ const loadingScreen = createLoadingScreen({
   ],
   onEnter: () => {
     revealBurn.play({
-      onReveal: () => document.body.classList.remove("is-loading"),
+      onReveal: () => {
+        document.body.classList.remove("is-loading");
+        heroHeadingReveal?.play();
+        // Let the title's scramble read as the lead beat before the
+        // subtext settles in underneath it, rather than both landing at once.
+        setTimeout(() => heroHeadingSubEl?.classList.add("is-visible"), 550);
+      },
     });
   },
 });
@@ -193,7 +205,7 @@ function applyScrollEffects(scrollY) {
         1,
       );
       heroHeadingEl.style.opacity = String(1 - heroT);
-      heroHeadingEl.style.transform = `translateY(calc(-50% - ${heroT * heroDriftDistance}px))`;
+      heroHeadingEl.style.transform = `translateY(${-heroT * heroDriftDistance}px)`;
     }
   }
 
