@@ -1,6 +1,7 @@
 // Content for the work modal, keyed by each card's `data-work` attribute.
 // Leave `company` null for independent projects — the modal shows
-// "Independent" in its place. All copy and callout images are placeholders.
+// "Independent" in its place. `role` is optional and only shown when set.
+// All copy and callout images are placeholders.
 
 const placeholderBody =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.";
@@ -91,6 +92,27 @@ export const works = {
         title: "Turnaround under pressure",
         body: placeholderBody,
         image: "/assets/images/Thumbnail_HandheldGuy.jpg",
+      },
+    ],
+  },
+
+  "Curse of Calypso": {
+    title: "Curse of Calypso",
+    year: "2021",
+    company: "Jadu",
+    role: "Unity Developer",
+    summary:
+      "An augmented reality experience from Palaye Royale, built at Jadu.",
+    callouts: [
+      {
+        title: "Augmented reality storytelling",
+        body: placeholderBody,
+        image: "/assets/images/cocposter.jpeg",
+      },
+      {
+        title: "Volumetric performances",
+        body: placeholderBody,
+        image: "/assets/images/cocposter.jpeg",
       },
     ],
   },

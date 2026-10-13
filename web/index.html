@@ -498,6 +498,10 @@
         transition: color 0.4s ease;
       }
 
+      /* Scales to any number of works: cards share the row down to a minimum
+         width, after which the row scrolls sideways. The hovered card asks
+         for double width and the others shrink to make room, so the
+         expand-on-hover still works either way. */
       .work-cells {
         display: flex;
         gap: 16px;
@@ -505,12 +509,29 @@
         height: 70vh;
         min-height: 420px;
         max-height: 760px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+      }
+
+      .work-cells::-webkit-scrollbar {
+        height: 6px;
+      }
+
+      .work-cells::-webkit-scrollbar-thumb {
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.25);
       }
 
       .work-cell {
+        --work-cell-basis: 260px;
         position: relative;
-        flex: 1 1 0;
-        min-width: 0;
+        flex: 1 1 var(--work-cell-basis);
+        min-width: 160px;
+        scroll-snap-align: start;
         overflow: hidden;
         border-radius: 8px;
         background: #1c1c1c;
@@ -520,12 +541,12 @@
         font: inherit;
         text-align: left;
         cursor: pointer;
-        transition: flex-grow 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: flex-basis 0.55s cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       .work-cell:hover,
       .work-cell:focus-visible {
-        flex-grow: 2.4;
+        --work-cell-basis: 520px;
       }
 
       .work-cell:focus-visible {
@@ -1225,16 +1246,14 @@
           flex-direction: column;
           height: auto;
           max-height: none;
+          overflow: visible;
+          scroll-snap-type: none;
         }
 
         .work-cell {
           flex: 0 0 auto;
+          min-width: 0;
           aspect-ratio: 16 / 10;
-        }
-
-        .work-cell:hover,
-        .work-cell:focus-visible {
-          flex-grow: 0;
         }
 
         .work-cell-bar {
@@ -1636,6 +1655,31 @@
             </span>
           </span>
         </button>
+
+        <button type="button" class="work-cell" data-work="Curse of Calypso">
+          <span class="work-cell-media">
+            <img
+              src="/assets/images/cocposter.jpeg"
+              alt="Curse of Calypso poster"
+            />
+            <video
+              src="/assets/videos/trees.mp4"
+              muted
+              loop
+              playsinline
+              preload="none"
+            ></video>
+          </span>
+          <span class="work-cell-bar">
+            <span class="work-cell-title">Curse of Calypso</span>
+            <span class="work-cell-meta">
+              <span class="work-cell-blurb"
+                >An augmented reality experience from Palaye Royale.</span
+              >
+              <span class="work-cell-cta">Click to explore &rarr;</span>
+            </span>
+          </span>
+        </button>
       </div>
     </section>
 
@@ -1759,6 +1803,10 @@
                 <div>
                   <dt>Company</dt>
                   <dd class="work-modal-company"></dd>
+                </div>
+                <div class="work-modal-role-item">
+                  <dt>Role</dt>
+                  <dd class="work-modal-role"></dd>
                 </div>
               </dl>
             </header>

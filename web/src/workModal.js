@@ -44,6 +44,8 @@ export function createWorkModal() {
   const titleEl = root.querySelector(".work-modal-title");
   const yearEl = root.querySelector(".work-modal-year");
   const companyEl = root.querySelector(".work-modal-company");
+  const roleItemEl = root.querySelector(".work-modal-role-item");
+  const roleEl = root.querySelector(".work-modal-role");
   const summaryEl = root.querySelector(".work-modal-summary");
   const calloutsEl = root.querySelector(".work-modal-callouts");
 
@@ -75,6 +77,9 @@ export function createWorkModal() {
     titleEl.textContent = work.title;
     yearEl.textContent = work.year;
     companyEl.textContent = work.company ?? "Independent";
+    // Role is optional; the whole Role column hides when a work has none.
+    roleEl.textContent = work.role ?? "";
+    roleItemEl.hidden = !work.role;
     summaryEl.textContent = work.summary;
     posterEl.src = cell.querySelector("img")?.src ?? "";
 
