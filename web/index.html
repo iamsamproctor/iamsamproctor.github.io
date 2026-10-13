@@ -304,6 +304,12 @@
         padding: 120px 32px;
       }
 
+      /* The hallway ends on pure black, so Work rises out of that black
+         rather than showing a hard edge where its background starts. */
+      #work {
+        background: linear-gradient(to bottom, #000000 0, #121212 50vh);
+      }
+
       .page-section-inner {
         max-width: 860px;
         margin: 0 auto;

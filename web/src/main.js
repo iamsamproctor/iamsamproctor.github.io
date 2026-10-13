@@ -9,6 +9,7 @@ import { createWorkModal } from "./workModal.js";
 import { createWindScroll } from "./windScroll.js";
 import { createBackgroundMusic } from "./backgroundMusic.js";
 import { setRevealSoundEnabled } from "./revealSound.js";
+import { createHallway } from "./hallway.js";
 
 const revealBurn = createRevealBurn();
 const windScroll = createWindScroll();
@@ -126,18 +127,14 @@ const introFadeStart = 0.7; // holds full opacity, anchored at its CSS position,
 const introFadeEnd = 0.78; // fraction where it's fully faded away
 const introExitDistance = 220; // px it scrolls up while fading out
 
-// Past the last camera keyframe (the sky point), continuing to scroll shrinks
-// the 3D view into a "window" with page padding around it, then slides that
-// window up off-screen — a test of transitioning from the 3D scene into a
-// flat 2D page. CSS-only: the wrapper is visually scaled/moved, the WebGL
-// canvas itself is never resized.
-const sceneWindowEl = document.querySelector(".scene-window");
-const windowScrollRange = 450; // px of scroll, after cameraScrollRange, for this phase
-const windowShrinkEnd = 0.5; // fraction of windowScrollRange by which shrink completes
-const windowSlideStart = 0.5; // fraction where the shrunk window starts sliding away
-const windowSlideEnd = 1; // fraction where it's fully off-screen
-const windowTargetScale = 0.55;
-const windowTargetRadius = 24; // px
+// Past the last camera keyframe (the sky point), continuing to scroll pulls
+// back from the splat scene to reveal it as a portrait at the end of a
+// hallway (see hallway.js), retreating down the hallway until it fades to
+// black, before the Work section scrolls in.
+const hallwayScrollRange = 2200; // px of scroll, after cameraScrollRange, for this phase
+const hallwayBlendSmoothing = 3; // rate the hallway dolly chases scroll; lower = more lag
+let hallwayProgress = 0; // raw 0-1
+let hallwayBlend = 0; // smoothed toward hallwayProgress each frame
 
 // The scroll-spacer exists purely to give the fixed hero/transition elements
 // room to animate. It needs to cover that scroll distance *plus* one extra
@@ -147,7 +144,7 @@ const windowTargetRadius = 24; // px
 const scrollSpacerEl = document.querySelector(".scroll-spacer");
 function sizeScrollSpacer() {
   if (scrollSpacerEl) {
-    scrollSpacerEl.style.height = `${cameraScrollRange + windowScrollRange + window.innerHeight}px`;
+    scrollSpacerEl.style.height = `${cameraScrollRange + hallwayScrollRange + window.innerHeight}px`;
   }
 }
 sizeScrollSpacer();
@@ -262,26 +259,11 @@ function applyScrollEffects(scrollY) {
     }
   }
 
-  if (sceneWindowEl) {
-    const windowProgress = THREE.MathUtils.clamp(
-      (scrollY - cameraScrollRange) / windowScrollRange,
-      0,
-      1,
-    );
-    const shrinkT = THREE.MathUtils.clamp(windowProgress / windowShrinkEnd, 0, 1);
-    const slideT = THREE.MathUtils.clamp(
-      (windowProgress - windowSlideStart) / (windowSlideEnd - windowSlideStart),
-      0,
-      1,
-    );
-
-    const scale = THREE.MathUtils.lerp(1, windowTargetScale, shrinkT);
-    const radius = THREE.MathUtils.lerp(0, windowTargetRadius, shrinkT);
-    const slideY = -slideT * window.innerHeight * 1.2;
-
-    sceneWindowEl.style.borderRadius = `${radius}px`;
-    sceneWindowEl.style.transform = `translateY(${slideY}px) scale(${scale})`;
-  }
+  hallwayProgress = THREE.MathUtils.clamp(
+    (scrollY - cameraScrollRange) / hallwayScrollRange,
+    0,
+    1,
+  );
 
   updateActiveSection(scrollY);
 }
@@ -327,6 +309,14 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.querySelector(".scene-window").appendChild(renderer.domElement);
 
 const spark = new SparkRenderer({ renderer });
+
+const hallway = createHallway({
+  renderer,
+  works: Array.from(document.querySelectorAll(".work-cell img")).map((img) => ({
+    src: img.getAttribute("src"),
+  })),
+});
+hallway.setSize(window.innerWidth, window.innerHeight);
 scene.add(spark);
 
 const environmentSplat = new SplatMesh({
@@ -549,6 +539,7 @@ function handleResize() {
     debugCamera.updateProjectionMatrix();
   }
   renderer.setSize(window.innerWidth, window.innerHeight);
+  hallway.setSize(window.innerWidth, window.innerHeight);
   revealBurn.setAspect(window.innerWidth / window.innerHeight);
 }
 window.addEventListener("resize", handleResize);
@@ -618,7 +609,19 @@ renderer.setAnimationLoop(() => {
     camera.rotation.y += currentYaw;
     camera.rotation.x += currentPitch;
 
-    renderer.render(scene, camera);
+    const hallwaySmoothing = 1 - Math.exp(-hallwayBlendSmoothing * deltaTime);
+    hallwayBlend = THREE.MathUtils.lerp(hallwayBlend, hallwayProgress, hallwaySmoothing);
+    if (Math.abs(hallwayBlend - hallwayProgress) < 0.0005) hallwayBlend = hallwayProgress;
+
+    if (hallwayBlend <= 0) {
+      renderer.render(scene, camera);
+    } else if (hallwayBlend >= 1) {
+      // Fully faded to black: skip the splat and hallway passes entirely.
+      renderer.clear();
+    } else {
+      hallway.update(hallwayBlend, currentYaw, currentPitch);
+      hallway.render(scene, camera);
+    }
   }
 
   revealBurn.setTime(currentTime / 1000);
