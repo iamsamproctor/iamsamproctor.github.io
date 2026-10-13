@@ -1,0 +1,114 @@
+[
+  {
+    "id": "q001",
+    "quote": "The imagination of nature is far, far greater than the imagination of man.",
+    "author": "Richard Feynman",
+    "category": "Nature & Wonder",
+    "attribution_note": "Verify exact source and wording",
+    "display_enabled": true
+  },
+  {
+    "id": "q002",
+    "quote": "The most beautiful thing we can experience is the mysterious.",
+    "author": "Albert Einstein",
+    "category": "Nature & Wonder",
+    "attribution_note": "Excerpt; verify translation and original context",
+    "display_enabled": true
+  },
+  {
+    "id": "q003",
+    "quote": "To see a World in a Grain of Sand / And a Heaven in a Wild Flower",
+    "author": "William Blake",
+    "category": "Nature & Wonder",
+    "attribution_note": "Auguries of Innocence; line breaks represented with /",
+    "display_enabled": true
+  },
+  {
+    "id": "q004",
+    "quote": "The universe is not only stranger than we imagine, it is stranger than we can imagine.",
+    "author": "J. B. S. Haldane (attributed)",
+    "category": "Nature & Wonder",
+    "attribution_note": "Paraphrase; not exact original wording",
+    "display_enabled": false
+  },
+  {
+    "id": "q005",
+    "quote": "Somewhere, something incredible is waiting to be known.",
+    "author": "Carl Sagan (disputed)",
+    "category": "Nature & Wonder",
+    "attribution_note": "Disputed attribution; exclude until verified",
+    "display_enabled": false
+  },
+  {
+    "id": "q006",
+    "quote": "The best way to predict the future is to invent it.",
+    "author": "Alan Kay",
+    "category": "Technology & Creativity",
+    "attribution_note": "Widely attributed; verify primary source",
+    "display_enabled": true
+  },
+  {
+    "id": "q007",
+    "quote": "Technology is anything that wasn't around when you were born.",
+    "author": "Alan Kay",
+    "category": "Technology & Creativity",
+    "attribution_note": "Verify original source",
+    "display_enabled": true
+  },
+  {
+    "id": "q008",
+    "quote": "The purpose of computing is insight, not numbers.",
+    "author": "Richard Hamming",
+    "category": "Technology & Creativity",
+    "attribution_note": "Verify attribution and original wording",
+    "display_enabled": true
+  },
+  {
+    "id": "q009",
+    "quote": "The computer is the most remarkable tool that we've ever come up with. It's the equivalent of a bicycle for our minds.",
+    "author": "Steve Jobs",
+    "category": "Technology & Creativity",
+    "attribution_note": "Paraphrased composite; not a verified verbatim quote",
+    "display_enabled": false
+  },
+  {
+    "id": "q010",
+    "quote": "All models are wrong, but some are useful.",
+    "author": "George E. P. Box",
+    "category": "Simulation & Emergence",
+    "attribution_note": "Well-known wording; verify original publication",
+    "display_enabled": true
+  },
+  {
+    "id": "q011",
+    "quote": "From so simple a beginning endless forms most beautiful and most wonderful have been, and are being, evolved.",
+    "author": "Charles Darwin",
+    "category": "Simulation & Emergence",
+    "attribution_note": "On the Origin of Species; excerpt",
+    "display_enabled": true
+  },
+  {
+    "id": "q012",
+    "quote": "Life is a process of becoming, a combination of states we have to go through.",
+    "author": "Anaïs Nin",
+    "category": "Simulation & Emergence",
+    "attribution_note": "Verify exact source and attribution",
+    "display_enabled": true
+  },
+  {
+    "id": "q013",
+    "quote": "It's a world without limitation, a world as unlimited as dreams.",
+    "author": "Jaron Lanier",
+    "category": "Virtual Reality",
+    "attribution_note": "Previously linked interview; verify original transcript",
+    "display_enabled": true
+  },
+  {
+    "id": "q014",
+    "quote": "It's like having a collaborative lucid dream.",
+    "author": "Jaron Lanier",
+    "category": "Virtual Reality",
+    "attribution_note": "Previously linked interview; verify original transcript",
+    "display_enabled": true
+  }
+]

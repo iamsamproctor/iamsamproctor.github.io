@@ -7,7 +7,8 @@
     <style>
       @font-face {
         font-family: "Encode Sans Semi Expanded";
-        src: url("/assets/fonts/encode-sans-semi-expanded/EncodeSansSemiExpanded-Light.ttf") format("truetype");
+        src: url("/assets/fonts/encode-sans-semi-expanded/EncodeSansSemiExpanded-Light.ttf")
+          format("truetype");
         font-weight: 300;
         font-style: normal;
         font-display: swap;
@@ -15,7 +16,8 @@
 
       @font-face {
         font-family: "Encode Sans Semi Expanded";
-        src: url("/assets/fonts/encode-sans-semi-expanded/EncodeSansSemiExpanded-Regular.ttf") format("truetype");
+        src: url("/assets/fonts/encode-sans-semi-expanded/EncodeSansSemiExpanded-Regular.ttf")
+          format("truetype");
         font-weight: 400;
         font-style: normal;
         font-display: swap;
@@ -23,7 +25,8 @@
 
       @font-face {
         font-family: "Encode Sans Semi Expanded";
-        src: url("/assets/fonts/encode-sans-semi-expanded/EncodeSansSemiExpanded-Medium.ttf") format("truetype");
+        src: url("/assets/fonts/encode-sans-semi-expanded/EncodeSansSemiExpanded-Medium.ttf")
+          format("truetype");
         font-weight: 500;
         font-style: normal;
         font-display: swap;
@@ -31,8 +34,18 @@
 
       @font-face {
         font-family: "Encode Sans Semi Expanded";
-        src: url("/assets/fonts/encode-sans-semi-expanded/EncodeSansSemiExpanded-SemiBold.ttf") format("truetype");
+        src: url("/assets/fonts/encode-sans-semi-expanded/EncodeSansSemiExpanded-SemiBold.ttf")
+          format("truetype");
         font-weight: 600;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Major Mono Display";
+        src: url("/assets/fonts/major-mono-display/MajorMonoDisplay-Regular.ttf")
+          format("truetype");
+        font-weight: 400;
         font-style: normal;
         font-display: swap;
       }
@@ -98,8 +111,7 @@
         letter-spacing: 0.15em;
       }
 
-      .contact-button,
-      .audio-toggle {
+      .contact-button {
         position: fixed;
         top: 20px;
         right: 32px;
@@ -121,33 +133,105 @@
           opacity 0.8s ease;
       }
 
-      .audio-toggle {
-        right: 88px;
-      }
-
-      .contact-button svg,
-      .audio-toggle svg {
+      .contact-button svg {
         width: 18px;
         height: 18px;
         display: block;
       }
 
-      .audio-toggle .audio-toggle-off,
-      .audio-toggle[aria-pressed="true"] .audio-toggle-on {
-        display: inline;
-      }
-
-      .audio-toggle .audio-toggle-on,
-      .audio-toggle[aria-pressed="true"] .audio-toggle-off {
-        display: none;
-      }
-
-      .contact-button:hover,
-      .audio-toggle:hover {
+      .contact-button:hover {
         background: #ffffff;
         border-color: #ffffff;
         color: #000000;
         transform: scale(1.08);
+      }
+
+      /* Sound toggle: a scrolling sine wave while sound is on, easing flat
+         to a line when muted. Sits above the work modal and portrait viewer
+         (z-index 8) so sound can always be muted, but below the loader (10). */
+      .audio-toggle {
+        position: fixed;
+        right: 24px;
+        bottom: 20px;
+        z-index: 9;
+        width: 128px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        /* Same pill treatment as the contact button, so it reads as a control. */
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.2);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+        color: #ffffff;
+        cursor: pointer;
+        transition:
+          background 0.25s ease,
+          border-color 0.25s ease,
+          color 0.25s ease,
+          transform 0.25s ease,
+          opacity 0.8s ease;
+      }
+
+      .audio-toggle:hover {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #000000;
+        transform: scale(1.04);
+      }
+
+      .audio-toggle:focus-visible {
+        outline: 1px solid rgba(255, 255, 255, 0.6);
+        outline-offset: 2px;
+      }
+
+      .audio-toggle svg {
+        width: 96px;
+        height: 48px;
+        display: block;
+        overflow: hidden;
+        /* Soft ends, so the wave seems to pass through rather than being cut. */
+        -webkit-mask-image: linear-gradient(to right, transparent, #000 25%, #000 75%, transparent);
+        mask-image: linear-gradient(to right, transparent, #000 25%, #000 75%, transparent);
+      }
+
+      .audio-toggle-amplitude {
+        transform-box: view-box;
+        transform-origin: 50% 50%;
+        transform: scaleY(0.04);
+        transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .audio-toggle[aria-pressed="true"] .audio-toggle-amplitude {
+        transform: scaleY(1);
+      }
+
+      .audio-toggle-wave {
+        animation: audio-wave-scroll 1.4s linear infinite;
+        animation-play-state: paused;
+      }
+
+      .audio-toggle[aria-pressed="true"] .audio-toggle-wave {
+        animation-play-state: running;
+      }
+
+      /* One wavelength in the SVG's own units, so the loop is seamless. */
+      @keyframes audio-wave-scroll {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-16px);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .audio-toggle-wave {
+          animation: none;
+        }
       }
 
       .hero-heading {
@@ -167,13 +251,19 @@
         --reveal-dim: rgba(255, 255, 255, 0.32);
         --reveal-bright: #ffffff;
         margin: 0;
-        font-family: "Encode Sans Semi Expanded", -apple-system, BlinkMacSystemFont,
-          "Helvetica Neue", Helvetica, Arial, sans-serif;
-        font-size: clamp(32px, 5.5vw, 76px);
-        font-weight: 500;
+        /* Major Mono Display draws lowercase letters as a mix of capital and
+           small forms, so the heading text is left in normal case. Other
+           candidates can be tried with ?fonts (fontPreview.js). */
+        font-family:
+          "Major Mono Display",
+          ui-monospace,
+          "SF Mono",
+          Menlo,
+          monospace;
+        font-size: clamp(26px, 4.4vw, 61px);
+        font-weight: 400;
         line-height: 1.15;
-        letter-spacing: 0;
-        text-transform: uppercase;
+        letter-spacing: -0.02em;
       }
 
       .hero-heading p {
@@ -195,43 +285,58 @@
         transform: translateY(0);
       }
 
-      .intro {
+      /* Shown on the black between the hallway and Work (quoteInterstitial.js).
+         Opacity is driven by scroll; the inner block crossfades between
+         quotes. */
+      .quote-interstitial {
         position: fixed;
-        right: 110px;
-        bottom: 64px;
+        inset: 0;
         z-index: 1;
-        max-width: 420px;
-        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .quote-interstitial-inner {
+        max-width: 28em;
+        margin: 0;
+        text-align: center;
+        transition: opacity 1.2s ease;
+      }
+
+      .quote-interstitial-inner.is-swapping {
+        opacity: 0;
+      }
+
+      .quote-interstitial-text {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.92);
+        font-family:
+          "Encode Sans Semi Expanded",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Helvetica Neue",
+          Helvetica,
+          Arial,
+          sans-serif;
+        font-size: clamp(20px, 2.8vw, 36px);
+        font-weight: 300;
+        line-height: 1.4;
+        text-wrap: balance;
+      }
+
+      .quote-interstitial-author {
+        margin-top: 28px;
+        color: rgba(255, 255, 255, 0.45);
         font-family:
           -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
           sans-serif;
-        opacity: 0;
-        transform: translateY(24px);
-        transition:
-          opacity 0.4s ease-out,
-          transform 0.4s ease-out;
-      }
-
-      .intro.is-visible {
-        opacity: 1;
-        transform: translateY(0);
-      }
-
-      .intro-heading {
-        margin: 0 0 12px;
-        font-size: clamp(32px, 5vw, 56px);
-        font-weight: 300;
-        letter-spacing: 0.03em;
-      }
-
-      .intro-body {
-        --reveal-dim: rgba(255, 255, 255, 0.32);
-        --reveal-bright: #ffffff;
-        margin: 0;
-        font-size: clamp(13px, 1.4vw, 15px);
-        font-weight: 400;
-        line-height: 1.6;
-        color: rgba(255, 255, 255, 0.8);
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
       }
 
       .section-nav {
@@ -787,23 +892,186 @@
       }
 
       .about-photo {
+        position: relative;
         aspect-ratio: 1;
         overflow: hidden;
         border-radius: 8px;
         background: #1c1c1c;
       }
 
-      .about-photo img {
+      /* The flat photo shows until the splat portrait (aboutPortrait.js)
+         has loaded, then the splat fades in over it. */
+      .about-photo img,
+      .about-photo-splat {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
         filter: grayscale(1) contrast(1.05);
-        transition: filter 0.6s ease;
+        transition:
+          filter 0.6s ease,
+          opacity 1.2s ease;
       }
 
-      .about-photo:hover img {
+      .about-photo-splat,
+      .about-photo.has-splat img {
+        opacity: 0;
+      }
+
+      .about-photo.has-splat .about-photo-splat {
+        opacity: 1;
+      }
+
+      .about-photo:hover img,
+      .about-photo:hover .about-photo-splat {
         filter: none;
+      }
+
+      .about-photo.has-splat {
+        cursor: pointer;
+      }
+
+      .about-photo:focus-visible {
+        outline: 1px solid rgba(255, 255, 255, 0.6);
+        outline-offset: 2px;
+      }
+
+      .about-photo.is-lifted {
+        visibility: hidden;
+      }
+
+      .about-photo-hint {
+        position: absolute;
+        left: 10px;
+        bottom: 10px;
+        z-index: 1;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.55);
+        color: #ffffff;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.4s ease;
+      }
+
+      .about-photo.has-splat .about-photo-hint {
+        opacity: 0.85;
+      }
+
+      .portrait-viewer {
+        position: fixed;
+        inset: 0;
+        z-index: 8;
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+      }
+
+      .portrait-viewer[hidden] {
+        display: none;
+      }
+
+      .portrait-viewer-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      .portrait-viewer-stage {
+        position: absolute;
+        inset: 24px;
+        overflow: hidden;
+        border-radius: 16px;
+        background: #1c1c1c;
+        transform-origin: 50% 50%;
+        cursor: grab;
+        touch-action: none;
+      }
+
+      .portrait-viewer-stage.is-dragging {
+        cursor: grabbing;
+      }
+
+      /* Color blooms in as the viewer opens. */
+      .portrait-viewer .about-photo-splat {
+        opacity: 1;
+        filter: none;
+        transition: filter 1.1s ease;
+      }
+
+      .portrait-viewer-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 2;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.35);
+        color: #ffffff;
+        cursor: pointer;
+        transition:
+          background 0.25s ease,
+          border-color 0.25s ease,
+          color 0.25s ease,
+          transform 0.25s ease;
+      }
+
+      .portrait-viewer-close svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+      }
+
+      .portrait-viewer-close:hover {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #000000;
+        transform: scale(1.08);
+      }
+
+      .portrait-viewer-hint {
+        position: absolute;
+        top: 36px;
+        left: 28px;
+        z-index: 1;
+        margin: 0;
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.5);
+        pointer-events: none;
+      }
+
+      @media (max-width: 900px) {
+        .portrait-viewer-stage {
+          inset: 10px;
+          border-radius: 12px;
+        }
+
+        .portrait-viewer-close {
+          top: 12px;
+          right: 12px;
+          width: 38px;
+          height: 38px;
+        }
+
+        .portrait-viewer-hint {
+          top: 25px;
+          left: 18px;
+        }
       }
 
       .page-section .about-heading {
@@ -1125,22 +1393,29 @@
       }
 
       @media (max-width: 640px) {
-        .contact-button,
-        .audio-toggle {
+        .contact-button {
           top: 16px;
           right: 16px;
           width: 38px;
           height: 38px;
         }
 
-        .audio-toggle {
-          right: 64px;
-        }
-
-        .contact-button svg,
-        .audio-toggle svg {
+        .contact-button svg {
           width: 16px;
           height: 16px;
+        }
+
+        /* Smaller on phones so it clears the hero heading. */
+        .audio-toggle {
+          right: 12px;
+          bottom: 12px;
+          width: 84px;
+          height: 42px;
+        }
+
+        .audio-toggle svg {
+          width: 64px;
+          height: 32px;
         }
 
         .section-nav {
@@ -1149,10 +1424,6 @@
 
         .section-nav .section-nav-label {
           display: none;
-        }
-
-        .intro {
-          right: 40px;
         }
 
         .loader-mark {
@@ -1211,42 +1482,28 @@
       aria-label="Sound"
       aria-pressed="false"
     >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.6"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M11 5 6 9H2v6h4l5 4V5z" />
-        <g class="audio-toggle-on">
-          <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-          <path d="M18.8 5.2a9.5 9.5 0 0 1 0 13.6" />
-        </g>
-        <g class="audio-toggle-off">
-          <path d="m16 9 6 6" />
-          <path d="m22 9-6 6" />
+<svg viewBox="0 0 32 16" fill="none" aria-hidden="true">
+        <g class="audio-toggle-amplitude">
+          <path
+            class="audio-toggle-wave"
+            d="M0 8q4-12 8 0t8 0t8 0t8 0t8 0t8 0"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            vector-effect="non-scaling-stroke"
+          />
         </g>
       </svg>
     </button>
 
     <div class="hero-heading">
-      <h2>Creative Developer</h2>
-      <p>XR and game engineering</p>
-    </div>
-
-    <div class="intro">
-      <h2 class="intro-heading">Hi, I'm Sam.</h2>
-      <p class="intro-body">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
-        tempor incididunt ut labore et dolore magna aliqua.
-      </p>
+      <h2>creative developer</h2>
+      <p>AR | VR | Games</p>
     </div>
 
     <nav class="section-nav" aria-label="Section navigation">
-      <button type="button" data-section="hero" aria-label="Intro">
-        <span class="section-nav-label">Intro</span>
+      <button type="button" data-section="hero" aria-label="Welcome">
+        <span class="section-nav-label">Welcome</span>
       </button>
       <button type="button" data-section="work" aria-label="Work">
         <span class="section-nav-label">Work</span>
@@ -1255,6 +1512,13 @@
         <span class="section-nav-label">About</span>
       </button>
     </nav>
+
+    <div class="quote-interstitial">
+      <blockquote class="quote-interstitial-inner">
+        <p class="quote-interstitial-text"></p>
+        <footer class="quote-interstitial-author"></footer>
+      </blockquote>
+    </div>
 
     <div class="scroll-spacer"></div>
 
@@ -1377,8 +1641,14 @@
 
     <section id="about" class="page-section about">
       <div class="about-grid">
-        <div class="about-photo">
+        <div
+          class="about-photo"
+          role="button"
+          tabindex="0"
+          aria-label="View Sam in 3D"
+        >
           <img src="/assets/images/me.jpg" alt="Sam Proctor" />
+          <span class="about-photo-hint" aria-hidden="true">View in 3D</span>
         </div>
 
         <div class="about-main">
@@ -1428,6 +1698,29 @@
       <footer class="site-footer">&copy; 2026 Sam Proctor</footer>
     </section>
 
+    <div class="portrait-viewer" hidden>
+      <div class="portrait-viewer-backdrop"></div>
+      <div
+        class="portrait-viewer-stage"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Sam in 3D"
+      >
+        <button type="button" class="portrait-viewer-close" aria-label="Close">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+        <p class="portrait-viewer-hint">Drag to turn</p>
+      </div>
+    </div>
+
     <div class="work-modal" hidden>
       <div class="work-modal-backdrop"></div>
       <div
@@ -1437,7 +1730,13 @@
         aria-labelledby="work-modal-title"
       >
         <button type="button" class="work-modal-close" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          >
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
@@ -1447,7 +1746,11 @@
           </div>
           <div class="work-modal-body">
             <header class="work-modal-header">
-              <h2 class="work-modal-title" id="work-modal-title" data-reveal></h2>
+              <h2
+                class="work-modal-title"
+                id="work-modal-title"
+                data-reveal
+              ></h2>
               <dl class="work-modal-meta" data-reveal>
                 <div>
                   <dt>Year</dt>

@@ -10,6 +10,10 @@ import { createWindScroll } from "./windScroll.js";
 import { createBackgroundMusic } from "./backgroundMusic.js";
 import { setRevealSoundEnabled } from "./revealSound.js";
 import { createHallway } from "./hallway.js";
+import { createAboutPortrait } from "./aboutPortrait.js";
+import { createQuoteInterstitial } from "./quoteInterstitial.js";
+import { addDustDevil } from "./dustDevil.js";
+import quotes from "./quotes.json";
 
 const revealBurn = createRevealBurn();
 const windScroll = createWindScroll();
@@ -45,7 +49,6 @@ audioToggleEl?.addEventListener("click", () => {
 const loadingScreen = createLoadingScreen({
   assets: [
     { id: "environment", bytes: 2359717 },
-    { id: "mom", bytes: 3296646 },
   ],
   // Starts the music silently; the longer fade below begins with the burn.
   onEnterWithAudio: () => setAudio(true, { fadeSeconds: 0 }),
@@ -66,6 +69,13 @@ const loadingScreen = createLoadingScreen({
 
 const debugMode = new URLSearchParams(window.location.search).has("debug");
 
+// ?fonts: temporary picker for trying heading fonts on the real hero.
+if (new URLSearchParams(window.location.search).has("fonts") && heroHeadingTitleEl) {
+  import("./fontPreview.js").then(({ createFontPreview }) =>
+    createFontPreview(heroHeadingTitleEl, heroHeadingReveal),
+  );
+}
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
@@ -85,21 +95,15 @@ const orbitHeight = 1;
 const orbitSpeed = THREE.MathUtils.degToRad(1); // radians per second
 let orbitAngle = 0;
 
-// Additional points of interest the camera dollies between as the user
-// scrolls, continuing to orbit around whichever point is currently active.
-const focusCenter = new THREE.Vector3(0, 0.7, 0);
-const focusRadius = 1.5;
-const focusHeight = 0.1;
-
-// Third point: high and far out, looking down at the scene from a distance
-// rather than straight overhead (bird's-eye).
+// Point the camera dollies out to as the user scrolls, continuing to orbit
+// around whichever point is currently active: high and far out, looking
+// down at the scene from a distance rather than straight overhead.
 const skyCenter = new THREE.Vector3(0, 0, 0);
 const skyRadius = 10;
 const skyHeight = 4;
 
 const orbitKeyframes = [
   { center: orbitCenter, radius: orbitRadius, height: orbitHeight },
-  { center: focusCenter, radius: focusRadius, height: focusHeight },
   { center: skyCenter, radius: skyRadius, height: skyHeight },
 ];
 
@@ -113,19 +117,11 @@ const cameraScrollRange = 2400; // px of scroll to move through all camera keyfr
 const scrollBlendSmoothing = 1.5; // rate scrollBlend chases scrollProgress; lower = more lag/slower dolly
 
 const heroHeadingEl = document.querySelector(".hero-heading");
-const heroFadeDistance = 500; // px of scroll over which it fully fades away
-const heroDriftDistance = 140; // px it drifts upward while fading
-
-const introEl = document.querySelector(".intro");
-const introBodyEl = document.querySelector(".intro-body");
-const introBodyReveal = introBodyEl
-  ? createTextReveal(introBodyEl, { lockWidths: true })
-  : null;
-let introWasVisible = false;
-const introRevealAt = 0.25; // fraction of cameraScrollRange after which the intro text appears
-const introFadeStart = 0.7; // holds full opacity, anchored at its CSS position, all the way to here
-const introFadeEnd = 0.78; // fraction where it's fully faded away
-const introExitDistance = 220; // px it scrolls up while fading out
+// The hero heading scrolls up with the page for a while at full opacity,
+// then fades out over the last stretch of its travel.
+const heroFadeStart = 350; // px of scroll before it starts fading
+const heroFadeEnd = 750; // px of scroll by which it's fully faded
+const heroDriftRate = 0.6; // px it moves up per px scrolled
 
 // Past the last camera keyframe (the sky point), continuing to scroll pulls
 // back from the splat scene to reveal it as a portrait at the end of a
@@ -136,6 +132,13 @@ const hallwayBlendSmoothing = 3; // rate the hallway dolly chases scroll; lower 
 let hallwayProgress = 0; // raw 0-1
 let hallwayBlend = 0; // smoothed toward hallwayProgress each frame
 
+// Once the hallway has gone fully black, the scroll holds on black for a
+// stretch while a quote fades in, then Work rises over it.
+const quoteEl = document.querySelector(".quote-interstitial");
+const quoteInterstitial = quoteEl ? createQuoteInterstitial(quoteEl, quotes) : null;
+const quoteHoldRange = 900; // px of scroll held on black, after hallwayScrollRange
+const quoteFadeIn = 250; // px it fades in over, ending as the hallway reaches black
+
 // The scroll-spacer exists purely to give the fixed hero/transition elements
 // room to animate. It needs to cover that scroll distance *plus* one extra
 // viewport height of buffer — otherwise the next section's opaque background
@@ -144,7 +147,7 @@ let hallwayBlend = 0; // smoothed toward hallwayProgress each frame
 const scrollSpacerEl = document.querySelector(".scroll-spacer");
 function sizeScrollSpacer() {
   if (scrollSpacerEl) {
-    scrollSpacerEl.style.height = `${cameraScrollRange + hallwayScrollRange + window.innerHeight}px`;
+    scrollSpacerEl.style.height = `${cameraScrollRange + hallwayScrollRange + quoteHoldRange + window.innerHeight}px`;
   }
 }
 sizeScrollSpacer();
@@ -226,36 +229,10 @@ function applyScrollEffects(scrollY) {
     if (document.body.classList.contains("is-loading")) {
       heroHeadingEl.style.opacity = "0";
     } else {
-      const heroT = THREE.MathUtils.smoothstep(
-        THREE.MathUtils.clamp(scrollY / heroFadeDistance, 0, 1),
-        0,
-        1,
-      );
-      heroHeadingEl.style.opacity = String(1 - heroT);
-      heroHeadingEl.style.transform = `translateY(${-heroT * heroDriftDistance}px)`;
-    }
-  }
-
-  if (introEl) {
-    const isVisible = scrollProgress >= introRevealAt;
-    introEl.classList.toggle("is-visible", isVisible);
-
-    if (isVisible && !introWasVisible && introBodyReveal) {
-      introBodyReveal.play();
-    }
-    introWasVisible = isVisible;
-
-    if (isVisible) {
-      const fadeT = THREE.MathUtils.smoothstep(
-        (scrollProgress - introFadeStart) / (introFadeEnd - introFadeStart),
-        0,
-        1,
-      );
-      introEl.style.transform = `translateY(${-fadeT * introExitDistance}px)`;
-      introEl.style.opacity = String(1 - fadeT);
-    } else {
-      introEl.style.transform = "";
-      introEl.style.opacity = "";
+      const fadeT = THREE.MathUtils.smoothstep(scrollY, heroFadeStart, heroFadeEnd);
+      const drift = Math.min(scrollY, heroFadeEnd) * heroDriftRate;
+      heroHeadingEl.style.opacity = String(1 - fadeT);
+      heroHeadingEl.style.transform = `translateY(${-drift}px)`;
     }
   }
 
@@ -264,6 +241,19 @@ function applyScrollEffects(scrollY) {
     0,
     1,
   );
+
+  if (quoteInterstitial) {
+    // Fades out as Work rises from the bottom, gone by the time Work's
+    // top edge reaches about a third of the way up the screen.
+    const intoBlack = scrollY - cameraScrollRange - hallwayScrollRange;
+    const fadeIn = THREE.MathUtils.smoothstep(intoBlack, -quoteFadeIn, 0);
+    const fadeOut = THREE.MathUtils.smoothstep(
+      intoBlack,
+      quoteHoldRange - 100,
+      quoteHoldRange + window.innerHeight * 0.35,
+    );
+    quoteInterstitial.setVisibility(fadeIn * (1 - fadeOut));
+  }
 
   updateActiveSection(scrollY);
 }
@@ -402,81 +392,10 @@ environmentSplat.objectModifier = dyno.dynoBlock(
 );
 environmentSplat.updateGenerator();
 
-const momSplat = new SplatMesh({
-  url: "/assets/splats/mom.spz",
-  onProgress: (event) => loadingScreen.report("mom", event.loaded, event.total),
-});
-momSplat.position.set(0, 0, 0);
+// Home point sits on the desert floor at the center of the opening orbit.
+const dustDevil = addDustDevil(environmentSplat, { home: new THREE.Vector3(0, -0.7, 0) });
 
-Promise.all([environmentSplat.initialized, momSplat.initialized]).then(() =>
-  loadingScreen.finish(),
-);
-scene.add(momSplat);
-
-// Breathe mom.spz between solid and a scattered, abstract state: a slow
-// global envelope eases from 0 (solid) to 1 (fully disintegrated) and back,
-// while each splat drifts outward along its own random direction and
-// flickers toward white at the peak of the cycle.
-// Pattern adapted from https://github.com/sparkjsdev/spark/blob/main/examples/splat-dissolve-effects/index.html
-const scatterTime = dyno.dynoFloat(0);
-const scatterAmount = dyno.dynoFloat(0.4); // how far splats drift at the peak
-const scatterSpeed = dyno.dynoFloat(0.1); // oscillations per second, roughly
-const scatterEnvelope = dyno.dynoFloat(0); // 0 = fully solid, 1 = fully disintegrated
-const scatterCyclePeriod = 16; // seconds for one full solid -> disintegrate -> solid cycle
-
-momSplat.worldModifier = dyno.dynoBlock(
-  { gsplat: dyno.Gsplat },
-  { gsplat: dyno.Gsplat },
-  ({ gsplat }) => {
-    const d = new dyno.Dyno({
-      inTypes: {
-        gsplat: dyno.Gsplat,
-        t: "float",
-        amount: "float",
-        speed: "float",
-        envelope: "float",
-      },
-      outTypes: { gsplat: dyno.Gsplat },
-      globals: () => [
-        dyno.unindent(/* glsl */ `
-          vec3 hash(vec3 p) {
-            return fract(sin(p * 123.456) * 123.456);
-          }
-        `),
-      ],
-      statements: ({ inputs, outputs }) => dyno.unindentLines(/* glsl */ `
-        ${outputs.gsplat} = ${inputs.gsplat};
-
-        vec3 localPos = ${inputs.gsplat}.center;
-        vec3 hashVal = hash(localPos);
-
-        vec3 moveDirection = normalize(hashVal - 0.5);
-        float phase = hashVal.x * 6.28;
-        float oscillation = sin(${inputs.t} * ${inputs.speed} * 6.28 + phase) * 0.5 + 0.5;
-        oscillation *= ${inputs.envelope};
-        float drift = oscillation * ${inputs.amount};
-
-        ${outputs.gsplat}.center = localPos + moveDirection * drift;
-
-        vec3 scattered = mix(${inputs.gsplat}.rgba.rgb, vec3(1.0), oscillation * 0.7);
-
-        ${outputs.gsplat}.rgba.rgb = scattered;
-        ${outputs.gsplat}.rgba.a *= mix(1.0, 0.03, oscillation);
-        ${outputs.gsplat}.scales = ${inputs.gsplat}.scales * (1.0 + oscillation * 0.6);
-      `),
-    });
-
-    gsplat = d.apply({
-      gsplat,
-      t: scatterTime,
-      amount: scatterAmount,
-      speed: scatterSpeed,
-      envelope: scatterEnvelope,
-    }).gsplat;
-    return { gsplat };
-  },
-);
-momSplat.updateGenerator();
+environmentSplat.initialized.then(() => loadingScreen.finish());
 
 let debugCamera;
 let debugControls;
@@ -551,15 +470,8 @@ renderer.setAnimationLoop(() => {
   previousTime = currentTime;
 
   waveTime.value = currentTime / 1000;
+  dustDevil.update(currentTime / 1000);
   environmentSplat.updateVersion();
-
-  scatterTime.value = currentTime / 1000;
-  const scatterCyclePhase =
-    ((currentTime / 1000) % scatterCyclePeriod) / scatterCyclePeriod;
-  // Eased 0 -> 1 -> 0 breathing cycle: lingers calm near the solid ends and
-  // slowly dissolves through the middle, rather than jumping straight in.
-  scatterEnvelope.value = (1 - Math.cos(scatterCyclePhase * Math.PI * 2)) / 2;
-  momSplat.updateVersion();
 
   if (debugMode) {
     debugControls.update();
@@ -652,6 +564,15 @@ document.querySelectorAll('.work-cell').forEach((cell) => {
   cell.addEventListener('blur', deactivate);
   cell.addEventListener('click', () => workModal.open(cell));
 });
+
+const aboutPhotoEl = document.querySelector(".about-photo");
+if (aboutPhotoEl) {
+  // Stand-in scan until there's a capture of Sam to swap in.
+  createAboutPortrait(aboutPhotoEl, {
+    url: "/assets/splats/mom.spz",
+    viewerEl: document.querySelector(".portrait-viewer"),
+  });
+}
 
 const workIntro = document.querySelector(".work-intro");
 if (workIntro) {
