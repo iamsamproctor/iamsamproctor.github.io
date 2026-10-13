@@ -9,10 +9,13 @@ import { createWorkModal } from "./workModal.js";
 import { createWindScroll } from "./windScroll.js";
 import { createBackgroundMusic } from "./backgroundMusic.js";
 import { setRevealSoundEnabled } from "./revealSound.js";
+import { setImpactSoundEnabled, playImpactSound } from "./impactSound.js";
 import { createHallway } from "./hallway.js";
 import { createAboutPortrait } from "./aboutPortrait.js";
 import { createQuoteInterstitial } from "./quoteInterstitial.js";
 import { addDustDevil } from "./dustDevil.js";
+import { createChromeBlob } from "./chromeBlob.js";
+import { createSplatShockwave } from "./splatShockwave.js";
 import quotes from "./quotes.json";
 
 const revealBurn = createRevealBurn();
@@ -32,6 +35,7 @@ const audioToggleEl = document.querySelector(".audio-toggle");
 function setAudio(on, { fadeSeconds = 1.5 } = {}) {
   audioToggleEl?.setAttribute("aria-pressed", String(on));
   setRevealSoundEnabled(on);
+  setImpactSoundEnabled(on);
   if (on) {
     windScroll.enable();
     backgroundMusic.start();
@@ -393,9 +397,69 @@ environmentSplat.objectModifier = dyno.dynoBlock(
 environmentSplat.updateGenerator();
 
 // Home point sits on the desert floor at the center of the opening orbit.
-const dustDevil = addDustDevil(environmentSplat, { home: new THREE.Vector3(0, -0.7, 0) });
+// Set dustDevilEnabled to false to switch the effect off; it still runs its
+// gentle wander, which the chrome blob follows.
+const dustDevilEnabled = false;
+const shockwave = createSplatShockwave();
+const dustDevil = addDustDevil(environmentSplat, {
+  home: new THREE.Vector3(0, -0.7, 0),
+  stages: [shockwave.apply],
+});
+dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
 
 environmentSplat.initialized.then(() => loadingScreen.finish());
+
+// Liquid-chrome blob floating where the dust devil would carry it. It reflects a
+// snapshot of the scene captured once the environment has loaded.
+const chromeBlob = createChromeBlob();
+const chromeBlobLift = 1.25; // world units above the dust devil's base
+const chromeBlobAnchor = new THREE.Vector3();
+scene.add(chromeBlob.mesh);
+function updateChromeBlob(seconds) {
+  chromeBlobAnchor.copy(dustDevil.center);
+  chromeBlobAnchor.y += chromeBlobLift;
+  chromeBlob.update(seconds, chromeBlobAnchor);
+}
+environmentSplat.initialized.then(async () => {
+  updateChromeBlob(performance.now() / 1000);
+  // Settle the dust so the reflection is of the clean desert, not of the
+  // puffs swirling right around the blob.
+  dustDevil.setStrength(0);
+  environmentSplat.updateVersion();
+  // Splat regeneration is asynchronous; give it a few frames to land.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  try {
+    chromeBlob.captureEnvironment(renderer, scene, camera);
+  } finally {
+    dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
+  }
+});
+
+// Tapping the blob makes it wobble, sends a shockwave out through the
+// desert, and plays a quiet impact. Only while the landing scene itself is
+// on screen, not once it has become the hallway portrait.
+const blobRaycaster = new THREE.Raycaster();
+const blobPointer = new THREE.Vector2();
+function pointerIsOnBlob(event) {
+  if (!chromeBlob.mesh.visible || hallwayBlend > 0 || debugMode) return false;
+  const rect = renderer.domElement.getBoundingClientRect();
+  blobPointer.set(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1,
+  );
+  blobRaycaster.setFromCamera(blobPointer, camera);
+  return blobRaycaster.intersectObject(chromeBlob.mesh, false).length > 0;
+}
+renderer.domElement.addEventListener("pointermove", (event) => {
+  renderer.domElement.style.cursor = pointerIsOnBlob(event) ? "pointer" : "";
+});
+renderer.domElement.addEventListener("click", (event) => {
+  if (!pointerIsOnBlob(event)) return;
+  const seconds = performance.now() / 1000;
+  chromeBlob.hit(seconds);
+  shockwave.trigger(chromeBlob.mesh.position, seconds);
+  playImpactSound();
+});
 
 let debugCamera;
 let debugControls;
@@ -471,6 +535,8 @@ renderer.setAnimationLoop(() => {
 
   waveTime.value = currentTime / 1000;
   dustDevil.update(currentTime / 1000);
+  shockwave.update(currentTime / 1000);
+  updateChromeBlob(currentTime / 1000);
   environmentSplat.updateVersion();
 
   if (debugMode) {

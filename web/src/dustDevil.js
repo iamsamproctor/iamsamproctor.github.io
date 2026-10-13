@@ -14,6 +14,10 @@ import { dyno } from "@sparkjsdev/spark";
 // It runs continuously, and the column wanders a little so it doesn't sit
 // in one spot. `strength` (0-1) scales the whole effect if it ever needs to
 // be faded in or out.
+//
+// A splat has only one world modifier slot, so other world-space effects
+// pass themselves in as `stages` (functions taking and returning a gsplat),
+// which run after the dust devil.
 
 const RADIUS = 1.5; // world units: how far from the column splats get pulled in
 const DENSITY = 0.55; // fraction of splats in range that take part
@@ -30,7 +34,7 @@ const DUST_TINT = 0.55; // how far toward DUST_COLOR they go at the top
 const DUST_SIZE = 0.018; // world-space radius of an airborne puff near the ground
 const DUST_OPACITY = 0.1; // opacity of an airborne puff
 
-export function addDustDevil(splat, { home = new THREE.Vector3(0, 0, 0) } = {}) {
+export function addDustDevil(splat, { home = new THREE.Vector3(0, 0, 0), stages = [] } = {}) {
   const time = dyno.dynoFloat(0);
   const strength = dyno.dynoFloat(1);
   const center = dyno.dynoVec3(home.clone());
@@ -111,6 +115,7 @@ export function addDustDevil(splat, { home = new THREE.Vector3(0, 0, 0) } = {}) 
       });
 
       gsplat = d.apply({ gsplat, t: time, strength, center }).gsplat;
+      for (const stage of stages) gsplat = stage(gsplat);
       return { gsplat };
     },
   );
@@ -127,5 +132,12 @@ export function addDustDevil(splat, { home = new THREE.Vector3(0, 0, 0) } = {}) 
     );
   }
 
-  return { update };
+  // 0-1; 0 puts every splat back where it belongs (e.g. while capturing
+  // reflections of the clean scene).
+  function setStrength(value) {
+    strength.value = value;
+  }
+
+  // Current point on the floor the column is centered on (it wanders).
+  return { update, setStrength, center: center.value };
 }

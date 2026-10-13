@@ -1,0 +1,200 @@
+import * as THREE from "three";
+
+// A floating liquid-chrome blob for the landing scene. It has no lighting of
+// its own: a mirror only shows its surroundings, so once it's given an
+// environment map made from the splat scene (see captureEnvironment) it
+// looks lit by the desert automatically, and keeps doing so if the
+// environment is swapped.
+//
+// A true reflection from the blob's position is mostly empty, because a scan
+// only covers the directions its camera saw. So instead of a physically
+// correct capture, one wide snapshot of the view is mirrored into a seamless
+// panorama and wrapped all the way around: not accurate, but the blob shows
+// desert from every angle, which is what reads as chrome.
+//
+// The surface ripples slowly: a smooth noise field displaces the sphere
+// along its normals in the vertex shader, and normals are rebuilt from the
+// displaced neighbors so reflections bend with the ripples.
+
+const RADIUS = 0.32;
+const RIPPLE = 0.055; // displacement, as a fraction of the radius
+const RIPPLE_SPEED = 0.55;
+const BOB_HEIGHT = 0.06;
+const BOB_SPEED = 0.7; // radians per second
+const SPIN_SPEED = 0.15; // radians per second
+const HIT_WOBBLE = 2.6; // extra ripple right after a tap, in units of RIPPLE
+const HIT_POP = 0.12; // how much it swells and shrinks right after a tap
+const HIT_DECAY = 3; // how quickly a tap's wobble dies down (per second)
+
+const SNAPSHOT_WIDTH = 1024;
+const SNAPSHOT_HEIGHT = 512;
+const SNAPSHOT_FOV = 75; // vertical degrees; wider shows more of the scene
+
+// Turns one snapshot into a 2:1 equirectangular panorama: the snapshot and
+// its mirror image side by side fill the band around the horizon (so the
+// wrap has no seam), and the rows at its top and bottom edges are stretched
+// out to the poles.
+function buildPanorama(snapshotCanvas) {
+  const width = SNAPSHOT_WIDTH * 2;
+  const height = SNAPSHOT_WIDTH;
+  const bandTop = (height - SNAPSHOT_HEIGHT) / 2;
+  const bandBottom = bandTop + SNAPSHOT_HEIGHT;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+
+  ctx.drawImage(snapshotCanvas, 0, bandTop);
+  ctx.save();
+  ctx.translate(width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(snapshotCanvas, 0, bandTop);
+  ctx.restore();
+
+  ctx.drawImage(canvas, 0, bandTop, width, 1, 0, 0, width, bandTop);
+  ctx.drawImage(canvas, 0, bandBottom - 1, width, 1, 0, bandBottom, width, height - bandBottom);
+  return canvas;
+}
+
+export function createChromeBlob() {
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    metalness: 1,
+    roughness: 0.06,
+  });
+
+  const time = { value: 0 };
+  const impact = { value: 0 }; // 1 right after a tap, decaying to 0
+  let hitAt = -1000;
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uBlobTime = time;
+    shader.uniforms.uBlobImpact = impact;
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        /* glsl */ `
+        #include <common>
+        uniform float uBlobTime;
+        uniform float uBlobImpact;
+
+        float blobField(vec3 p) {
+          float t = uBlobTime * ${RIPPLE_SPEED.toFixed(3)};
+          float d = sin(p.x * 1.7 + t * 1.1) * sin(p.y * 2.1 - t * 0.8) * sin(p.z * 1.6 + t * 0.9);
+          d += 0.35 * sin(p.x * 3.1 + p.z * 2.3 - t * 1.4) * sin(p.y * 2.7 + t);
+          // A tap sets off a fast, tighter wobble that dies away.
+          d += uBlobImpact * ${HIT_WOBBLE.toFixed(3)}
+            * sin(p.x * 5.3 + uBlobTime * 17.) * sin(p.y * 4.1 - uBlobTime * 13.) * sin(p.z * 4.7 + uBlobTime * 11.);
+          return d * ${RIPPLE.toFixed(3)};
+        }
+
+        vec3 blobPoint(vec3 p) {
+          vec3 n = normalize(p);
+          return n + n * blobField(n);
+        }
+        `,
+      )
+      .replace(
+        "#include <beginnormal_vertex>",
+        /* glsl */ `
+        // Rebuild the normal from two displaced neighbors on the sphere.
+        vec3 n0 = normalize(position);
+        vec3 tangent0 = normalize(cross(n0, abs(n0.y) < 0.99 ? vec3(0., 1., 0.) : vec3(1., 0., 0.)));
+        vec3 bitangent0 = cross(n0, tangent0);
+        vec3 q0 = blobPoint(n0);
+        vec3 qa = blobPoint(n0 + tangent0 * 0.01);
+        vec3 qb = blobPoint(n0 + bitangent0 * 0.01);
+        vec3 objectNormal = normalize(cross(qa - q0, qb - q0));
+        `,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        /* glsl */ `
+        vec3 transformed = q0;
+        `,
+      );
+  };
+
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 160, 120), material);
+  mesh.scale.setScalar(RADIUS);
+  // Hidden until it has something to reflect; a mirror with no environment
+  // is just a black ball.
+  mesh.visible = false;
+
+  const anchor = new THREE.Vector3();
+
+  // Snapshots the scene once and wraps it around the blob as its reflection.
+  // viewCamera: the camera the scene is viewed through; the snapshot is taken
+  // from the same spot (where the splats are already sorted for) with a
+  // wider lens. Call after the environment splat has loaded.
+  function captureEnvironment(renderer, scene, viewCamera) {
+    const target = new THREE.WebGLRenderTarget(SNAPSHOT_WIDTH, SNAPSHOT_HEIGHT);
+    const snapshotCamera = new THREE.PerspectiveCamera(
+      SNAPSHOT_FOV,
+      SNAPSHOT_WIDTH / SNAPSHOT_HEIGHT,
+      0.05,
+      200,
+    );
+    snapshotCamera.position.copy(viewCamera.position);
+    snapshotCamera.quaternion.copy(viewCamera.quaternion);
+
+    const pixels = new Uint8Array(SNAPSHOT_WIDTH * SNAPSHOT_HEIGHT * 4);
+    const previousTarget = renderer.getRenderTarget();
+    // Spark reads splat data back asynchronously through a pixel-pack
+    // buffer; if one is still bound, a plain readPixels into an array fails.
+    // Unbind it for this read and put it back afterwards.
+    const gl = renderer.getContext();
+    const boundPackBuffer = gl.getParameter(gl.PIXEL_PACK_BUFFER_BINDING);
+    mesh.visible = false;
+    try {
+      renderer.setRenderTarget(target);
+      renderer.render(scene, snapshotCamera);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      renderer.readRenderTargetPixels(target, 0, 0, SNAPSHOT_WIDTH, SNAPSHOT_HEIGHT, pixels);
+    } finally {
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, boundPackBuffer);
+      renderer.setRenderTarget(previousTarget);
+      target.dispose();
+    }
+
+    // Pixels come back bottom row first; flip them into a canvas. Spark
+    // writes sRGB values directly, so they're used as-is.
+    const snapshotCanvas = document.createElement("canvas");
+    snapshotCanvas.width = SNAPSHOT_WIDTH;
+    snapshotCanvas.height = SNAPSHOT_HEIGHT;
+    const image = new ImageData(SNAPSHOT_WIDTH, SNAPSHOT_HEIGHT);
+    const rowBytes = SNAPSHOT_WIDTH * 4;
+    for (let y = 0; y < SNAPSHOT_HEIGHT; y++) {
+      const from = (SNAPSHOT_HEIGHT - 1 - y) * rowBytes;
+      image.data.set(pixels.subarray(from, from + rowBytes), y * rowBytes);
+    }
+    for (let i = 3; i < image.data.length; i += 4) image.data[i] = 255;
+    snapshotCanvas.getContext("2d").putImageData(image, 0, 0);
+
+    const envMap = new THREE.CanvasTexture(buildPanorama(snapshotCanvas));
+    envMap.mapping = THREE.EquirectangularReflectionMapping;
+    envMap.colorSpace = THREE.SRGBColorSpace;
+    material.envMap = envMap;
+    material.needsUpdate = true;
+    mesh.visible = true;
+  }
+
+  // seconds: page time when it was tapped.
+  function hit(seconds) {
+    hitAt = seconds;
+  }
+
+  // center: where to float, e.g. a point partway up the dust devil.
+  function update(seconds, center) {
+    time.value = seconds;
+    const sinceHit = seconds - hitAt;
+    impact.value = sinceHit >= 0 ? Math.exp(-sinceHit * HIT_DECAY) : 0;
+    mesh.scale.setScalar(RADIUS * (1 + HIT_POP * impact.value * Math.sin(sinceHit * 18)));
+    anchor.copy(center);
+    mesh.position.set(anchor.x, anchor.y + Math.sin(seconds * BOB_SPEED) * BOB_HEIGHT, anchor.z);
+    mesh.rotation.y = seconds * SPIN_SPEED;
+    mesh.rotation.x = Math.sin(seconds * 0.23) * 0.3;
+  }
+
+  return { mesh, captureEnvironment, update, hit };
+}
