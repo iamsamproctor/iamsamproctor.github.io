@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import { playRevealSound } from "./revealSound.js";
 
 const SCRAMBLE_CHARS = "!<>-_\\/[]{}=+*^?#%@$&01234567890'\";:";
 
@@ -131,6 +132,7 @@ export function createTextReveal(
       char.lastSwap = -Infinity;
     });
     tween.restart();
+    playRevealSound(el, total);
   };
 
   const finishSetup = () => {

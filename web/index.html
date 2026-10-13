@@ -98,7 +98,8 @@
         letter-spacing: 0.15em;
       }
 
-      .contact-button {
+      .contact-button,
+      .audio-toggle {
         position: fixed;
         top: 20px;
         right: 32px;
@@ -120,13 +121,29 @@
           opacity 0.8s ease;
       }
 
-      .contact-button svg {
+      .audio-toggle {
+        right: 88px;
+      }
+
+      .contact-button svg,
+      .audio-toggle svg {
         width: 18px;
         height: 18px;
         display: block;
       }
 
-      .contact-button:hover {
+      .audio-toggle .audio-toggle-off,
+      .audio-toggle[aria-pressed="true"] .audio-toggle-on {
+        display: inline;
+      }
+
+      .audio-toggle .audio-toggle-on,
+      .audio-toggle[aria-pressed="true"] .audio-toggle-off {
+        display: none;
+      }
+
+      .contact-button:hover,
+      .audio-toggle:hover {
         background: #ffffff;
         border-color: #ffffff;
         color: #000000;
@@ -919,6 +936,7 @@
 
       body.is-loading .title-block,
       body.is-loading .contact-button,
+      body.is-loading .audio-toggle,
       body.is-loading .section-nav,
       body.is-loading .hero-heading {
         opacity: 0;
@@ -933,14 +951,20 @@
       }
 
       @media (max-width: 640px) {
-        .contact-button {
+        .contact-button,
+        .audio-toggle {
           top: 16px;
           right: 16px;
           width: 38px;
           height: 38px;
         }
 
-        .contact-button svg {
+        .audio-toggle {
+          right: 64px;
+        }
+
+        .contact-button svg,
+        .audio-toggle svg {
           width: 16px;
           height: 16px;
         }
@@ -1004,6 +1028,32 @@
         <path
           d="M6.6 10.8c1.6 3.2 4.4 6 7.6 7.6l2.5-2.5c.3-.3.8-.4 1.2-.3 1.3.4 2.7.7 4.1.7.6 0 1 .4 1 1v3.6c0 .6-.4 1-1 1C10.9 22 2 13.1 2 2c0-.6.4-1 1-1h3.6c.6 0 1 .4 1 1 0 1.4.2 2.8.7 4.1.1.4 0 .9-.3 1.2z"
         />
+      </svg>
+    </button>
+
+    <button
+      type="button"
+      class="audio-toggle"
+      aria-label="Sound"
+      aria-pressed="false"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M11 5 6 9H2v6h4l5 4V5z" />
+        <g class="audio-toggle-on">
+          <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+          <path d="M18.8 5.2a9.5 9.5 0 0 1 0 13.6" />
+        </g>
+        <g class="audio-toggle-off">
+          <path d="m16 9 6 6" />
+          <path d="m22 9-6 6" />
+        </g>
       </svg>
     </button>
 

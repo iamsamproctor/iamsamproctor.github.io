@@ -6,8 +6,13 @@ import { createTextReveal, revealOnEnter } from "./textReveal.js";
 import { createLoadingScreen } from "./loadingScreen.js";
 import { createRevealBurn } from "./revealBurn.js";
 import { createWorkModal } from "./workModal.js";
+import { createWindScroll } from "./windScroll.js";
+import { createBackgroundMusic } from "./backgroundMusic.js";
+import { setRevealSoundEnabled } from "./revealSound.js";
 
 const revealBurn = createRevealBurn();
+const windScroll = createWindScroll();
+const backgroundMusic = createBackgroundMusic();
 
 const heroHeadingTitleEl = document.querySelector(".hero-heading h2");
 const heroHeadingSubEl = document.querySelector(".hero-heading p");
@@ -15,12 +20,37 @@ const heroHeadingReveal = heroHeadingTitleEl
   ? createTextReveal(heroHeadingTitleEl, { lockWidths: true })
   : null;
 
+const audioToggleEl = document.querySelector(".audio-toggle");
+
+// Both start/enable calls must happen inside a click, which is why this is
+// only ever called from the Enter button or the toggle itself.
+function setAudio(on, { fadeSeconds = 1.5 } = {}) {
+  audioToggleEl?.setAttribute("aria-pressed", String(on));
+  setRevealSoundEnabled(on);
+  if (on) {
+    windScroll.enable();
+    backgroundMusic.start();
+    if (fadeSeconds) backgroundMusic.fadeIn(fadeSeconds);
+  } else {
+    windScroll.disable();
+    backgroundMusic.stop();
+  }
+}
+
+audioToggleEl?.addEventListener("click", () => {
+  setAudio(audioToggleEl.getAttribute("aria-pressed") !== "true");
+});
+
 const loadingScreen = createLoadingScreen({
   assets: [
     { id: "environment", bytes: 2359717 },
     { id: "mom", bytes: 3296646 },
   ],
+  // Starts the music silently; the longer fade below begins with the burn.
+  onEnterWithAudio: () => setAudio(true, { fadeSeconds: 0 }),
   onEnter: () => {
+    // No-op if they entered without audio, since start() never ran.
+    backgroundMusic.fadeIn(4);
     revealBurn.play({
       onReveal: () => {
         document.body.classList.remove("is-loading");
@@ -256,14 +286,14 @@ function applyScrollEffects(scrollY) {
   updateActiveSection(scrollY);
 }
 applyScrollEffects(latestScrollY);
-
+ 
 const maxYaw = THREE.MathUtils.degToRad(20);
 const maxPitch = THREE.MathUtils.degToRad(20);
 const cameraSmoothing = 0.2;
 let targetYaw = 0;
 let targetPitch = 0;
 let currentYaw = 0;
-let currentPitch = 0;
+let currentPitch = 0;  
 
 window.addEventListener("pointermove", (event) => {
   const horizontalPosition = THREE.MathUtils.clamp(

@@ -5,7 +5,7 @@ import gsap from "gsap";
 // so 100% means "ready", not "downloaded".
 const DOWNLOAD_SHARE = 0.95;
 
-export function createLoadingScreen({ assets, onEnter }) {
+export function createLoadingScreen({ assets, onEnter, onEnterWithAudio }) {
   const root = document.querySelector(".loader");
   const valueEl = root.querySelector(".loader-percent-value");
   const fillEl = root.querySelector(".loader-bar-fill");
@@ -67,7 +67,12 @@ export function createLoadingScreen({ assets, onEnter }) {
       });
   };
 
-  enterEl.addEventListener("click", enter);
+  // Audio has to be started synchronously inside the click — browsers won't
+  // let it start later from the fade timeline — so this runs before `enter`.
+  enterEl.addEventListener("click", () => {
+    if (onEnterWithAudio) onEnterWithAudio();
+    enter();
+  });
   enterMutedEl.addEventListener("click", enter);
 
   return {
