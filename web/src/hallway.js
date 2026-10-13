@@ -263,5 +263,7 @@ export function createHallway({ renderer, works = [] }) {
     renderer.render(scene, camera);
   }
 
-  return { setSize, update, render };
+  // scene is exposed so other pieces (e.g. museumVisitor.js) can be placed
+  // in the hallway.
+  return { scene, setSize, update, render };
 }

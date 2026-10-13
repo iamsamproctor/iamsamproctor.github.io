@@ -11,6 +11,7 @@ import { createBackgroundMusic } from "./backgroundMusic.js";
 import { setRevealSoundEnabled } from "./revealSound.js";
 import { setImpactSoundEnabled, playImpactSound } from "./impactSound.js";
 import { createHallway } from "./hallway.js";
+import { createMuseumVisitor } from "./museumVisitor.js";
 import { createAboutPortrait } from "./aboutPortrait.js";
 import { createQuoteInterstitial } from "./quoteInterstitial.js";
 import { addDustDevil } from "./dustDevil.js";
@@ -311,6 +312,16 @@ const hallway = createHallway({
   })),
 });
 hallway.setSize(window.innerWidth, window.innerHeight);
+
+// Someone on a bench partway down the hallway, watching the portrait. The
+// camera starts in front of them and pulls back over them; since it faces
+// the portrait, their head stays below and behind the view until it's past
+// them, so they can sit dead center. The figure is a large file, so it's only
+// fetched partway through the landing scene (see the animation loop).
+const museumVisitor = createMuseumVisitor({ url: "/assets/animations/sitting-idle.fbx" });
+museumVisitor.group.position.set(0, 0, 4.5);
+hallway.scene.add(museumVisitor.group);
+const museumVisitorLoadAt = 0.35; // fraction of cameraScrollRange
 scene.add(spark);
 
 const environmentSplat = new SplatMesh({
@@ -555,6 +566,7 @@ renderer.setAnimationLoop(() => {
     renderer.render(scene, debugCamera);
   } else {
     applyScrollEffects(latestScrollY);
+    if (scrollProgress >= museumVisitorLoadAt) museumVisitor.load();
 
     if (!isScrolling) {
       orbitAngle += orbitSpeed * deltaTime;
@@ -597,6 +609,7 @@ renderer.setAnimationLoop(() => {
       // Fully faded to black: skip the splat and hallway passes entirely.
       renderer.clear();
     } else {
+      museumVisitor.update(deltaTime);
       hallway.update(hallwayBlend, currentYaw, currentPitch);
       hallway.render(scene, camera);
     }
