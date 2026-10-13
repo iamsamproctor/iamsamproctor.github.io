@@ -659,5 +659,5 @@ if (workIntro) {
 }
 
 document.querySelector(".contact-button")?.addEventListener("click", () => {
-  console.log("Clicked contact");
+  document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
 });

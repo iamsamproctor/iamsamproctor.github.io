@@ -770,18 +770,186 @@
         }
       }
 
-      .contact-link {
-        display: inline-block;
-        margin-top: 12px;
-        color: #ffffff;
-        font-size: clamp(16px, 2vw, 20px);
-        text-decoration: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-        padding-bottom: 2px;
+      .page-section .section-eyebrow {
+        margin: 0 0 28px;
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.45);
       }
 
-      .contact-link:hover {
+      .about-grid {
+        display: grid;
+        grid-template-columns: minmax(160px, 240px) minmax(0, 640px);
+        gap: 64px;
+        align-items: start;
+      }
+
+      .about-photo {
+        aspect-ratio: 1;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #1c1c1c;
+      }
+
+      .about-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        filter: grayscale(1) contrast(1.05);
+        transition: filter 0.6s ease;
+      }
+
+      .about-photo:hover img {
+        filter: none;
+      }
+
+      .page-section .about-heading {
+        margin: 0 0 32px;
+        font-size: clamp(30px, 4.2vw, 52px);
+        font-weight: 300;
+        line-height: 1.15;
+        letter-spacing: -0.01em;
+      }
+
+      .about-heading span {
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .page-section .about-bio {
+        max-width: 56ch;
+      }
+
+      .about-subheading {
+        margin: 56px 0 12px;
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.45);
+      }
+
+      .about-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .about-list li {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 9em;
+        gap: 24px;
+        padding: 16px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 15px;
+      }
+
+      .about-list-role {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .about-list-years {
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        color: rgba(255, 255, 255, 0.45);
+        align-self: center;
+        text-align: right;
+      }
+
+      .contact {
+        margin-top: 160px;
+        padding-top: 48px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .contact-email {
+        display: inline-block;
+        color: #ffffff;
+        font-size: clamp(28px, 5.5vw, 72px);
+        font-weight: 300;
+        letter-spacing: -0.015em;
+        line-height: 1.1;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+      }
+
+      .contact-email span {
+        display: inline-block;
+        color: rgba(255, 255, 255, 0.4);
+        transition:
+          transform 0.3s ease,
+          color 0.3s ease;
+      }
+
+      .contact-email:hover span {
+        color: #ffffff;
+        transform: translateX(8px);
+      }
+
+      .contact-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 32px;
+        margin: 40px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .contact-links a {
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+        padding-bottom: 3px;
+        transition:
+          color 0.25s ease,
+          border-color 0.25s ease;
+      }
+
+      .contact-links a:hover {
+        color: #ffffff;
         border-color: #ffffff;
+      }
+
+      .site-footer {
+        margin-top: 120px;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        color: rgba(255, 255, 255, 0.3);
+      }
+
+      @media (max-width: 900px) {
+        .about-grid {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+
+        .about-photo {
+          width: 160px;
+        }
+
+        .about-list li {
+          grid-template-columns: 1fr auto;
+          gap: 4px 16px;
+        }
+
+        .about-list-role {
+          grid-row: 2;
+        }
+
+        .about-list-years {
+          grid-row: 1 / span 2;
+          grid-column: 2;
+        }
+
+        .contact {
+          margin-top: 112px;
+        }
       }
 
       @media (max-width: 900px) {
@@ -1086,9 +1254,6 @@
       <button type="button" data-section="about" aria-label="About">
         <span class="section-nav-label">About</span>
       </button>
-      <button type="button" data-section="contact" aria-label="Contact">
-        <span class="section-nav-label">Contact</span>
-      </button>
     </nav>
 
     <div class="scroll-spacer"></div>
@@ -1210,25 +1375,57 @@
       </div>
     </section>
 
-    <section id="about" class="page-section">
-      <div class="page-section-inner">
-        <h2>About</h2>
-        <p>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
-          minim veniam, quis nostrud exercitation ullamco laboris.
-        </p>
-      </div>
-    </section>
+    <section id="about" class="page-section about">
+      <div class="about-grid">
+        <div class="about-photo">
+          <img src="/assets/images/me.jpg" alt="Sam Proctor" />
+        </div>
 
-    <section id="contact" class="page-section">
-      <div class="page-section-inner">
-        <h2>Contact</h2>
-        <p>Say hello.</p>
-        <a class="contact-link" href="mailto:iamsamproctor@gmail.com"
-          >iamsamproctor@gmail.com</a
-        >
+        <div class="about-main">
+          <p class="section-eyebrow">About</p>
+          <h2 class="about-heading">
+            Sam Proctor,<br />
+            <span>creative developer in XR and games.</span>
+          </h2>
+          <p class="about-bio">
+            Placeholder bio. A couple of sentences about what you build, how you
+            like to work, and what you're drawn to: real-time worlds, playful
+            interfaces, the tools underneath them.
+          </p>
+          <p class="about-bio">
+            A second, shorter paragraph for what you're doing right now, or what
+            you're open to next.
+          </p>
+
+          <h3 class="about-subheading">Experience</h3>
+          <ul class="about-list">
+            <li>
+              <span class="about-list-name">Kainoa Labs Inc.</span>
+              <span class="about-list-role">Unity Engineer</span>
+              <span class="about-list-years">2026 &ndash; Now</span>
+            </li>
+            <li>
+              <span class="about-list-name">Jadu AR Inc.</span>
+              <span class="about-list-role">Gameplay Engineer</span>
+              <span class="about-list-years">2020 &ndash; 2025</span>
+            </li>
+          </ul>
+        </div>
       </div>
+
+      <div id="contact" class="contact">
+        <p class="section-eyebrow">Contact</p>
+        <a class="contact-email" href="mailto:iamsamproctor@gmail.com"
+          >iamsamproctor@gmail.com <span aria-hidden="true">&rarr;</span></a
+        >
+        <ul class="contact-links">
+          <li><a href="#">LinkedIn</a></li>
+          <li><a href="#">GitHub</a></li>
+          <li><a href="#">R&eacute;sum&eacute;</a></li>
+        </ul>
+      </div>
+
+      <footer class="site-footer">&copy; 2026 Sam Proctor</footer>
     </section>
 
     <div class="work-modal" hidden>
