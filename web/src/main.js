@@ -18,7 +18,7 @@ import {
 import { createHallway } from "./hallway.js";
 import { createMuseumVisitor } from "./museumVisitor.js";
 import { createAboutPortrait } from "./aboutPortrait.js";
-import { createQuoteInterstitial } from "./quoteInterstitial.js";
+import { createHallwayQuote } from "./hallwayQuote.js";
 import { addDustDevil } from "./dustDevil.js";
 import { createChromeBlob } from "./chromeBlob.js";
 import { createSplatShockwave } from "./splatShockwave.js";
@@ -142,13 +142,6 @@ const hallwayBlendSmoothing = 3; // rate the hallway dolly chases scroll; lower 
 let hallwayProgress = 0; // raw 0-1
 let hallwayBlend = 0; // smoothed toward hallwayProgress each frame
 
-// Once the hallway has gone fully black, the scroll holds on black for a
-// stretch while a quote fades in, then Work rises over it.
-const quoteEl = document.querySelector(".quote-interstitial");
-const quoteInterstitial = quoteEl ? createQuoteInterstitial(quoteEl, quotes) : null;
-const quoteHoldRange = 900; // px of scroll held on black, after hallwayScrollRange
-const quoteFadeIn = 250; // px it fades in over, ending as the hallway reaches black
-
 // The scroll-spacer exists purely to give the fixed hero/transition elements
 // room to animate. It needs to cover that scroll distance *plus* one extra
 // viewport height of buffer — otherwise the next section's opaque background
@@ -157,7 +150,7 @@ const quoteFadeIn = 250; // px it fades in over, ending as the hallway reaches b
 const scrollSpacerEl = document.querySelector(".scroll-spacer");
 function sizeScrollSpacer() {
   if (scrollSpacerEl) {
-    scrollSpacerEl.style.height = `${cameraScrollRange + hallwayScrollRange + quoteHoldRange + window.innerHeight}px`;
+    scrollSpacerEl.style.height = `${cameraScrollRange + hallwayScrollRange + window.innerHeight}px`;
   }
 }
 sizeScrollSpacer();
@@ -252,19 +245,6 @@ function applyScrollEffects(scrollY) {
     1,
   );
 
-  if (quoteInterstitial) {
-    // Fades out as Work rises from the bottom, gone by the time Work's
-    // top edge reaches about a third of the way up the screen.
-    const intoBlack = scrollY - cameraScrollRange - hallwayScrollRange;
-    const fadeIn = THREE.MathUtils.smoothstep(intoBlack, -quoteFadeIn, 0);
-    const fadeOut = THREE.MathUtils.smoothstep(
-      intoBlack,
-      quoteHoldRange - 100,
-      quoteHoldRange + window.innerHeight * 0.35,
-    );
-    quoteInterstitial.setVisibility(fadeIn * (1 - fadeOut));
-  }
-
   updateActiveSection(scrollY);
 }
 applyScrollEffects(latestScrollY);
@@ -317,6 +297,9 @@ const hallway = createHallway({
   })),
 });
 hallway.setSize(window.innerWidth, window.innerHeight);
+
+const hallwayQuoteEl = document.querySelector(".hallway-quote");
+const hallwayQuote = hallwayQuoteEl ? createHallwayQuote(hallwayQuoteEl, quotes) : null;
 
 // Someone on a bench partway down the hallway, watching the portrait. The
 // camera starts in front of them and pulls back over them; since it faces
@@ -635,13 +618,16 @@ renderer.setAnimationLoop(() => {
 
     if (hallwayBlend <= 0) {
       renderer.render(scene, camera);
+      hallwayQuote?.hide();
     } else if (hallwayBlend >= 1) {
       // Fully faded to black: skip the splat and hallway passes entirely.
       renderer.clear();
+      hallwayQuote?.hide();
     } else {
       museumVisitor.update(deltaTime);
       hallway.update(hallwayBlend, currentYaw, currentPitch);
       hallway.render(scene, camera);
+      hallwayQuote?.update(hallway.projectWallPoint, hallwayBlend);
     }
   }
 

@@ -1,5 +1,4 @@
 import gsap from "gsap";
-import { createLoaderGrid } from "./loaderGrid.js";
 
 // Downloading is the bulk of the wait, but the splats still need to decode
 // after the last byte arrives. Hold the bar short of full until that settles
@@ -13,7 +12,6 @@ export function createLoadingScreen({ assets, onEnter, onEnterWithAudio }) {
   const enterEl = root.querySelector(".loader-enter");
   const enterMutedEl = root.querySelector(".loader-enter-muted");
   const markEl = root.querySelector(".loader-mark");
-  const grid = createLoaderGrid(root);
 
   const tracked = new Map(
     assets.map((asset) => [asset.id, { loaded: 0, total: asset.bytes }]),
@@ -57,14 +55,13 @@ export function createLoadingScreen({ assets, onEnter, onEnterWithAudio }) {
   const enter = () => {
     gsap
       .timeline()
-      .to([grid.canvas, markEl, valueEl.parentElement, fillEl.parentElement, enterEl, enterMutedEl], {
+      .to([markEl, valueEl.parentElement, fillEl.parentElement, enterEl, enterMutedEl], {
         opacity: 0,
         duration: 0.4,
         ease: "power2.in",
       })
       .add(() => {
         root.style.display = "none";
-        grid.destroy();
         window.scrollTo(0, 0);
         if (onEnter) onEnter();
       });

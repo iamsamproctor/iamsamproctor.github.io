@@ -93,7 +93,8 @@ export function createHallway({ renderer, works = [] }) {
   // portrait doesn't float in a black void.
   const pictureLight = new THREE.SpotLight(0xffe2c0, 14, 7, 0.75, 0.9, 1.6);
   pictureLight.position.set(0, HALL_HEIGHT - 0.3, 1.6);
-  pictureLight.target.position.set(0, EYE_HEIGHT + 0.2, -0.1);
+  // Aimed above the frame so the pool also takes in the quote on the wall.
+  pictureLight.target.position.set(0, EYE_HEIGHT + 0.55, -0.1);
   scene.add(pictureLight, pictureLight.target);
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.06));
@@ -255,6 +256,29 @@ export function createHallway({ renderer, works = [] }) {
     }
   }
 
+  // Where a point on the end wall lands on screen, for HTML laid over the
+  // hallway (see hallwayQuote.js). Returns its position in CSS pixels, how
+  // many CSS pixels one world unit spans there, and how visible it is
+  // through the fog (0..1).
+  const projected = new THREE.Vector3();
+  function projectWallPoint(point, viewWidth, viewHeight) {
+    projected.copy(point).project(camera);
+    const depth = camera.position.z - point.z;
+    const pxPerUnit =
+      viewHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * depth);
+    const fog = THREE.MathUtils.clamp(
+      (scene.fog.far - depth) / Math.max(scene.fog.far - scene.fog.near, 0.0001),
+      0,
+      1,
+    );
+    return {
+      x: ((projected.x + 1) / 2) * viewWidth,
+      y: ((1 - projected.y) / 2) * viewHeight,
+      pxPerUnit,
+      visibility: fog,
+    };
+  }
+
   // Draws the splat scene into the portrait, then the hallway to the screen.
   function render(splatScene, splatCamera) {
     renderer.setRenderTarget(renderTarget);
@@ -265,5 +289,5 @@ export function createHallway({ renderer, works = [] }) {
 
   // scene is exposed so other pieces (e.g. museumVisitor.js) can be placed
   // in the hallway.
-  return { scene, setSize, update, render };
+  return { scene, setSize, update, render, projectWallPoint };
 }
