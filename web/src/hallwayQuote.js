@@ -11,6 +11,7 @@ const ANCHOR = new THREE.Vector3(0, 2.62, -0.09);
 const DESIGN_PX_PER_UNIT = 100; // the CSS is laid out at 100px per world unit
 const MAX_LENGTH = 120; // longer quotes don't fit the wall above the frame
 const SWAP_SECONDS = 0.6; // must match the .hallway-quote-inner transition
+const HINT_DELAY = 1.2; // seconds the quote is fully in view before the hint shows
 
 function escapeHtml(value) {
   return String(value).replace(
@@ -23,6 +24,12 @@ export function createHallwayQuote(el, quotes) {
   const innerEl = el.querySelector(".hallway-quote-inner");
   const textEl = el.querySelector(".hallway-quote-text");
   const authorEl = el.querySelector(".hallway-quote-author");
+  const hintEl = el.querySelector(".hallway-quote-hint");
+  if (hintEl) {
+    hintEl.textContent = window.matchMedia("(pointer: coarse)").matches
+      ? "Tap for another"
+      : "Click for another";
+  }
 
   const pool = quotes.filter(
     (quote) => quote.display_enabled && quote.quote.length <= MAX_LENGTH,
@@ -59,7 +66,15 @@ export function createHallwayQuote(el, quotes) {
   }
 
   if (pool.length) render(pickNext());
-  el.addEventListener("click", next);
+
+  // The hint teaches once: after the first tap it's gone for the visit.
+  let hintUsed = false;
+  let inViewSince = null;
+  el.addEventListener("click", () => {
+    hintUsed = true;
+    hintEl?.classList.remove("is-shown");
+    next();
+  });
 
   let shown = false;
 
@@ -75,6 +90,16 @@ export function createHallwayQuote(el, quotes) {
     el.style.opacity = String(opacity);
     el.style.pointerEvents = opacity > 0.3 ? "auto" : "none";
     shown = true;
+
+    if (hintEl && !hintUsed) {
+      const now = performance.now() / 1000;
+      if (opacity > 0.8) {
+        inViewSince ??= now;
+        if (now - inViewSince > HINT_DELAY) hintEl.classList.add("is-shown");
+      } else {
+        inViewSince = null;
+      }
+    }
   }
 
   function hide() {

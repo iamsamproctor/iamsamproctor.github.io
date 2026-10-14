@@ -333,6 +333,36 @@
         color: rgba(255, 244, 230, 1);
       }
 
+      /* Shown once, a beat after the quote first settles on the wall, and
+         gone for good after the first tap (hallwayQuote.js). */
+      .hallway-quote-hint {
+        margin: 9px 0 0;
+        color: rgba(255, 240, 222, 0.38);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        font-size: 4px;
+        letter-spacing: 0.22em;
+        text-align: center;
+        text-transform: uppercase;
+        opacity: 0;
+        transform: translateY(2px);
+        transition:
+          opacity 0.9s ease,
+          transform 0.9s ease,
+          color 0.3s ease;
+      }
+
+      .hallway-quote-hint.is-shown {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .hallway-quote:hover .hallway-quote-hint {
+        color: rgba(255, 240, 222, 0.7);
+        transform: translateY(-1px);
+      }
+
       .hallway-quote-author {
         margin-top: 8px;
         color: rgba(255, 240, 222, 0.45);
@@ -1581,6 +1611,7 @@
         <p class="hallway-quote-text"></p>
         <footer class="hallway-quote-author"></footer>
       </blockquote>
+      <p class="hallway-quote-hint" aria-hidden="true"></p>
     </div>
 
     <div class="scroll-spacer"></div>

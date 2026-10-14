@@ -24,6 +24,11 @@ const FRAMING = 0.36; // fraction of the figure's height (from the top) that fil
 const FULL_FRAMING = 1.32; // full-body view: whole figure plus room above and below
 const FULL_ELEVATION = THREE.MathUtils.degToRad(14); // full-body view: camera raised, looking down
 
+const FLOOR_SIZE = 8; // world units across the grid floor
+const FLOOR_CELL = 0.25; // world units between grid lines
+const SHADOW_SPREAD = 3; // contact shadow size, relative to the figure's footprint
+const SHADOW_DARKNESS = 1;
+
 const DRAG_SPEED = 0.008; // radians of spin per px dragged
 const AUTO_SPIN = 0.25; // radians/sec the viewer drifts at when left alone
 const SPIN_DAMPING = 2.5; // how quickly a flick's momentum settles back to AUTO_SPIN
@@ -57,6 +62,16 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
   const pivot = new THREE.Group();
   scene.add(pivot);
 
+  // A grid floor under the figure's feet, only seen in the full-body view.
+  // It turns with the pivot, so spinning the figure reads as turning the
+  // whole stage rather than the figure alone.
+  const floor = createGridFloor();
+  pivot.add(floor.mesh);
+  // A soft contact shadow pooled under the feet, so the figure stands on
+  // the floor instead of hovering over it.
+  const shadow = createContactShadow();
+  pivot.add(shadow.mesh);
+
   let splat = null;
   let bounds = null; // { center, top, height } once loaded
   let isVisible = false;
@@ -80,7 +95,9 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
       bounds = {
         center: box.getCenter(new THREE.Vector3()),
         top: box.max.y,
+        bottom: box.min.y,
         height: box.max.y - box.min.y,
+        footprint: Math.max(box.max.x - box.min.x, box.max.z - box.min.z),
       };
       pivot.add(splat);
       addBreathing(splat);
@@ -95,11 +112,18 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
   // square photo frame — which is what lets the open morph line up.
   function frameCamera() {
     if (!bounds) return;
-    const { center, top, height } = bounds;
+    const { center, top, bottom, height } = bounds;
     const headHeight = height * FRAMING;
     const frameHeight = lerp(headHeight, height * FULL_FRAMING, morph.value);
     const focusY = lerp(top - headHeight / 2, center.y, morph.value);
     splat.position.set(-center.x, -focusY, -center.z);
+    floor.mesh.position.y = bottom - focusY;
+    const floorOpacity = THREE.MathUtils.smoothstep(morph.value, 0.4, 1);
+    floor.setOpacity(floorOpacity);
+    // Centered under the figure itself, whatever its offset in the capture.
+    shadow.mesh.position.set(0, bottom - focusY + 0.002, 0);
+    shadow.mesh.scale.setScalar(bounds.footprint * SHADOW_SPREAD);
+    shadow.setOpacity(floorOpacity);
 
     const halfFov = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
     const distance = frameHeight / 2 / (halfFov * Math.min(1, camera.aspect));
@@ -370,6 +394,100 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
       frameCamera();
     });
   }
+}
+
+// A faint wireframe floor: grid lines drawn in the shader so they stay one
+// pixel thin at any distance, fading out toward the edges into the dark.
+// Drawn before the splats, which blend over it.
+function createGridFloor() {
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: {
+      opacity: { value: 0 },
+      cell: { value: FLOOR_CELL },
+      radius: { value: FLOOR_SIZE / 2 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vPos;
+      void main() {
+        vPos = position.xy;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float opacity;
+      uniform float cell;
+      uniform float radius;
+      varying vec2 vPos;
+      void main() {
+        vec2 g = vPos / cell;
+        vec2 w = fwidth(g);
+        vec2 line = abs(fract(g - 0.5) - 0.5) / w;
+        float grid = 1.0 - min(min(line.x, line.y), 1.0);
+        // Every fourth line a little brighter, like a drafting grid.
+        vec2 g4 = g / 4.0;
+        vec2 line4 = abs(fract(g4 - 0.5) - 0.5) / fwidth(g4);
+        float major = 1.0 - min(min(line4.x, line4.y), 1.0);
+        float fade = 1.0 - smoothstep(radius * 0.15, radius, length(vPos));
+        float alpha = max(grid * 0.22, major * 0.45) * fade * opacity;
+        gl_FragColor = vec4(vec3(1.0), alpha);
+      }
+    `,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE), material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = -1;
+  mesh.visible = false;
+
+  return {
+    mesh,
+    setOpacity(value) {
+      material.uniforms.opacity.value = value;
+      mesh.visible = value > 0.001;
+    },
+  };
+}
+
+// A dark pool that is densest right under the figure and feathers out to
+// nothing, drawn over the grid floor and under the splats.
+function createContactShadow() {
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: { opacity: { value: 0 } },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float opacity;
+      varying vec2 vUv;
+      void main() {
+        float d = length(vUv - 0.5) * 2.0;
+        // A tight core under the feet plus a wide, faint falloff.
+        float core = 1.0 - smoothstep(0.0, 0.45, d);
+        float soft = pow(1.0 - smoothstep(0.0, 1.0, d), 2.0);
+        float alpha = (core * 0.55 + soft * 0.45) * ${SHADOW_DARKNESS.toFixed(3)} * opacity;
+        gl_FragColor = vec4(vec3(0.0), alpha);
+      }
+    `,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = -0.5;
+  mesh.visible = false;
+
+  return {
+    mesh,
+    setOpacity(value) {
+      material.uniforms.opacity.value = value;
+      mesh.visible = value > 0.001;
+    },
+  };
 }
 
 // Breathe the figure between solid and a scattered, abstract state: a slow
