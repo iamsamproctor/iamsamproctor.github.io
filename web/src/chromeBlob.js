@@ -52,9 +52,48 @@ function buildPanorama(snapshotCanvas) {
   ctx.drawImage(snapshotCanvas, 0, bandTop);
   ctx.restore();
 
-  ctx.drawImage(canvas, 0, bandTop, width, 1, 0, 0, width, bandTop);
-  ctx.drawImage(canvas, 0, bandBottom - 1, width, 1, 0, bandBottom, width, height - bandBottom);
+  fillPole(ctx, canvas, width, bandTop, 0, bandTop, true);
+  fillPole(ctx, canvas, width, bandBottom - 1, bandBottom, height - bandBottom, false);
   return canvas;
+}
+
+// Fills the area above or below the snapshot band. Stretching the edge row
+// straight to the pole smears it into long streaks, so the edge is averaged
+// into a few broad color patches (a coarse, smooth version of the same
+// colors) that then fade to the row's overall average color at the pole.
+function fillPole(ctx, source, width, edgeRow, poleTop, poleHeight, isTop) {
+  const PATCHES = 12;
+  const small = document.createElement("canvas");
+  small.width = PATCHES;
+  small.height = 1;
+  const sctx = small.getContext("2d");
+  sctx.imageSmoothingQuality = "high";
+  sctx.drawImage(source, 0, edgeRow - (isTop ? 0 : 7), width, 8, 0, 0, PATCHES, 1);
+
+  const mean = document.createElement("canvas");
+  mean.width = 1;
+  mean.height = 1;
+  mean.getContext("2d").drawImage(small, 0, 0, PATCHES, 1, 0, 0, 1, 1);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(small, 0, 0, PATCHES, 1, 0, poleTop, width, poleHeight);
+  // Fade from the patches at the band edge to the flat average at the pole.
+  const grad = ctx.createLinearGradient(0, poleTop, 0, poleTop + poleHeight);
+  const near = isTop ? 1 : 0;
+  grad.addColorStop(near, "rgba(0,0,0,0)");
+  grad.addColorStop(1 - near, "rgba(0,0,0,1)");
+  const flat = document.createElement("canvas");
+  flat.width = 1;
+  flat.height = poleHeight;
+  const fctx = flat.getContext("2d");
+  fctx.drawImage(mean, 0, 0, 1, 1, 0, 0, 1, poleHeight);
+  fctx.globalCompositeOperation = "destination-in";
+  fctx.fillStyle = grad;
+  fctx.fillRect(0, 0, 1, poleHeight);
+  ctx.drawImage(flat, 0, 0, 1, poleHeight, 0, poleTop, width, poleHeight);
+  ctx.restore();
 }
 
 export function createChromeBlob() {
@@ -67,7 +106,34 @@ export function createChromeBlob() {
   const time = { value: 0 };
   const impact = { value: 0 }; // 1 right after a tap, decaying to 0
   let hitAt = -1000;
+  // Three only encodes output to sRGB when drawing to the screen. The hallway
+  // draws this scene into a render target (as the portrait), where the blob
+  // would come out in linear values and look black next to Spark's sRGB
+  // splats, so it encodes itself there.
+  const encodeOutput = { value: 0 };
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uBlobEncode = encodeOutput;
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        /* glsl */ `
+        #include <common>
+        uniform float uBlobEncode;
+        `,
+      )
+      .replace(
+        "#include <colorspace_fragment>",
+        /* glsl */ `
+        #include <colorspace_fragment>
+        if (uBlobEncode > 0.5) {
+          gl_FragColor.rgb = mix(
+            gl_FragColor.rgb * 12.92,
+            1.055 * pow(gl_FragColor.rgb, vec3(1.0 / 2.4)) - 0.055,
+            step(0.0031308, gl_FragColor.rgb)
+          );
+        }
+        `,
+      );
     shader.uniforms.uBlobTime = time;
     shader.uniforms.uBlobImpact = impact;
     shader.vertexShader = shader.vertexShader
@@ -116,6 +182,9 @@ export function createChromeBlob() {
   };
 
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 160, 120), material);
+  mesh.onBeforeRender = (renderer) => {
+    encodeOutput.value = renderer.getRenderTarget() ? 1 : 0;
+  };
   mesh.scale.setScalar(RADIUS);
   // Hidden until it has something to reflect; a mirror with no environment
   // is just a black ball.

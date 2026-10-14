@@ -146,7 +146,21 @@ export function createTextReveal(
   };
 
   if (lockWidths) {
-    document.fonts.ready.then(finishSetup);
+    // fonts.ready can resolve before a not-yet-requested face has loaded, so
+    // load the element's own font explicitly before measuring glyph widths.
+    const cs = getComputedStyle(el);
+    const loads = (cs.fontFamily || "")
+      .split(",")
+      .map((f) => f.trim())
+      .filter(Boolean)
+      .slice(0, 1)
+      .map((family) =>
+        document.fonts.load(`${cs.fontWeight} ${cs.fontSize} ${family}`, text),
+      );
+    Promise.all(loads)
+      .catch(() => {})
+      .then(() => document.fonts.ready)
+      .then(finishSetup);
   } else {
     finishSetup();
   }
