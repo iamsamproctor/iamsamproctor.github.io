@@ -16,7 +16,7 @@ import * as THREE from "three";
 // along its normals in the vertex shader, and normals are rebuilt from the
 // displaced neighbors so reflections bend with the ripples.
 
-const RADIUS = 0.32;
+const RADIUS = 0.384;
 const RIPPLE = 0.055; // displacement, as a fraction of the radius
 const RIPPLE_SPEED = 0.55;
 const BOB_HEIGHT = 0.06;
@@ -24,6 +24,9 @@ const BOB_SPEED = 0.7; // radians per second
 const SPIN_SPEED = 0.15; // radians per second
 const HIT_WOBBLE = 2.6; // extra ripple right after a tap, in units of RIPPLE
 const HIT_POP = 0.12; // how much it swells and shrinks right after a tap
+const CHARGE_SQUEEZE = 0.22; // how far it draws in when fully charged
+const CHARGE_SHIVER = 1.2; // wobble while charging, in units of a tap's
+const CHARGE_BLAST = 2.2; // extra wobble and swell from a full release
 const HIT_DECAY = 3; // how quickly a tap's wobble dies down (per second)
 
 const SNAPSHOT_WIDTH = 1024;
@@ -106,6 +109,8 @@ export function createChromeBlob() {
   const time = { value: 0 };
   const impact = { value: 0 }; // 1 right after a tap, decaying to 0
   let hitAt = -1000;
+  let hitPower = 0;
+  let charge = 0; // 0..1 while the blob is being held down
   // Three only encodes output to sRGB when drawing to the screen. The hallway
   // draws this scene into a render target (as the portrait), where the blob
   // would come out in linear values and look black next to Spark's sRGB
@@ -249,21 +254,33 @@ export function createChromeBlob() {
   }
 
   // seconds: page time when it was tapped.
-  function hit(seconds) {
+  // power: 0 for a plain tap up to 1 for a fully charged release.
+  function hit(seconds, power = 0) {
     hitAt = seconds;
+    hitPower = power;
+  }
+
+  // While held, the blob draws in and shivers harder as it charges.
+  function setCharge(value) {
+    charge = value;
   }
 
   // center: where to float, e.g. a point partway up the dust devil.
   function update(seconds, center) {
     time.value = seconds;
     const sinceHit = seconds - hitAt;
-    impact.value = sinceHit >= 0 ? Math.exp(-sinceHit * HIT_DECAY) : 0;
-    mesh.scale.setScalar(RADIUS * (1 + HIT_POP * impact.value * Math.sin(sinceHit * 18)));
+    const decay = HIT_DECAY / (1 + hitPower * 0.6);
+    const hitImpact = sinceHit >= 0 ? Math.exp(-sinceHit * decay) : 0;
+    const strength = 1 + hitPower * CHARGE_BLAST;
+    impact.value = hitImpact * strength + charge * charge * CHARGE_SHIVER;
+    const swell = HIT_POP * hitImpact * strength * Math.sin(sinceHit * 18);
+    const squeeze = charge * CHARGE_SQUEEZE;
+    mesh.scale.setScalar(RADIUS * (1 + swell - squeeze));
     anchor.copy(center);
     mesh.position.set(anchor.x, anchor.y + Math.sin(seconds * BOB_SPEED) * BOB_HEIGHT, anchor.z);
     mesh.rotation.y = seconds * SPIN_SPEED;
     mesh.rotation.x = Math.sin(seconds * 0.23) * 0.3;
   }
 
-  return { mesh, captureEnvironment, update, hit };
+  return { mesh, captureEnvironment, update, hit, setCharge };
 }

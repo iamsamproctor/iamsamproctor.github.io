@@ -32,12 +32,93 @@ export function setImpactSoundEnabled(on) {
   master.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.1);
 }
 
-export function playImpactSound() {
+// power: 0 for a plain tap up to 1 for a fully charged blast, which is
+// louder and lower.
+export function playImpactSound(power = 0) {
   if (!enabled || !buffer) return;
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   const gain = ctx.createGain();
-  gain.gain.value = VOLUME;
+  gain.gain.value = VOLUME * (1 + power * 2.2);
+  source.playbackRate.value = 1 - power * 0.35;
   source.connect(gain).connect(master);
   source.start();
+}
+
+// The sound of charging the blob: filtered noise that swells and brightens
+// over `riseSeconds`, then holds at full with a restless shimmer until it's
+// stopped. Stopping lets it fall away over a short tail under the impact.
+const CHARGE_VOLUME = 0.1;
+const CHARGE_FILTER_FROM = 25; // Hz at the start of the rise
+const CHARGE_FILTER_TO = 280; // Hz once fully charged
+const CHARGE_RELEASE = 1.2; // seconds for the charge to die away after release
+
+let noiseBuffer = null;
+let charging = null;
+
+function getNoiseBuffer() {
+  if (noiseBuffer) return noiseBuffer;
+  const length = ctx.sampleRate * 2;
+  noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  // Pink-ish noise (a running average of white) is less hissy than white.
+  let last = 0;
+  for (let i = 0; i < length; i++) {
+    last = last * 0.82 + (Math.random() * 2 - 1) * 0.18;
+    data[i] = last * 3.2;
+  }
+  return noiseBuffer;
+}
+
+export function startChargeSound(riseSeconds) {
+  if (!enabled || !ctx || charging) return;
+  const now = ctx.currentTime;
+
+  const source = ctx.createBufferSource();
+  source.buffer = getNoiseBuffer();
+  source.loop = true;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.Q.value = 0.8;
+  filter.frequency.setValueAtTime(CHARGE_FILTER_FROM, now);
+  filter.frequency.exponentialRampToValueAtTime(CHARGE_FILTER_TO, now + riseSeconds);
+  filter.Q.setValueAtTime(0.8, now);
+  filter.Q.linearRampToValueAtTime(3, now + riseSeconds);
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(CHARGE_VOLUME, now + riseSeconds);
+
+  // Once the rise is done, a fast wobble in the filter keeps the hold alive.
+  const lfo = ctx.createOscillator();
+  const lfoDepth = ctx.createGain();
+  lfo.frequency.value = 9;
+  lfoDepth.gain.setValueAtTime(0, now);
+  lfoDepth.gain.linearRampToValueAtTime(250, now + riseSeconds);
+  lfo.connect(lfoDepth).connect(filter.detune);
+
+  source.connect(filter).connect(gain).connect(master);
+  source.start();
+  lfo.start();
+  charging = { source, lfo, gain, filter };
+}
+
+export function stopChargeSound() {
+  if (!charging) return;
+  const { source, lfo, gain, filter } = charging;
+  charging = null;
+  const now = ctx.currentTime;
+  const end = now + CHARGE_RELEASE;
+  // The tail falls away: volume decays and the filter slides back down
+  // from wherever the charge had reached, so it sounds like energy letting go.
+  gain.gain.cancelScheduledValues(now);
+  gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), now);
+  gain.gain.exponentialRampToValueAtTime(0.0001, end);
+  const from = Math.max(filter.frequency.value, CHARGE_FILTER_FROM);
+  filter.frequency.cancelScheduledValues(now);
+  filter.frequency.setValueAtTime(from, now);
+  filter.frequency.exponentialRampToValueAtTime(CHARGE_FILTER_FROM, end);
+  source.stop(end + 0.05);
+  lfo.stop(end + 0.05);
 }

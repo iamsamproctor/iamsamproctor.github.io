@@ -9,7 +9,12 @@ import { createWorkModal } from "./workModal.js";
 import { createWindScroll } from "./windScroll.js";
 import { createBackgroundMusic } from "./backgroundMusic.js";
 import { setRevealSoundEnabled } from "./revealSound.js";
-import { setImpactSoundEnabled, playImpactSound } from "./impactSound.js";
+import {
+  setImpactSoundEnabled,
+  playImpactSound,
+  startChargeSound,
+  stopChargeSound,
+} from "./impactSound.js";
 import { createHallway } from "./hallway.js";
 import { createMuseumVisitor } from "./museumVisitor.js";
 import { createAboutPortrait } from "./aboutPortrait.js";
@@ -104,8 +109,8 @@ let orbitAngle = 0;
 // around whichever point is currently active: high and far out, looking
 // down at the scene from a distance rather than straight overhead.
 const skyCenter = new THREE.Vector3(0, 0, 0);
-const skyRadius = 10;
-const skyHeight = 4;
+const skyRadius = 14;
+const skyHeight = 3.6;
 
 const orbitKeyframes = [
   { center: orbitCenter, radius: orbitRadius, height: orbitHeight },
@@ -427,6 +432,7 @@ const chromeBlobLift = 1.25; // world units above the dust devil's base
 const chromeBlobAnchor = new THREE.Vector3();
 scene.add(chromeBlob.mesh);
 function updateChromeBlob(seconds) {
+  if (chargeStart !== null) chromeBlob.setCharge(chargeAmount());
   chromeBlobAnchor.copy(dustDevil.center);
   chromeBlobAnchor.y += chromeBlobLift;
   chromeBlob.update(seconds, chromeBlobAnchor);
@@ -464,12 +470,36 @@ function pointerIsOnBlob(event) {
 renderer.domElement.addEventListener("pointermove", (event) => {
   renderer.domElement.style.cursor = pointerIsOnBlob(event) ? "pointer" : "";
 });
-renderer.domElement.addEventListener("click", (event) => {
-  if (!pointerIsOnBlob(event)) return;
+// Holding the blob charges it; letting go releases a bigger, louder warp the
+// longer it was held. A quick tap is the plain impact.
+const CHARGE_SECONDS = 2;
+let chargeStart = null;
+function chargeAmount() {
+  if (chargeStart === null) return 0;
+  const held = performance.now() / 1000 - chargeStart;
+  return THREE.MathUtils.smoothstep(held / CHARGE_SECONDS, 0, 1);
+}
+function releaseBlob() {
+  if (chargeStart === null) return;
+  const power = chargeAmount();
+  chargeStart = null;
+  stopChargeSound();
+  chromeBlob.setCharge(0);
   const seconds = performance.now() / 1000;
-  chromeBlob.hit(seconds);
-  shockwave.trigger(chromeBlob.mesh.position, seconds);
-  playImpactSound();
+  chromeBlob.hit(seconds, power);
+  shockwave.trigger(chromeBlob.mesh.position, seconds, power);
+  playImpactSound(power);
+}
+renderer.domElement.addEventListener("pointerdown", (event) => {
+  if (!pointerIsOnBlob(event)) return;
+  chargeStart = performance.now() / 1000;
+  startChargeSound(CHARGE_SECONDS);
+});
+window.addEventListener("pointerup", releaseBlob);
+window.addEventListener("pointercancel", () => {
+  chargeStart = null;
+  stopChargeSound();
+  chromeBlob.setCharge(0);
 });
 
 let debugCamera;
