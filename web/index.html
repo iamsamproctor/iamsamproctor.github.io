@@ -1155,34 +1155,71 @@
         text-align: right;
       }
 
+      /* A photo washes in behind About from the right, rising out of the
+         page color on the left (where the text sits) and fading into it at
+         the top and bottom so the section has no hard edges. */
+      .about {
+        isolation: isolate;
+      }
+
+      .about::before,
+      .about::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+      }
+
+      .about::before {
+        left: 30%;
+        background: url("/assets/images/sunset.jpg") 70% 55% / cover no-repeat;
+      }
+
+      .about::after {
+        background:
+          linear-gradient(
+            to right,
+            #121212 0%,
+            #121212 30%,
+            rgba(18, 18, 18, 0.88) 42%,
+            rgba(18, 18, 18, 0.55) 60%,
+            rgba(18, 18, 18, 0.2) 82%,
+            rgba(18, 18, 18, 0.1) 100%
+          ),
+          linear-gradient(
+            to bottom,
+            #121212 0,
+            rgba(18, 18, 18, 0) 220px,
+            rgba(18, 18, 18, 0) calc(100% - 260px),
+            #121212 100%
+          );
+      }
+
+      /* On narrow screens the text spans the full width, so the photo sits
+         behind all of it, dimmed more evenly. */
+      @media (max-width: 640px) {
+        .about::before {
+          left: 0;
+        }
+
+        .about::after {
+          background:
+            linear-gradient(rgba(18, 18, 18, 0.72), rgba(18, 18, 18, 0.72)),
+            linear-gradient(
+              to bottom,
+              #121212 0,
+              rgba(18, 18, 18, 0) 160px,
+              rgba(18, 18, 18, 0) calc(100% - 200px),
+              #121212 100%
+            );
+        }
+      }
+
       .contact {
         margin-top: 160px;
         padding-top: 48px;
         border-top: 1px solid rgba(255, 255, 255, 0.12);
-      }
-
-      .contact-email {
-        display: inline-block;
-        color: #ffffff;
-        font-size: clamp(28px, 5.5vw, 72px);
-        font-weight: 300;
-        letter-spacing: -0.015em;
-        line-height: 1.1;
-        text-decoration: none;
-        overflow-wrap: anywhere;
-      }
-
-      .contact-email span {
-        display: inline-block;
-        color: rgba(255, 255, 255, 0.4);
-        transition:
-          transform 0.3s ease,
-          color 0.3s ease;
-      }
-
-      .contact-email:hover span {
-        color: #ffffff;
-        transform: translateX(8px);
       }
 
       .contact-links {
@@ -1737,10 +1774,8 @@
 
       <div id="contact" class="contact">
         <p class="section-eyebrow">Contact</p>
-        <a class="contact-email" href="mailto:iamsamproctor@gmail.com"
-          >iamsamproctor@gmail.com <span aria-hidden="true">&rarr;</span></a
-        >
         <ul class="contact-links">
+          <li><a href="mailto:iamsamproctor@gmail.com">Email</a></li>
           <li><a href="#">LinkedIn</a></li>
           <li><a href="#">GitHub</a></li>
           <li><a href="#">R&eacute;sum&eacute;</a></li>

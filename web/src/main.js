@@ -22,6 +22,7 @@ import { createHallwayQuote } from "./hallwayQuote.js";
 import { addDustDevil } from "./dustDevil.js";
 import { createChromeBlob } from "./chromeBlob.js";
 import { createSplatShockwave } from "./splatShockwave.js";
+import { createSplatRipples } from "./splatRipples.js";
 import quotes from "./quotes.json";
 
 const revealBurn = createRevealBurn();
@@ -109,7 +110,7 @@ let orbitAngle = 0;
 // around whichever point is currently active: high and far out, looking
 // down at the scene from a distance rather than straight overhead.
 const skyCenter = new THREE.Vector3(0, 0, 0);
-const skyRadius = 14;
+const skyRadius = 12;
 const skyHeight = 3.6;
 
 const orbitKeyframes = [
@@ -127,11 +128,18 @@ const cameraScrollRange = 2400; // px of scroll to move through all camera keyfr
 const scrollBlendSmoothing = 1.5; // rate scrollBlend chases scrollProgress; lower = more lag/slower dolly
 
 const heroHeadingEl = document.querySelector(".hero-heading");
-// The hero heading scrolls up with the page for a while at full opacity,
-// then fades out over the last stretch of its travel.
-const heroFadeStart = 350; // px of scroll before it starts fading
-const heroFadeEnd = 750; // px of scroll by which it's fully faded
+// The hero heading scrolls up with the page until its middle reaches the
+// middle of the screen, then holds there while the camera keeps zooming out.
+// Near the end of the zoom it lets go, carrying on up and fading away.
+const heroHoldEnd = cameraScrollRange * 0.75; // px of scroll where it lets go
+const heroFadeLength = 400; // px of scroll it fades out over, after letting go
 const heroDriftRate = 0.6; // px it moves up per px scrolled
+// px of scroll at which the heading's middle reaches the middle of the
+// screen. offsetTop ignores the drift transform, so this is its resting spot.
+function heroPinStart() {
+  const middle = heroHeadingEl.offsetTop + heroHeadingEl.offsetHeight / 2;
+  return Math.max(0, (middle - window.innerHeight / 2) / heroDriftRate);
+}
 
 // Past the last camera keyframe (the sky point), continuing to scroll pulls
 // back from the splat scene to reveal it as a portrait at the end of a
@@ -232,8 +240,13 @@ function applyScrollEffects(scrollY) {
     if (document.body.classList.contains("is-loading")) {
       heroHeadingEl.style.opacity = "0";
     } else {
-      const fadeT = THREE.MathUtils.smoothstep(scrollY, heroFadeStart, heroFadeEnd);
-      const drift = Math.min(scrollY, heroFadeEnd) * heroDriftRate;
+      const pinStart = heroPinStart();
+      const holdEnd = Math.max(heroHoldEnd, pinStart);
+      const fadeEnd = holdEnd + heroFadeLength;
+      const fadeT = THREE.MathUtils.smoothstep(scrollY, holdEnd, fadeEnd);
+      const travel =
+        Math.min(scrollY, pinStart) + Math.max(0, Math.min(scrollY, fadeEnd) - holdEnd);
+      const drift = travel * heroDriftRate;
       heroHeadingEl.style.opacity = String(1 - fadeT);
       heroHeadingEl.style.transform = `translateY(${-drift}px)`;
     }
@@ -313,7 +326,7 @@ const museumVisitorLoadAt = 0.35; // fraction of cameraScrollRange
 scene.add(spark);
 
 const environmentSplat = new SplatMesh({
-  url: "/assets/splats/cholla2.spz",
+  url: "/assets/splats/cholla.spz",
   onProgress: (event) =>
     loadingScreen.report("environment", event.loaded, event.total),
 });
@@ -400,9 +413,13 @@ environmentSplat.updateGenerator();
 // gentle wander, which the chrome blob follows.
 const dustDevilEnabled = false;
 const shockwave = createSplatShockwave();
+// Moving the pointer over the desert ripples the ground like water.
+const ripples = createSplatRipples();
+const desertFloorY = -0.7;
+ripples.setGround(desertFloorY);
 const dustDevil = addDustDevil(environmentSplat, {
-  home: new THREE.Vector3(0, -0.7, 0),
-  stages: [shockwave.apply],
+  home: new THREE.Vector3(0, desertFloorY, 0),
+  stages: [ripples.apply, shockwave.apply],
 });
 dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
 
@@ -451,6 +468,15 @@ function pointerIsOnBlob(event) {
   return blobRaycaster.intersectObject(chromeBlob.mesh, false).length > 0;
 }
 renderer.domElement.addEventListener("pointermove", (event) => {
+  if (hallwayBlend <= 0 && !debugMode) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    ripples.pointerMoved(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1,
+      camera,
+      performance.now() / 1000,
+    );
+  }
   renderer.domElement.style.cursor = pointerIsOnBlob(event) ? "pointer" : "";
 });
 // Holding the blob charges it; letting go releases a bigger, louder warp the
@@ -560,6 +586,7 @@ renderer.setAnimationLoop(() => {
   waveTime.value = currentTime / 1000;
   dustDevil.update(currentTime / 1000);
   shockwave.update(currentTime / 1000);
+  ripples.update(currentTime / 1000);
   updateChromeBlob(currentTime / 1000);
   environmentSplat.updateVersion();
 
