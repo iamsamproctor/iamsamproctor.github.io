@@ -85,7 +85,7 @@ export function createTextReveal(
 
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     chars.forEach((char) => applyPhase(char, DONE));
-    return { play: () => {} };
+    return { play: () => {}, scrub: () => {} };
   }
 
   let ready = false;
@@ -95,32 +95,34 @@ export function createTextReveal(
     (chars.length - 1) * stagger + scrambleDuration + settleDelay;
   const proxy = { t: 0 };
 
+  const render = (now) => {
+    for (let i = 0; i < chars.length; i += 1) {
+      const char = chars[i];
+      const start = i * stagger;
+
+      if (now < start) {
+        applyPhase(char, HIDDEN);
+      } else if (now < start + scrambleDuration) {
+        applyPhase(char, SCRAMBLING);
+        // abs: when scrubbed, time can run backwards.
+        if (Math.abs(now - char.lastSwap) >= swapInterval) {
+          char.lastSwap = now;
+          char.span.textContent = randomChar(scrambleChars);
+        }
+      } else if (now < start + scrambleDuration + settleDelay) {
+        applyPhase(char, SETTLED);
+      } else {
+        applyPhase(char, DONE);
+      }
+    }
+  };
+
   const tween = gsap.to(proxy, {
     t: total,
     duration: total,
     ease: "none",
     paused: true,
-    onUpdate() {
-      const now = proxy.t;
-      for (let i = 0; i < chars.length; i += 1) {
-        const char = chars[i];
-        const start = i * stagger;
-
-        if (now < start) {
-          applyPhase(char, HIDDEN);
-        } else if (now < start + scrambleDuration) {
-          applyPhase(char, SCRAMBLING);
-          if (now - char.lastSwap >= swapInterval) {
-            char.lastSwap = now;
-            char.span.textContent = randomChar(scrambleChars);
-          }
-        } else if (now < start + scrambleDuration + settleDelay) {
-          applyPhase(char, SETTLED);
-        } else {
-          applyPhase(char, DONE);
-        }
-      }
-    },
+    onUpdate: () => render(proxy.t),
   });
 
   const play = () => {
@@ -133,6 +135,16 @@ export function createTextReveal(
     });
     tween.restart();
     playRevealSound(el, total);
+  };
+
+  // Drives the reveal by hand instead of over time: 1 is fully revealed, 0
+  // fully hidden, and values between run the scramble at that point. Takes
+  // over from a play() still in progress.
+  const scrub = (amount) => {
+    if (!ready) return;
+    tween.pause();
+    proxy.t = Math.min(Math.max(amount, 0), 1) * total;
+    render(proxy.t);
   };
 
   const finishSetup = () => {
@@ -165,7 +177,7 @@ export function createTextReveal(
     finishSetup();
   }
 
-  return { play };
+  return { play, scrub };
 }
 
 export function revealOnEnter(el, options) {

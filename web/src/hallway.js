@@ -16,7 +16,10 @@ const EYE_HEIGHT = 1.6;
 const HALL_WIDTH = 7;
 const HALL_HEIGHT = 4;
 const HALL_LENGTH = 34;
-const END_DISTANCE = 26; // how far back the camera ends up, in world units
+// How far back the camera ends up, in world units. Scaled with main.js's
+// hallwayScrollRange so the pull-back keeps its pace; it passes the bench and
+// the first few works before the fog closes in.
+const END_DISTANCE = 13;
 const RIB_SPACING = 3;
 const RIB_DEPTH = 0.3; // pilaster/beam thickness
 const FRAME_BORDER = 0.12; // total extra width/height of a work's frame
@@ -163,6 +166,9 @@ export function createHallway({ renderer, works = [] }) {
   // sized to fit inside it, so frames never cut into the pilasters.
   const bayClearWidth = RIB_SPACING - RIB_DEPTH - 0.3; // leaves a little wall either side
   const textureLoader = new THREE.TextureLoader();
+  // Resolves once every work's image has loaded (or failed), since a picture
+  // gaining its texture changes its shader; see warmUp.
+  const workLoads = [];
   works.forEach((work, index) => {
     const side = index % 2 === 0 ? -1 : 1;
     const z = RIB_SPACING * (index + 1); // ribs sit at half-spacings, so this is mid-bay
@@ -188,13 +194,23 @@ export function createHallway({ renderer, works = [] }) {
     picture.position.z = 0.03;
     group.add(picture);
 
-    textureLoader.load(work.src, (texture) => {
-      texture.colorSpace = THREE.SRGBColorSpace;
-      const aspect = texture.image.width / texture.image.height;
-      picture.material.map = texture;
-      picture.material.needsUpdate = true;
-      sizeWork(aspect);
-    });
+    workLoads.push(
+      new Promise((resolve) => {
+        textureLoader.load(
+          work.src,
+          (texture) => {
+            texture.colorSpace = THREE.SRGBColorSpace;
+            const aspect = texture.image.width / texture.image.height;
+            picture.material.map = texture;
+            picture.material.needsUpdate = true;
+            sizeWork(aspect);
+            resolve();
+          },
+          undefined,
+          resolve,
+        );
+      }),
+    );
     sizeWork(16 / 9);
 
     const spot = new THREE.SpotLight(0xffe2c0, 18, 6, 0.5, 0.7, 2);
@@ -287,7 +303,41 @@ export function createHallway({ renderer, works = [] }) {
     renderer.render(scene, camera);
   }
 
+  // Nothing here is drawn until the hallway first comes on screen, so that
+  // first frame would otherwise compile every shader at once (the hallway's
+  // lit materials, the mirror, and the splat scene drawn into the portrait)
+  // and upload every texture, stalling the scroll. This does that ahead of
+  // time, compiling in the background where the browser supports it.
+  // Programs differ between drawing to the screen and into a render target
+  // (the portrait, and the mirror's reflection), so both are compiled. Safe
+  // to call again after something new is added, e.g. the museum visitor.
+  async function warmUp(splatScene, splatCamera) {
+    await Promise.all(workLoads);
+    const previousTarget = renderer.getRenderTarget();
+    renderer.setRenderTarget(renderTarget);
+    const jobs = [
+      renderer.compileAsync(splatScene, splatCamera),
+      renderer.compileAsync(scene, camera),
+    ];
+    renderer.setRenderTarget(null);
+    jobs.push(renderer.compileAsync(scene, camera));
+    renderer.setRenderTarget(previousTarget);
+
+    scene.traverse((object) => {
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        if (!material) continue;
+        for (const value of Object.values(material)) {
+          if (value?.isTexture && value.image && !value.isRenderTargetTexture) {
+            renderer.initTexture(value);
+          }
+        }
+      }
+    });
+    await Promise.all(jobs);
+  }
+
   // scene is exposed so other pieces (e.g. museumVisitor.js) can be placed
   // in the hallway.
-  return { scene, setSize, update, render, projectWallPoint };
+  return { scene, setSize, update, render, projectWallPoint, warmUp };
 }

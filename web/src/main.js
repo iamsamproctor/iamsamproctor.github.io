@@ -23,6 +23,7 @@ import { addDustDevil } from "./dustDevil.js";
 import { createChromeBlob } from "./chromeBlob.js";
 import { createSplatShockwave } from "./splatShockwave.js";
 import { createSplatRipples } from "./splatRipples.js";
+import { createSplatSparkle } from "./splatSparkle.js";
 import quotes from "./quotes.json";
 
 const revealBurn = createRevealBurn();
@@ -73,12 +74,20 @@ const loadingScreen = createLoadingScreen({
         // Let the title's scramble read as the lead beat before the
         // subtext settles in underneath it, rather than both landing at once.
         setTimeout(() => heroHeadingSubEl?.classList.add("is-visible"), 550);
+        scheduleMuseumVisitor();
       },
     });
   },
 });
 
 const debugMode = new URLSearchParams(window.location.search).has("debug");
+const realReflection = new URLSearchParams(window.location.search).has("realreflection");
+// With realReflection, how often the blob's reflection is recaptured so it
+// keeps up with the scene. Each recapture redraws every splat six times, so
+// it's skipped on touch devices (assumed weaker GPUs; see isTouchDevice),
+// which keep the reflection captured at load.
+const reflectionRefreshSeconds = 0.2;
+let lastReflectionRefresh = 0;
 
 // ?fonts: temporary picker for trying heading fonts on the real hero.
 if (new URLSearchParams(window.location.search).has("fonts") && heroHeadingTitleEl) {
@@ -101,8 +110,10 @@ camera.rotation.order = "YXZ";
 camera.rotation.x = THREE.MathUtils.degToRad(-60);
 
 const orbitCenter = new THREE.Vector3(0, 0.0, 0);
-const orbitRadius = 5;
-const orbitHeight = 1;
+const orbitRadius = 4;
+// Low over the desert floor for a cinematic opening. Much below 0.3 the camera
+// starts passing through the scan's splats.
+const orbitHeight = 0.4;
 const orbitSpeed = THREE.MathUtils.degToRad(1); // radians per second
 let orbitAngle = 0;
 
@@ -128,24 +139,21 @@ const cameraScrollRange = 2400; // px of scroll to move through all camera keyfr
 const scrollBlendSmoothing = 1.5; // rate scrollBlend chases scrollProgress; lower = more lag/slower dolly
 
 const heroHeadingEl = document.querySelector(".hero-heading");
-// The hero heading scrolls up with the page until its middle reaches the
-// middle of the screen, then holds there while the camera keeps zooming out.
-// Near the end of the zoom it lets go, carrying on up and fading away.
-const heroHoldEnd = cameraScrollRange * 0.75; // px of scroll where it lets go
-const heroFadeLength = 400; // px of scroll it fades out over, after letting go
-const heroDriftRate = 0.6; // px it moves up per px scrolled
-// px of scroll at which the heading's middle reaches the middle of the
-// screen. offsetTop ignores the drift transform, so this is its resting spot.
-function heroPinStart() {
-  const middle = heroHeadingEl.offsetTop + heroHeadingEl.offsetHeight / 2;
-  return Math.max(0, (middle - window.innerHeight / 2) / heroDriftRate);
-}
+// The hero heading stays put in the corner like a title card. As the camera
+// starts to pull away, the subtitle fades and the title scrambles back out,
+// the reverse of its intro; scrolling back up scrambles it in again.
+const heroSubFadeEnd = 250; // px of scroll the subtitle is gone by
+const heroScrambleEnd = 700; // px of scroll the title is fully scrambled out by
+const heroDrift = 24; // px it rises over that span, for a little parallax
+let heroRevealAmount = 1; // last value handed to heroHeadingReveal.scrub
 
 // Past the last camera keyframe (the sky point), continuing to scroll pulls
 // back from the splat scene to reveal it as a portrait at the end of a
 // hallway (see hallway.js), retreating down the hallway until it fades to
 // black, before the Work section scrolls in.
-const hallwayScrollRange = 2200; // px of scroll, after cameraScrollRange, for this phase
+// Kept short so the Work section arrives sooner; hallway.js's END_DISTANCE is
+// shortened to match, so the walk back keeps the same pace per px scrolled.
+const hallwayScrollRange = 1000; // px of scroll, after cameraScrollRange, for this phase
 const hallwayBlendSmoothing = 3; // rate the hallway dolly chases scroll; lower = more lag
 let hallwayProgress = 0; // raw 0-1
 let hallwayBlend = 0; // smoothed toward hallwayProgress each frame
@@ -240,15 +248,27 @@ function applyScrollEffects(scrollY) {
     if (document.body.classList.contains("is-loading")) {
       heroHeadingEl.style.opacity = "0";
     } else {
-      const pinStart = heroPinStart();
-      const holdEnd = Math.max(heroHoldEnd, pinStart);
-      const fadeEnd = holdEnd + heroFadeLength;
-      const fadeT = THREE.MathUtils.smoothstep(scrollY, holdEnd, fadeEnd);
-      const travel =
-        Math.min(scrollY, pinStart) + Math.max(0, Math.min(scrollY, fadeEnd) - holdEnd);
-      const drift = travel * heroDriftRate;
-      heroHeadingEl.style.opacity = String(1 - fadeT);
-      heroHeadingEl.style.transform = `translateY(${-drift}px)`;
+      const exitT = THREE.MathUtils.clamp(scrollY / heroScrambleEnd, 0, 1);
+      // Only scrub on a change, so sitting at the top doesn't cut short the
+      // intro scramble that plays on reveal.
+      const revealAmount = 1 - exitT;
+      if (revealAmount !== heroRevealAmount) {
+        heroRevealAmount = revealAmount;
+        heroHeadingReveal?.scrub(revealAmount);
+      }
+      // Left to the stylesheet at the top, so it doesn't override the
+      // subtitle's own delayed fade-in after the title's intro.
+      if (heroHeadingSubEl) {
+        heroHeadingSubEl.style.opacity =
+          scrollY > 0
+            ? String(1 - THREE.MathUtils.smoothstep(scrollY, 0, heroSubFadeEnd))
+            : "";
+      }
+      // Fully hidden past the end, so reduced-motion (where scrub is a no-op)
+      // still clears it.
+      heroHeadingEl.style.opacity = exitT >= 1 ? "0" : "1";
+      heroHeadingEl.style.setProperty("--hero-scrim", String(1 - exitT));
+      heroHeadingEl.style.transform = `translateY(${-exitT * heroDrift}px)`;
     }
   }
 
@@ -317,12 +337,30 @@ const hallwayQuote = hallwayQuoteEl ? createHallwayQuote(hallwayQuoteEl, quotes)
 // Someone on a bench partway down the hallway, watching the portrait. The
 // camera starts in front of them and pulls back over them; since it faces
 // the portrait, their head stays below and behind the view until it's past
-// them, so they can sit dead center. The figure is a large file, so it's only
-// fetched partway through the landing scene (see the animation loop).
+// them, so they can sit dead center. The figure is a large file, so it isn't
+// part of the initial load. It's fetched once the landing scene has settled
+// (or on the first scroll, if that comes sooner), so that parsing it, which
+// briefly blocks the page, is less likely to land mid-scroll near the hallway.
 const museumVisitor = createMuseumVisitor({ url: "/assets/animations/sitting-idle.fbx" });
 museumVisitor.group.position.set(0, 0, 4.5);
 hallway.scene.add(museumVisitor.group);
-const museumVisitorLoadAt = 0.35; // fraction of cameraScrollRange
+const museumVisitorDelay = 2500; // ms after the reveal before fetching when idle
+let museumVisitorRequested = false;
+function loadMuseumVisitor() {
+  if (museumVisitorRequested) return;
+  museumVisitorRequested = true;
+  // Its shaders and textures are new to the hallway, so warm it up again.
+  museumVisitor.load().then(() => hallway.warmUp(scene, camera));
+}
+function scheduleMuseumVisitor() {
+  setTimeout(() => {
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(loadMuseumVisitor, { timeout: 2000 });
+    } else {
+      loadMuseumVisitor();
+    }
+  }, museumVisitorDelay);
+}
 scene.add(spark);
 
 const environmentSplat = new SplatMesh({
@@ -417,9 +455,12 @@ const shockwave = createSplatShockwave();
 const ripples = createSplatRipples();
 const desertFloorY = -0.7;
 ripples.setGround(desertFloorY);
+// The sparkle effect: every so often the splats shrink to pinpoints and the
+// scene becomes stars.
+const sparkle = createSplatSparkle();
 const dustDevil = addDustDevil(environmentSplat, {
   home: new THREE.Vector3(0, desertFloorY, 0),
-  stages: [ripples.apply, shockwave.apply],
+  stages: [sparkle.apply, ripples.apply, shockwave.apply],
 });
 dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
 
@@ -427,29 +468,49 @@ environmentSplat.initialized.then(() => loadingScreen.finish());
 
 // Liquid-chrome blob floating where the dust devil would carry it. It reflects a
 // snapshot of the scene captured once the environment has loaded.
+// Set chromeBlobEnabled to false to switch it off (?chromeball turns it back
+// on for a look). When off it's never added to the scene or given a
+// reflection, so it costs nothing and can't be tapped; it still tracks its
+// position, since the sparkle spreads out from where it would be.
+const chromeBlobEnabled =
+  false || new URLSearchParams(window.location.search).has("chromeball");
 const chromeBlob = createChromeBlob();
 const chromeBlobLift = 1.25; // world units above the dust devil's base
+// Extra height it floats up by as the camera zooms out, following the same
+// smoothed scroll as the camera so the two move together.
+const chromeBlobScrollRise = 1.5;
 const chromeBlobAnchor = new THREE.Vector3();
-scene.add(chromeBlob.mesh);
+if (chromeBlobEnabled) scene.add(chromeBlob.mesh);
 function updateChromeBlob(seconds) {
   if (chargeStart !== null) chromeBlob.setCharge(chargeAmount());
   chromeBlobAnchor.copy(dustDevil.center);
-  chromeBlobAnchor.y += chromeBlobLift;
+  chromeBlobAnchor.y +=
+    chromeBlobLift +
+    chromeBlobScrollRise * THREE.MathUtils.smoothstep(scrollBlend, 0, 1);
   chromeBlob.update(seconds, chromeBlobAnchor);
 }
 environmentSplat.initialized.then(async () => {
   updateChromeBlob(performance.now() / 1000);
-  // Settle the dust so the reflection is of the clean desert, not of the
-  // puffs swirling right around the blob.
-  dustDevil.setStrength(0);
-  environmentSplat.updateVersion();
-  // Splat regeneration is asynchronous; give it a few frames to land.
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  try {
-    chromeBlob.captureEnvironment(renderer, scene, camera);
-  } finally {
-    dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
+  if (chromeBlobEnabled) {
+    // Settle the dust so the reflection is of the clean desert, not of the
+    // puffs swirling right around the blob.
+    dustDevil.setStrength(0);
+    environmentSplat.updateVersion();
+    // Splat regeneration is asynchronous; give it a few frames to land.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      // ?realreflection: try a true reflection from the blob's position (see
+      // chromeBlob.js), for comparing against the default.
+      await chromeBlob.captureEnvironment(renderer, scene, camera, {
+        real: realReflection,
+      });
+    } finally {
+      dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
+    }
   }
+  // After the capture, since giving the blob its reflection changes its
+  // shader, and the blob is drawn into the hallway's portrait too.
+  hallway.warmUp(scene, camera);
 });
 
 // Tapping the blob makes it wobble, sends a shockwave out through the
@@ -561,6 +622,7 @@ if (debugMode) {
     if (event.key === "w") transformControls.setMode("translate");
     if (event.key === "e") transformControls.setMode("rotate");
     if (event.key === "r") transformControls.setMode("scale");
+    if (event.key === "s") sparkle.triggerNow();
   });
 }
 
@@ -588,7 +650,27 @@ renderer.setAnimationLoop(() => {
   shockwave.update(currentTime / 1000);
   ripples.update(currentTime / 1000);
   updateChromeBlob(currentTime / 1000);
+  // Runs as long as the scene is visible at all: on its own, or as the
+  // hallway's portrait until that has faded to black.
+  sparkle.update(
+    currentTime / 1000,
+    chromeBlob.mesh.position,
+    debugMode ||
+      (hallwayBlend < 1 && !document.body.classList.contains("is-loading")),
+    camera.position.distanceTo(chromeBlob.mesh.position),
+  );
   environmentSplat.updateVersion();
+
+  if (
+    chromeBlobEnabled &&
+    realReflection &&
+    !isTouchDevice &&
+    hallwayBlend < 1 &&
+    currentTime / 1000 - lastReflectionRefresh >= reflectionRefreshSeconds
+  ) {
+    lastReflectionRefresh = currentTime / 1000;
+    chromeBlob.refreshReflection();
+  }
 
   if (debugMode) {
     debugControls.update();
@@ -601,12 +683,12 @@ renderer.setAnimationLoop(() => {
       `position: ${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}\n` +
       `rotation: ${THREE.MathUtils.radToDeg(r.x).toFixed(1)}, ${THREE.MathUtils.radToDeg(r.y).toFixed(1)}, ${THREE.MathUtils.radToDeg(r.z).toFixed(1)}\n` +
       `scale:    ${s.x.toFixed(2)}, ${s.y.toFixed(2)}, ${s.z.toFixed(2)}\n` +
-      `(w: move, e: rotate, r: scale)`;
+      `(w: move, e: rotate, r: scale, s: sparkle)`;
 
     renderer.render(scene, debugCamera);
   } else {
     applyScrollEffects(latestScrollY);
-    if (scrollProgress >= museumVisitorLoadAt) museumVisitor.load();
+    if (scrollProgress > 0) loadMuseumVisitor();
 
     if (!isScrolling) {
       orbitAngle += orbitSpeed * deltaTime;

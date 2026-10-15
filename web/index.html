@@ -245,6 +245,34 @@
           -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
           sans-serif;
         pointer-events: none;
+        /* Inset from the screen corner, so the scrim below can reach it. */
+        --hero-inset-x: 32px;
+        --hero-inset-y: 64px;
+        transition: opacity 0.8s ease-out;
+      }
+
+      /* A soft dark glow behind the heading so it reads over bright parts
+         of the scene. It starts at the screen's bottom-left corner and fades
+         out well past the text, so it has no visible edge. --hero-scrim is
+         set from main.js so it fades out as the heading scrambles away. */
+      .hero-heading::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: calc(-1 * var(--hero-inset-x));
+        bottom: calc(-1 * var(--hero-inset-y));
+        width: calc(100% + var(--hero-inset-x) + 320px);
+        height: calc(100% + var(--hero-inset-y) + 220px);
+        background: radial-gradient(
+          ellipse at 0% 100%,
+          rgba(0, 0, 0, 0.55) 0%,
+          rgba(0, 0, 0, 0.42) 25%,
+          rgba(0, 0, 0, 0.2) 50%,
+          rgba(0, 0, 0, 0.06) 72%,
+          rgba(0, 0, 0, 0) 100%
+        );
+        opacity: var(--hero-scrim, 1);
+        pointer-events: none;
       }
 
       .hero-heading h2 {
@@ -1482,6 +1510,8 @@
           left: 20px;
           bottom: 48px;
           max-width: calc(100% - 40px);
+          --hero-inset-x: 20px;
+          --hero-inset-y: 48px;
         }
       }
 
@@ -1590,8 +1620,8 @@
     </button>
 
     <div class="hero-heading">
-      <h2>creative developer</h2>
-      <p>AR | VR | Games | Music</p>
+      <h2>creative technologist</h2>
+      <p>XR | Games | Gaussian Splats | Music</p>
     </div>
 
     <nav class="section-nav" aria-label="Section navigation">
@@ -1775,7 +1805,7 @@
           <p class="section-eyebrow">About</p>
           <h2 class="about-heading">
             Sam Proctor,<br />
-            <span>creative developer in XR and games.</span>
+            <span>creative technologist in XR, games, and 3D capture.</span>
           </h2>
           <p class="about-bio">
             Placeholder bio. A couple of sentences about what you build, how you

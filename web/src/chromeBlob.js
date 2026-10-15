@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { SparkRenderer } from "@sparkjsdev/spark";
 
 // A floating liquid-chrome blob for the landing scene. It has no lighting of
 // its own: a mirror only shows its surroundings, so once it's given an
@@ -11,6 +12,11 @@ import * as THREE from "three";
 // correct capture, one wide snapshot of the view is mirrored into a seamless
 // panorama and wrapped all the way around: not accurate, but the blob shows
 // desert from every angle, which is what reads as chrome.
+//
+// With realReflection (see captureEnvironment), that panorama becomes the
+// backdrop for a true 360° capture of the splats from the blob's own
+// position: it reflects the actual scene around it where the scan has data,
+// and falls back to the panorama where it doesn't, instead of to black.
 //
 // The surface ripples slowly: a smooth noise field displaces the sphere
 // along its normals in the vertex shader, and normals are rebuilt from the
@@ -29,9 +35,25 @@ const CHARGE_SHIVER = 1.2; // wobble while charging, in units of a tap's
 const CHARGE_BLAST = 2.2; // extra wobble and swell from a full release
 const HIT_DECAY = 3; // how quickly a tap's wobble dies down (per second)
 
+// When the blob travels (e.g. rising as the page scrolls), it pulls into a
+// teardrop: a broad, slightly flattened front leading the way and a narrow
+// tail trailing behind. The stretch follows its speed through a spring, so it
+// lags as it sets off and overshoots into a liquid wobble when it stops.
+const STRETCH_PER_SPEED = 0.5; // stretch per world unit/second of travel
+const STRETCH_MAX = 0.4;
+const STRETCH_STIFFNESS = 60; // spring pull toward the target stretch
+const STRETCH_DAMPING = 9; // lower = more wobble when it stops
+const TEAR_TAIL = 0.55; // how far the tail draws out at full stretch, in radii
+const TEAR_TAPER = 0.35; // how much the tail narrows
+const TEAR_WIDEN = 0.06; // how much the front broadens
+const TEAR_FLATTEN = 0.06; // how much the leading face flattens
+
 const SNAPSHOT_WIDTH = 1024;
 const SNAPSHOT_HEIGHT = 512;
 const SNAPSHOT_FOV = 75; // vertical degrees; wider shows more of the scene
+// Pixels per cube face for the true capture. The blob is small on screen, and
+// this is redrawn several times a second when refreshed live.
+const REAL_REFLECTION_SIZE = 256;
 
 // Turns one snapshot into a 2:1 equirectangular panorama: the snapshot and
 // its mirror image side by side fill the band around the horizon (so the
@@ -108,6 +130,16 @@ export function createChromeBlob() {
 
   const time = { value: 0 };
   const impact = { value: 0 }; // 1 right after a tap, decaying to 0
+  const stretchUniform = { value: 0 };
+  const stretchDir = { value: new THREE.Vector3(0, 1, 0) };
+  // The spring behind the teardrop: signed stretch (+ = travelling up) and
+  // how fast it's changing.
+  let stretch = 0;
+  let stretchVelocity = 0;
+  let lastAnchorY = null;
+  let lastSeconds = null;
+  const worldTravel = new THREE.Vector3();
+  const inverseRotation = new THREE.Quaternion();
   let hitAt = -1000;
   let hitPower = 0;
   let charge = 0; // 0..1 while the blob is being held down
@@ -141,6 +173,8 @@ export function createChromeBlob() {
       );
     shader.uniforms.uBlobTime = time;
     shader.uniforms.uBlobImpact = impact;
+    shader.uniforms.uBlobStretch = stretchUniform;
+    shader.uniforms.uBlobStretchDir = stretchDir;
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
@@ -148,6 +182,23 @@ export function createChromeBlob() {
         #include <common>
         uniform float uBlobTime;
         uniform float uBlobImpact;
+        uniform float uBlobStretch;
+        uniform vec3 uBlobStretchDir; // direction of travel, in object space
+
+        // n: point on the unit sphere. q: where the ripples put it.
+        vec3 blobTeardrop(vec3 n, vec3 q) {
+          float a = uBlobStretch;
+          if (a <= 0.) return q;
+          vec3 d = uBlobStretchDir;
+          float s = dot(n, d);
+          float back = max(-s, 0.);
+          float front = max(s, 0.);
+          float along = dot(q, d);
+          vec3 across = q - d * along;
+          across *= 1. + a * (${TEAR_WIDEN.toFixed(3)} * (1. - back) - ${TEAR_TAPER.toFixed(3)} * back * back);
+          along *= 1. + a * (${TEAR_TAIL.toFixed(3)} * pow(back, 1.5) - ${TEAR_FLATTEN.toFixed(3)} * front);
+          return across + d * along;
+        }
 
         float blobField(vec3 p) {
           float t = uBlobTime * ${RIPPLE_SPEED.toFixed(3)};
@@ -161,7 +212,7 @@ export function createChromeBlob() {
 
         vec3 blobPoint(vec3 p) {
           vec3 n = normalize(p);
-          return n + n * blobField(n);
+          return blobTeardrop(n, n + n * blobField(n));
         }
         `,
       )
@@ -191,6 +242,9 @@ export function createChromeBlob() {
     encodeOutput.value = renderer.getRenderTarget() ? 1 : 0;
   };
   mesh.scale.setScalar(RADIUS);
+  // The teardrop's tail reaches past the sphere's bounds, which would get it
+  // culled early at the edge of the view.
+  mesh.frustumCulled = false;
   // Hidden until it has something to reflect; a mirror with no environment
   // is just a black ball.
   mesh.visible = false;
@@ -201,7 +255,81 @@ export function createChromeBlob() {
   // viewCamera: the camera the scene is viewed through; the snapshot is taken
   // from the same spot (where the splats are already sorted for) with a
   // wider lens. Call after the environment splat has loaded.
-  function captureEnvironment(renderer, scene, viewCamera) {
+  //
+  // real: also make the true capture from the blob's position (see the top
+  // of this file); call refreshReflection() after that to keep it current.
+  async function captureEnvironment(renderer, scene, viewCamera, { real = false } = {}) {
+    panorama = capturePanorama(renderer, scene, viewCamera);
+    material.envMap = panorama;
+    material.needsUpdate = true;
+    mesh.visible = true;
+    if (!real) return;
+
+    // A second, offscreen SparkRenderer for the capture, with its own sort
+    // order, so sorting the splats around the blob never disturbs the main
+    // view's. Being offscreen, it writes linear color, matching the cube and
+    // the decoded panorama behind it. Its target is never drawn to, but splats
+    // are sized against its dimensions, so it must match a cube face. It's
+    // sorted by hand before each capture, so it doesn't update itself.
+    reflectionSpark = new SparkRenderer({
+      renderer,
+      autoUpdate: false,
+      target: { width: REAL_REFLECTION_SIZE, height: REAL_REFLECTION_SIZE },
+    });
+    reflectionScene = scene;
+    await refreshReflection();
+  }
+
+  let panorama = null;
+  let reflectionSpark = null;
+  let reflectionScene = null;
+  let reflectionCube = null; // the cube texture the blob reflects, once captured
+  let refreshing = false;
+  const reflectionSortCamera = new THREE.Camera();
+
+  // Recaptures the true reflection from where the blob is now, so it shows
+  // the scene as it currently is (the sparkle, ripples) from its current
+  // height. Skipped if a refresh is still in progress. Needs
+  // captureEnvironment(..., { real: true }) first.
+  async function refreshReflection() {
+    if (!reflectionSpark || refreshing) return;
+    refreshing = true;
+    try {
+      const center = mesh.position;
+      reflectionSortCamera.position.copy(center);
+      await reflectionSpark.update({ scene: reflectionScene, camera: reflectionSortCamera });
+
+      // With the splats already sorted, the capture itself runs without
+      // waiting, so the panorama is only the scene's backdrop for these six
+      // renders and never shows in an on-screen frame.
+      const previousBackground = reflectionScene.background;
+      reflectionScene.background = panorama;
+      try {
+        const cube = await reflectionSpark.renderCubeMap({
+          scene: reflectionScene,
+          worldCenter: center,
+          size: REAL_REFLECTION_SIZE,
+          hideObjects: [mesh],
+          update: false,
+          filter: true,
+        });
+        // Three re-filters a render-target cube for reflections whenever this
+        // is flagged, reusing the same buffers each time.
+        cube.needsPMREMUpdate = true;
+        if (reflectionCube !== cube) {
+          reflectionCube = cube;
+          material.envMap = cube;
+          material.needsUpdate = true;
+        }
+      } finally {
+        reflectionScene.background = previousBackground;
+      }
+    } finally {
+      refreshing = false;
+    }
+  }
+
+  function capturePanorama(renderer, scene, viewCamera) {
     const target = new THREE.WebGLRenderTarget(SNAPSHOT_WIDTH, SNAPSHOT_HEIGHT);
     const snapshotCamera = new THREE.PerspectiveCamera(
       SNAPSHOT_FOV,
@@ -248,9 +376,7 @@ export function createChromeBlob() {
     const envMap = new THREE.CanvasTexture(buildPanorama(snapshotCanvas));
     envMap.mapping = THREE.EquirectangularReflectionMapping;
     envMap.colorSpace = THREE.SRGBColorSpace;
-    material.envMap = envMap;
-    material.needsUpdate = true;
-    mesh.visible = true;
+    return envMap;
   }
 
   // seconds: page time when it was tapped.
@@ -280,7 +406,30 @@ export function createChromeBlob() {
     mesh.position.set(anchor.x, anchor.y + Math.sin(seconds * BOB_SPEED) * BOB_HEIGHT, anchor.z);
     mesh.rotation.y = seconds * SPIN_SPEED;
     mesh.rotation.x = Math.sin(seconds * 0.23) * 0.3;
+    updateStretch(seconds);
   }
 
-  return { mesh, captureEnvironment, update, hit, setCharge };
+  // Measured from the anchor, not the bob, so only real travel stretches it.
+  function updateStretch(seconds) {
+    const dt = lastSeconds === null ? 0 : Math.min(seconds - lastSeconds, 0.05);
+    if (dt > 0) {
+      const speed = (anchor.y - lastAnchorY) / dt;
+      const target = THREE.MathUtils.clamp(speed * STRETCH_PER_SPEED, -STRETCH_MAX, STRETCH_MAX);
+      stretchVelocity +=
+        (STRETCH_STIFFNESS * (target - stretch) - STRETCH_DAMPING * stretchVelocity) * dt;
+      stretch += stretchVelocity * dt;
+    }
+    lastSeconds = seconds;
+    lastAnchorY = anchor.y;
+
+    // The shader stretches toward one direction by a positive amount, so a
+    // negative stretch (falling, or the wobble overshooting) points it down.
+    // That direction is given in the blob's own space, since it spins.
+    stretchUniform.value = Math.abs(stretch);
+    worldTravel.set(0, Math.sign(stretch) || 1, 0);
+    inverseRotation.copy(mesh.quaternion).invert();
+    stretchDir.value.copy(worldTravel).applyQuaternion(inverseRotation);
+  }
+
+  return { mesh, captureEnvironment, refreshReflection, update, hit, setCharge };
 }
