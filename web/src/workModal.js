@@ -36,8 +36,17 @@ function escapeHtml(value) {
 //
 // It lives inside the menu modal (see gameMenu.js) as its deepest screen, so
 // its panel is the menu's panel and the menu's bar does the closing. onOpen
-// and onClose tell the menu when it opens or starts to close.
-export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) {
+// and onClose tell the menu when it opens or starts to close, and onClosed
+// when it has finished closing.
+//
+// It normally grows out of the card that was clicked, but open() can be
+// given another rect to grow out of and shrink back into, e.g. a work's
+// picture on the gallery wall (see galleryExplore.js).
+export function createWorkModal({
+  onOpen = () => {},
+  onClose = () => {},
+  onClosed = () => {},
+} = {}) {
   const root = document.querySelector(".work-modal");
   const backdropEl = root.querySelector(".work-modal-backdrop");
   const panelEl = root.querySelector(".work-modal-panel");
@@ -104,11 +113,17 @@ export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) 
       .join("");
   }
 
-  function measure(cell) {
+  // Where it grows out of and shrinks back into: the card, or the rect
+  // open() was given instead.
+  function originRect() {
+    return state.fromRect ? state.fromRect() : state.cell.getBoundingClientRect();
+  }
+
+  function measure() {
     const panelStyle = getComputedStyle(panelEl);
     return {
-      from: cell.getBoundingClientRect(),
-      fromRadius: parseFloat(getComputedStyle(cell).borderTopLeftRadius) || 0,
+      from: originRect(),
+      fromRadius: state.fromRect ? 0 : parseFloat(getComputedStyle(state.cell).borderTopLeftRadius) || 0,
       panel: panelEl.getBoundingClientRect(),
       panelRadius: parseFloat(panelStyle.borderTopLeftRadius) || 0,
       hero: heroEl.getBoundingClientRect(),
@@ -152,7 +167,9 @@ export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) 
     document.body.style.paddingRight = "";
   }
 
-  function open(cell) {
+  // fromRect: optional function returning the rect to grow out of and
+  // shrink back into, instead of the card's.
+  function open(cell, { fromRect = null } = {}) {
     if (state) return;
     const work = works[cell.dataset.work];
     if (!work) return;
@@ -163,6 +180,7 @@ export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) 
       video,
       videoParent: video?.parentNode,
       videoNext: video?.nextSibling,
+      fromRect,
       closing: false,
     };
 
@@ -181,8 +199,8 @@ export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) 
       video.play().catch(() => {});
     }
 
-    rects = measure(cell);
-    cell.classList.add("is-lifted");
+    rects = measure();
+    if (!fromRect) cell.classList.add("is-lifted");
 
     progress.value = 0;
     renderMorph();
@@ -224,9 +242,9 @@ export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) 
     morphTween?.kill();
     root.classList.add("is-animating");
     if (wasMorphing) {
-      rects.from = state.cell.getBoundingClientRect();
+      rects.from = originRect();
     } else {
-      rects = measure(state.cell);
+      rects = measure();
       progress.value = 1;
     }
 
@@ -242,7 +260,7 @@ export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) 
   }
 
   function finishClose({ refocus = true } = {}) {
-    const { cell, video, videoParent, videoNext } = state;
+    const { cell, video, videoParent, videoNext, fromRect } = state;
     if (video && videoParent) {
       videoParent.insertBefore(video, videoNext);
       video.pause();
@@ -256,7 +274,10 @@ export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) 
     calloutsEl.innerHTML = "";
     state = null;
 
-    if (refocus) cell.focus({ preventScroll: true });
+    // Back to the card it came from, unless it came from somewhere else
+    // (focusing a card also starts its preview video).
+    if (refocus && !fromRect) cell.focus({ preventScroll: true });
+    onClosed();
   }
 
   // Closes at once, with no morph, e.g. when the whole menu is being closed

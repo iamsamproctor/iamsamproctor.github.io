@@ -112,6 +112,13 @@ export function createHallway({ renderer, works = [] }) {
   endWall.position.set(0, HALL_HEIGHT / 2, -0.1);
   scene.add(endWall);
 
+  // The far end, only ever seen when walking the gallery (galleryExplore.js)
+  // and turning around; the scrolled view always faces the portrait.
+  const farWall = new THREE.Mesh(new THREE.PlaneGeometry(HALL_WIDTH, HALL_HEIGHT), wallMaterial);
+  farWall.rotation.y = Math.PI;
+  farWall.position.set(0, HALL_HEIGHT / 2, HALL_LENGTH - 0.1);
+  scene.add(farWall);
+
   for (const side of [-1, 1]) {
     const wall = new THREE.Mesh(new THREE.PlaneGeometry(HALL_LENGTH, HALL_HEIGHT), wallMaterial);
     wall.rotation.y = -side * Math.PI / 2;
@@ -170,6 +177,9 @@ export function createHallway({ renderer, works = [] }) {
   // Resolves once every work's image has loaded (or failed), since a picture
   // gaining its texture changes its shader; see warmUp.
   const workLoads = [];
+  // Each hung work, for picking them out when walking the gallery: index (as
+  // in `works`), the picture mesh, and its wall side (-1 left, 1 right).
+  const pieces = [];
   works.forEach((work, index) => {
     const side = index % 2 === 0 ? -1 : 1;
     const z = RIB_SPACING * (index + 1); // ribs sit at half-spacings, so this is mid-bay
@@ -194,6 +204,7 @@ export function createHallway({ renderer, works = [] }) {
     );
     picture.position.z = 0.03;
     group.add(picture);
+    pieces.push({ index, picture, side });
 
     workLoads.push(
       new Promise((resolve) => {
@@ -332,7 +343,37 @@ export function createHallway({ renderer, works = [] }) {
     await Promise.all(jobs);
   }
 
+  // Draws the hallway from some other camera than the scrolled one, e.g.
+  // when walking the gallery. The portrait can be seen up close then, so it
+  // gets its full resolution.
+  function renderFrom(splatScene, splatCamera, viewCamera) {
+    if (resolutionStep !== 0) {
+      resolutionStep = 0;
+      sizeRenderTarget();
+    }
+    renderer.setRenderTarget(renderTarget);
+    renderer.render(splatScene, splatCamera);
+    renderer.setRenderTarget(null);
+    renderer.render(scene, viewCamera);
+  }
+
+  // The hall's walkable shape, for walking the gallery: the side walls are at
+  // x = ±halfWidth with pilasters ribDepth deep, the portrait's end wall is at
+  // z = 0, the far end at z = length, and the ceiling at height.
+  const bounds = { halfWidth, length: HALL_LENGTH, height: HALL_HEIGHT, ribDepth: RIB_DEPTH };
+
   // scene is exposed so other pieces (e.g. museumVisitor.js) can be placed
   // in the hallway.
-  return { scene, setSize, update, render, projectWallPoint, warmUp };
+  return {
+    scene,
+    setSize,
+    update,
+    render,
+    renderFrom,
+    projectWallPoint,
+    warmUp,
+    pieces,
+    portrait,
+    bounds,
+  };
 }

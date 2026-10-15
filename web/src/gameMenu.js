@@ -15,6 +15,11 @@ import { createTextReveal } from "./textReveal.js";
 // any step of which can be clicked to go back to it; Esc goes back one step,
 // and ✕ closes the lot.
 //
+// It can also open straight into one project with no menu behind it
+// (openWork), e.g. from a picture on the gallery wall: the project grows out
+// of the picture, the breadcrumb reads "gallery / <project>", and going back
+// shrinks it back into the picture and closes the modal.
+//
 // onChange reports the current screen ("menu", "work", "about"), or null
 // once closed, e.g. to highlight the matching nav dot.
 
@@ -33,6 +38,7 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
   const root = document.querySelector(".menu-modal");
   const backdropEl = root.querySelector(".menu-modal-backdrop");
   const panelEl = root.querySelector(".menu-modal-panel");
+  const barEl = root.querySelector(".menu-modal-bar");
   const crumbsEl = root.querySelector(".menu-modal-crumbs");
   const closeEl = root.querySelector(".menu-modal-close");
   const screens = Object.fromEntries(
@@ -50,6 +56,7 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
   let isOpen = false;
   let screen = null;
   let detailTitle = null; // set while a project's details are open
+  let detailOnly = false; // opened straight into a project (openWork)
   let ctaWanted = false;
   let tween = null;
   const morph = { value: 0 };
@@ -72,6 +79,21 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
   }
 
   function renderCrumbs() {
+    if (detailOnly) {
+      crumbsEl.replaceChildren();
+      const backButton = crumbButton("\u2190", back);
+      backButton.classList.add("menu-crumb-back");
+      backButton.setAttribute("aria-label", "Back");
+      const sep = document.createElement("span");
+      sep.className = "menu-crumb-sep";
+      sep.textContent = "/";
+      sep.setAttribute("aria-hidden", "true");
+      crumbsEl.append(backButton, crumbButton("gallery", back));
+      if (detailTitle) {
+        crumbsEl.append(sep, crumbButton(detailTitle.toLowerCase(), () => {}, { current: true }));
+      }
+      return;
+    }
     const steps = [{ label: SCREEN_TITLES.menu, go: () => showScreen("menu") }];
     if (screen && screen !== "menu") {
       // From a project, its screen is one step back: shrink it into its card.
@@ -126,9 +148,55 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
 
   // One step back: out of a project, out of a screen, or out of the menu.
   function back() {
+    if (detailOnly) {
+      detail.close();
+      return;
+    }
     if (detail.isOpen()) detail.close();
     else if (screen !== "menu") showScreen("menu");
     else close();
+  }
+
+  // Opens straight into one project, grown out of fromRect (a function
+  // returning a screen rect, e.g. a picture on the gallery wall), with no
+  // menu behind it. Closing it shrinks it back there and closes the modal.
+  function openWork(cell, { fromRect }) {
+    if (isOpen) return;
+    isOpen = true;
+    detailOnly = true;
+    screen = "work";
+    syncCta();
+    root.classList.add("is-detail-only");
+    root.hidden = false;
+    for (const el of Object.values(screens)) el.hidden = true;
+    clearMorph();
+    gsap.fromTo(backdropEl, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" });
+    // The bar waits until the project has mostly grown out.
+    gsap.fromTo(barEl, { opacity: 0 }, { opacity: 1, duration: 0.4, delay: 0.55 });
+    detail.open(cell, { fromRect });
+    onChange(screen);
+  }
+
+  // Called by workModal.js (via main.js) once a project has finished
+  // closing. Opened on its own (openWork), that closes the modal too.
+  function detailClosed() {
+    if (!detailOnly) return;
+    gsap.to(backdropEl, {
+      opacity: 0,
+      duration: 0.35,
+      ease: "power2.inOut",
+      onComplete: () => {
+        root.hidden = true;
+        root.classList.remove("is-detail-only");
+        gsap.set(barEl, { opacity: 1 });
+        isOpen = false;
+        detailOnly = false;
+        screen = null;
+        detailTitle = null;
+        syncCta();
+        onChange(null);
+      },
+    });
   }
 
   // Called by workModal.js (via main.js) as a project opens or closes.
@@ -214,6 +282,12 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
 
   function close() {
     if (!isOpen) return;
+    // Opened on its own: shrink the project back to where it came from,
+    // after which detailClosed closes the modal.
+    if (detailOnly) {
+      detail.close();
+      return;
+    }
     tween?.kill();
     isOpen = false;
     // Shrink back into the menu button if it's on screen, otherwise fade.
@@ -325,6 +399,8 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     open,
     close,
     setDetail,
+    openWork,
+    detailClosed,
     getState: () => (isOpen ? screen : null),
   };
 }

@@ -527,6 +527,117 @@
         }
       }
 
+      .menu-cta-buttons {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      /* Quieter than the menu button beside it. */
+      .menu-cta-explore {
+        padding: 14px 26px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: rgba(255, 255, 255, 0.85);
+        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: clamp(14px, 1.4vw, 17px);
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition:
+          background 0.25s ease,
+          border-color 0.25s ease,
+          color 0.25s ease;
+      }
+
+      .menu-cta-explore:hover,
+      .menu-cta-explore:focus-visible {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #000000;
+        outline: none;
+      }
+
+      @media (hover: none), (pointer: coarse) {
+        .menu-cta-explore {
+          display: none;
+        }
+      }
+
+      /* Over everything but the loader, for fading between modes. */
+      .gallery-fade {
+        position: fixed;
+        inset: 0;
+        z-index: 9;
+        background: #000000;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .gallery-hud {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 28px;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        pointer-events: none;
+      }
+
+      .gallery-hud[hidden] {
+        display: none;
+      }
+
+      .gallery-exit {
+        padding: 10px 22px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: rgba(255, 255, 255, 0.85);
+        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        pointer-events: auto;
+        transition:
+          background 0.25s ease,
+          color 0.25s ease;
+      }
+
+      .gallery-exit:hover,
+      .gallery-exit:focus-visible {
+        background: #ffffff;
+        color: #000000;
+        outline: none;
+      }
+
+      .gallery-keys {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.45);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      /* While walking the gallery, the scrolling page's own overlays step
+         aside. The quote is positioned for the scrolled view's camera. */
+      body.is-exploring .hero-heading,
+      body.is-exploring .section-nav,
+      body.is-exploring .menu-cta,
+      body.is-exploring .hallway-quote {
+        display: none !important;
+      }
+
       .menu-cta-hint {
         margin: 0;
         color: rgba(255, 255, 255, 0.45);
@@ -568,6 +679,12 @@
         overflow: hidden;
         border-radius: 16px;
         background: #161616;
+      }
+
+      /* Opened straight into a project, e.g. from the gallery wall: nothing
+         behind it, so the project grows out over the backdrop. */
+      .menu-modal.is-detail-only .menu-modal-panel {
+        background: transparent;
       }
 
       /* Over every screen, including a project's details, so the way back
@@ -1991,8 +2108,23 @@
 
     <!-- Appears at the end of the hallway, where the page ends. -->
     <div class="menu-cta">
-      <button type="button" class="menu-cta-button">menu</button>
+      <div class="menu-cta-buttons">
+        <button type="button" class="menu-cta-button">menu</button>
+        <!-- Walks the hallway in 3D (galleryExplore.js). Mouse and keyboard
+             only for now, so it's hidden on touch screens. -->
+        <button type="button" class="menu-cta-explore">walk the gallery</button>
+      </div>
       <p class="menu-cta-hint" aria-hidden="true">press enter</p>
+    </div>
+
+    <!-- Walking the gallery: the fade between modes, and the controls. -->
+    <div class="gallery-fade" aria-hidden="true"></div>
+    <div class="gallery-hud" hidden>
+      <button type="button" class="gallery-exit">&larr; back to the bench</button>
+      <p class="gallery-keys" aria-hidden="true">
+        wasd to walk &nbsp;&middot;&nbsp; mouse to look &nbsp;&middot;&nbsp;
+        click a work to view it &nbsp;&middot;&nbsp; esc to leave
+      </p>
     </div>
 
     <!-- The menu: a modal that grows out of whatever opened it, holding a

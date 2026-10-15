@@ -51,6 +51,7 @@ export function createMuseumVisitor({ url }) {
   }
 
   let mixer = null;
+  let figureVisible = true; // see setFigureVisible
   let loading = null;
 
   function load() {
@@ -65,6 +66,8 @@ export function createMuseumVisitor({ url }) {
       figure.traverse((node) => {
         if (node.isSkinnedMesh) node.frustumCulled = false;
       });
+      // It may arrive while someone is walking the gallery in its place.
+      figure.visible = figureVisible;
       group.add(figure);
 
       mixer = new THREE.AnimationMixer(figure);
@@ -91,5 +94,21 @@ export function createMuseumVisitor({ url }) {
     mixer?.update(deltaTime);
   }
 
-  return { group, load, update };
+  // Hides just the seated figure, leaving the bench, e.g. while someone is
+  // walking the gallery in their place.
+  function setFigureVisible(visible) {
+    figureVisible = visible;
+    for (const child of group.children) {
+      if (child !== bench) child.visible = visible;
+    }
+  }
+
+  // The bench's world-space box, e.g. so someone walking the gallery bumps
+  // into it rather than through it.
+  function getBenchBounds(target = new THREE.Box3()) {
+    bench.updateWorldMatrix(true, true);
+    return target.setFromObject(bench);
+  }
+
+  return { group, load, update, setFigureVisible, getBenchBounds };
 }

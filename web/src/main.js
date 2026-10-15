@@ -26,6 +26,7 @@ import { createSplatCharge } from "./splatCharge.js";
 import { createSplatRipples } from "./splatRipples.js";
 import { createSplatSparkle } from "./splatSparkle.js";
 import { createGameMenu } from "./gameMenu.js";
+import { createGalleryExplore } from "./galleryExplore.js";
 import quotes from "./quotes.json";
 
 const revealBurn = createRevealBurn();
@@ -185,6 +186,7 @@ const hallwayMenuShowAt = 0.92; // hallway progress at which the menu button app
 const workModal = createWorkModal({
   onOpen: (work) => gameMenu.setDetail(work.title),
   onClose: () => gameMenu.setDetail(null),
+  onClosed: () => gameMenu.detailClosed(),
 });
 const gameMenu = createGameMenu({
   detail: workModal,
@@ -287,7 +289,8 @@ let currentPitch = 0;
 // reports a pointer position too, and with nothing to bring it back the view
 // would stay turned toward wherever the finger last was.
 window.addEventListener("pointermove", (event) => {
-  if (event.pointerType !== "mouse") return;
+  // While walking the gallery the mouse steers the walker instead.
+  if (event.pointerType !== "mouse" || document.body.classList.contains("is-exploring")) return;
   const horizontalPosition = THREE.MathUtils.clamp(
     (event.clientX / window.innerWidth) * 2 - 1,
     -1,
@@ -349,6 +352,26 @@ const hallwayQuote = hallwayQuoteEl ? createHallwayQuote(hallwayQuoteEl, quotes)
 const museumVisitor = createMuseumVisitor({ url: "/assets/animations/sitting-idle.fbx" });
 museumVisitor.group.position.set(0, 0, 4.5);
 hallway.scene.add(museumVisitor.group);
+
+// Walking the gallery in 3D, from the button beside the menu at the end of
+// the hallway (mouse and keyboard only, for now). A work's picture opens the
+// same project modal as the Selected Works menu.
+const workCells = Array.from(document.querySelectorAll(".work-cell"));
+const galleryExplore = createGalleryExplore({
+  hallway,
+  museumVisitor,
+  onOpenWork: (index, fromRect) => {
+    const cell = workCells[index];
+    if (cell) gameMenu.openWork(cell, { fromRect });
+  },
+  isModalOpen: () =>
+    gameMenu.getState() !== null ||
+    document.querySelector(".portrait-viewer:not([hidden])") !== null,
+});
+const canExploreGallery = !window.matchMedia("(hover: none), (pointer: coarse)").matches;
+document.querySelector(".menu-cta-explore")?.addEventListener("click", () => {
+  if (canExploreGallery) galleryExplore.enter();
+});
 const museumVisitorDelay = 2500; // ms after the reveal before fetching when idle
 let museumVisitorRequested = false;
 function loadMuseumVisitor() {
@@ -681,6 +704,7 @@ function handleResize() {
   }
   renderer.setSize(window.innerWidth, window.innerHeight);
   hallway.setSize(window.innerWidth, window.innerHeight);
+  galleryExplore.setSize(window.innerWidth, window.innerHeight);
   revealBurn.setAspect(window.innerWidth / window.innerHeight);
 }
 window.addEventListener("resize", handleResize);
@@ -774,9 +798,15 @@ renderer.setAnimationLoop(() => {
     const hallwaySmoothing = 1 - Math.exp(-hallwayBlendSmoothing * deltaTime);
     hallwayBlend = THREE.MathUtils.lerp(hallwayBlend, hallwayProgress, hallwaySmoothing);
     if (Math.abs(hallwayBlend - hallwayProgress) < 0.0005) hallwayBlend = hallwayProgress;
-    gameMenu.setCtaVisible(hallwayBlend >= hallwayMenuShowAt);
+    const exploring = galleryExplore.isActive();
+    gameMenu.setCtaVisible(!exploring && hallwayBlend >= hallwayMenuShowAt);
 
-    if (hallwayBlend <= 0) {
+    if (exploring) {
+      galleryExplore.update(deltaTime);
+      museumVisitor.update(deltaTime);
+      galleryExplore.render(scene, camera);
+      hallwayQuote?.hide();
+    } else if (hallwayBlend <= 0) {
       renderer.render(scene, camera);
       hallwayQuote?.hide();
     } else {
