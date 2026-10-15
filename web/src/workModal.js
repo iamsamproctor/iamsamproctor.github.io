@@ -33,7 +33,11 @@ function escapeHtml(value) {
 //    the card at the start and never stretches on the way out.
 // Once the morph settles, every inline style is cleared and plain CSS takes
 // over again, so resizing while the modal is open behaves normally.
-export function createWorkModal() {
+//
+// It lives inside the menu modal (see gameMenu.js) as its deepest screen, so
+// its panel is the menu's panel and the menu's bar does the closing. onOpen
+// and onClose tell the menu when it opens or starts to close.
+export function createWorkModal({ onOpen = () => {}, onClose = () => {} } = {}) {
   const root = document.querySelector(".work-modal");
   const backdropEl = root.querySelector(".work-modal-backdrop");
   const panelEl = root.querySelector(".work-modal-panel");
@@ -163,6 +167,7 @@ export function createWorkModal() {
     };
 
     populate(work, cell);
+    onOpen(work);
     lockScroll();
     root.hidden = false;
     root.classList.add("is-animating");
@@ -207,6 +212,7 @@ export function createWorkModal() {
   function close() {
     if (!state || state.closing) return;
     state.closing = true;
+    onClose();
 
     revealCall?.kill();
     revealObserver.disconnect();
@@ -235,7 +241,7 @@ export function createWorkModal() {
     });
   }
 
-  function finishClose() {
+  function finishClose({ refocus = true } = {}) {
     const { cell, video, videoParent, videoNext } = state;
     if (video && videoParent) {
       videoParent.insertBefore(video, videoNext);
@@ -250,7 +256,19 @@ export function createWorkModal() {
     calloutsEl.innerHTML = "";
     state = null;
 
-    cell.focus({ preventScroll: true });
+    if (refocus) cell.focus({ preventScroll: true });
+  }
+
+  // Closes at once, with no morph, e.g. when the whole menu is being closed
+  // around it.
+  function closeImmediately() {
+    if (!state) return;
+    if (!state.closing) onClose();
+    revealCall?.kill();
+    revealObserver.disconnect();
+    gsap.killTweensOf(revealEls());
+    morphTween?.kill();
+    finishClose({ refocus: false });
   }
 
   closeEl.addEventListener("click", close);
@@ -262,6 +280,8 @@ export function createWorkModal() {
   return {
     open,
     close,
+    closeImmediately,
+    isOpen: () => state !== null,
     isOpenFor: (cell) => state?.cell === cell,
   };
 }

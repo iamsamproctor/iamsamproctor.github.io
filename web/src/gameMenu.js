@@ -1,118 +1,274 @@
+import gsap from "gsap";
 import { createTextReveal } from "./textReveal.js";
 
-// The page ends where the hallway fades to black. There a menu button
-// appears (setCtaVisible), opening a game-style menu over the scene whose
-// items open Work and About as full-screen panels, each of which can step
-// back to the menu or close everything. Esc steps back one level, and the
-// arrow keys move through the menu.
+// The menu: one modal panel over the end of the hallway, holding a stack of
+// screens like a game's pause menu.
 //
-// State is one of: null (nothing open), "menu", or a panel name ("work",
-// "about"). onChange reports it, e.g. to highlight the matching nav dot.
+//   menu  ->  selected works  ->  a project's details
+//         ->  about
+//
+// It grows out of whatever opened it (the menu button, a nav dot, the
+// contact button) the way a project grows out of its card, and shrinks back
+// into the menu button on close. A project's details are the deepest screen:
+// workModal.js grows them out of their card inside this same panel, passed
+// in as `detail`. The bar along the top shows where you are as a breadcrumb,
+// any step of which can be clicked to go back to it; Esc goes back one step,
+// and ✕ closes the lot.
+//
+// onChange reports the current screen ("menu", "work", "about"), or null
+// once closed, e.g. to highlight the matching nav dot.
 
-const FADE_MS = 350; // must match the .game-menu / .menu-panel transitions
-const ITEM_STAGGER_MS = 70; // between each menu item's scramble-in
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const OPEN_DURATION = reduceMotion ? 0.01 : 0.75;
+const CLOSE_DURATION = reduceMotion ? 0.01 : 0.6;
+const ITEM_STAGGER = 0.07; // seconds between each menu item's scramble-in
 
-export function createGameMenu({ onChange = () => {}, onBackToStart = () => {} } = {}) {
+const SCREEN_TITLES = { menu: "menu", work: "selected works", about: "about" };
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+export function createGameMenu({ detail, onChange = () => {}, onBackToStart = () => {} }) {
   const ctaEl = document.querySelector(".menu-cta");
   const ctaButtonEl = ctaEl.querySelector(".menu-cta-button");
-  const menuEl = document.querySelector(".game-menu");
-  const items = Array.from(menuEl.querySelectorAll(".game-menu-item"));
-  const panels = Object.fromEntries(
-    Array.from(document.querySelectorAll(".menu-panel")).map((el) => [el.dataset.panel, el]),
+  const root = document.querySelector(".menu-modal");
+  const backdropEl = root.querySelector(".menu-modal-backdrop");
+  const panelEl = root.querySelector(".menu-modal-panel");
+  const crumbsEl = root.querySelector(".menu-modal-crumbs");
+  const closeEl = root.querySelector(".menu-modal-close");
+  const screens = Object.fromEntries(
+    Array.from(root.querySelectorAll(".menu-screen")).map((el) => [el.dataset.screen, el]),
   );
+  const items = Array.from(root.querySelectorAll(".game-menu-item"));
 
-  // Menu labels scramble in each time the menu opens, like the hero title.
-  // Widths aren't locked: the menu is hidden when this runs, so there's
-  // nothing to measure, and the font is monospaced anyway.
+  // Menu labels scramble in each time the menu screen is shown, like the
+  // hero title. Widths aren't locked: the screen is hidden when this runs,
+  // so there's nothing to measure, and the font is monospaced anyway.
   const itemReveals = items.map((item) =>
     createTextReveal(item.querySelector(".game-menu-label"), { lockWidths: false }),
   );
 
-  let state = null;
+  let isOpen = false;
+  let screen = null;
+  let detailTitle = null; // set while a project's details are open
   let ctaWanted = false;
-  const hideTimers = new Map();
+  let tween = null;
+  const morph = { value: 0 };
+  let rects = null;
 
-  function show(el) {
-    clearTimeout(hideTimers.get(el));
-    el.hidden = false;
-    // Let the browser apply the hidden-state styles before transitioning.
-    void el.offsetWidth;
-    el.classList.add("is-open");
+  function syncCta() {
+    ctaEl.classList.toggle("is-shown", ctaWanted && !isOpen);
   }
 
-  function hide(el) {
-    el.classList.remove("is-open");
-    clearTimeout(hideTimers.get(el));
-    hideTimers.set(
-      el,
-      setTimeout(() => {
-        if (!el.classList.contains("is-open")) el.hidden = true;
-      }, FADE_MS),
-    );
+  // --- Breadcrumb ---------------------------------------------------------
+
+  function crumbButton(label, onClick, { current = false } = {}) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "menu-crumb";
+    button.textContent = label;
+    if (current) button.setAttribute("aria-current", "page");
+    else button.addEventListener("click", onClick);
+    return button;
   }
 
-  function setState(next) {
-    state = next;
-    ctaEl.classList.toggle("is-shown", ctaWanted && state === null);
-    onChange(state);
-  }
-
-  function openMenu() {
-    for (const panel of Object.values(panels)) hide(panel);
-    const wasOpen = state === "menu";
-    show(menuEl);
-    setState("menu");
-    if (!wasOpen) {
-      itemReveals.forEach((reveal, i) => setTimeout(() => reveal.play(), i * ITEM_STAGGER_MS));
+  function renderCrumbs() {
+    const steps = [{ label: SCREEN_TITLES.menu, go: () => showScreen("menu") }];
+    if (screen && screen !== "menu") {
+      // From a project, its screen is one step back: shrink it into its card.
+      steps.push({ label: SCREEN_TITLES[screen], go: () => detail.close() });
     }
-    items[0].focus({ preventScroll: true });
-  }
+    if (detailTitle) steps.push({ label: detailTitle.toLowerCase(), go: () => {} });
 
-  // name: "work" or "about". scrollTo: id of an element in the panel to
-  // scroll to once open, e.g. "contact".
-  function openPanel(name, { scrollTo = null } = {}) {
-    const panel = panels[name];
-    if (!panel) return;
-    for (const other of Object.values(panels)) if (other !== panel) hide(other);
-    hide(menuEl);
-    show(panel);
-    panel.scrollTop = 0;
-    if (scrollTo) {
-      const target = panel.querySelector(`#${scrollTo}`);
-      if (target) {
-        requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth" }));
+    crumbsEl.replaceChildren();
+    if (steps.length > 1) {
+      const backButton = crumbButton("←", back);
+      backButton.classList.add("menu-crumb-back");
+      backButton.setAttribute("aria-label", "Back");
+      crumbsEl.append(backButton);
+    }
+    steps.forEach((step, i) => {
+      if (i > 0) {
+        const sep = document.createElement("span");
+        sep.className = "menu-crumb-sep";
+        sep.textContent = "/";
+        sep.setAttribute("aria-hidden", "true");
+        crumbsEl.append(sep);
       }
+      crumbsEl.append(crumbButton(step.label, step.go, { current: i === steps.length - 1 }));
+    });
+  }
+
+  // --- Screens ------------------------------------------------------------
+
+  // name: "menu", "work" or "about". scrollTo: id of an element on that
+  // screen to scroll to, e.g. "contact".
+  function showScreen(name, { scrollTo = null } = {}) {
+    if (detail.isOpen()) detail.closeImmediately();
+    const changed = name !== screen;
+    screen = name;
+    for (const [key, el] of Object.entries(screens)) el.hidden = key !== name;
+    const el = screens[name];
+    if (changed) el.scrollTop = 0;
+    if (scrollTo) {
+      const target = el.querySelector(`#${scrollTo}`);
+      if (target) requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth" }));
     }
-    setState(name);
-    panel.querySelector(".menu-panel-back")?.focus({ preventScroll: true });
+
+    if (name === "menu" && changed) {
+      itemReveals.forEach((reveal, i) => gsap.delayedCall(i * ITEM_STAGGER, () => reveal.play()));
+    }
+
+    renderCrumbs();
+    if (name === "menu") items[0].focus({ preventScroll: true });
+    else (crumbsEl.querySelector(".menu-crumb-back") ?? closeEl).focus({ preventScroll: true });
+    onChange(screen);
   }
 
-  function closeAll() {
-    const wasOpen = state !== null;
-    hide(menuEl);
-    for (const panel of Object.values(panels)) hide(panel);
-    setState(null);
-    if (wasOpen && ctaWanted) ctaButtonEl.focus({ preventScroll: true });
+  // One step back: out of a project, out of a screen, or out of the menu.
+  function back() {
+    if (detail.isOpen()) detail.close();
+    else if (screen !== "menu") showScreen("menu");
+    else close();
   }
 
-  // Shown once the end of the hallway is reached; hidden while anything is
+  // Called by workModal.js (via main.js) as a project opens or closes.
+  function setDetail(title) {
+    detailTitle = title;
+    renderCrumbs();
+    // Keyboard focus follows into the project, onto its way back out.
+    if (title) crumbsEl.querySelector(".menu-crumb-back")?.focus({ preventScroll: true });
+  }
+
+  // --- Open / close morph -------------------------------------------------
+
+  function measure(fromEl) {
+    const panel = panelEl.getBoundingClientRect();
+    const panelRadius = parseFloat(getComputedStyle(panelEl).borderTopLeftRadius) || 0;
+    if (!fromEl) return { from: null, panel, panelRadius };
+    const from = fromEl.getBoundingClientRect();
+    const fromRadius = Math.min(
+      parseFloat(getComputedStyle(fromEl).borderTopLeftRadius) || 0,
+      from.height / 2,
+      from.width / 2,
+    );
+    return { from, fromRadius, panel, panelRadius };
+  }
+
+  // Clips the panel down to the opener's rect at 0, out to its full size at
+  // 1. With no opener it scales up slightly from the center instead.
+  function renderMorph() {
+    const t = morph.value;
+    const { from, fromRadius, panel, panelRadius } = rects;
+    if (!from) {
+      panelEl.style.opacity = String(t);
+      panelEl.style.transform = `scale(${lerp(0.96, 1, t)})`;
+      return;
+    }
+    const top = lerp(from.top, panel.top, t);
+    const left = lerp(from.left, panel.left, t);
+    const bottom = lerp(from.bottom, panel.bottom, t);
+    const right = lerp(from.right, panel.right, t);
+    panelEl.style.clipPath =
+      `inset(${top - panel.top}px ${panel.right - right}px ` +
+      `${panel.bottom - bottom}px ${left - panel.left}px ` +
+      `round ${lerp(fromRadius, panelRadius, t)}px)`;
+  }
+
+  function clearMorph() {
+    panelEl.style.clipPath = "";
+    panelEl.style.opacity = "";
+    panelEl.style.transform = "";
+  }
+
+  // screenName: which screen to show. from: the element it grows out of.
+  function open(screenName = "menu", { from = null, scrollTo = null } = {}) {
+    if (isOpen && !tween?.isActive()) {
+      showScreen(screenName, { scrollTo });
+      return;
+    }
+    tween?.kill();
+    const wasClosed = !isOpen;
+    isOpen = true;
+    syncCta();
+    root.hidden = false;
+    showScreen(screenName, { scrollTo });
+
+    if (!wasClosed) {
+      // Reopened mid-close: run the same morph forward from where it is.
+      tween = gsap.to(morph, { value: 1, duration: OPEN_DURATION, ease: "power3.inOut", onUpdate: renderMorph, onComplete: clearMorph });
+      gsap.to(backdropEl, { opacity: 1, duration: 0.4 });
+      return;
+    }
+    rects = measure(from);
+    morph.value = 0;
+    renderMorph();
+    gsap.fromTo(backdropEl, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" });
+    tween = gsap.to(morph, {
+      value: 1,
+      duration: OPEN_DURATION,
+      ease: "power3.inOut",
+      onUpdate: renderMorph,
+      onComplete: clearMorph,
+    });
+  }
+
+  function close() {
+    if (!isOpen) return;
+    tween?.kill();
+    isOpen = false;
+    // Shrink back into the menu button if it's on screen, otherwise fade.
+    // Measured before it reappears, since it's offset while hidden.
+    const target = ctaWanted ? ctaButtonEl : null;
+    rects = measure(target);
+    if (target) {
+      // Its shown position: the hidden state is nudged down a little.
+      const shown = ctaButtonEl.getBoundingClientRect();
+      const offset = parseFloat(getComputedStyle(ctaEl).transform.split(",")[5]) || 0;
+      rects.from = new DOMRect(shown.left, shown.top - offset, shown.width, shown.height);
+    }
+    morph.value = 1;
+    gsap.to(backdropEl, { opacity: 0, duration: 0.5, delay: 0.1, ease: "power2.inOut" });
+    tween = gsap.to(morph, {
+      value: 0,
+      duration: CLOSE_DURATION,
+      ease: "power3.inOut",
+      onUpdate: renderMorph,
+      onComplete: () => {
+        root.hidden = true;
+        clearMorph();
+        detail.closeImmediately();
+        screen = null;
+        detailTitle = null;
+        for (const el of Object.values(screens)) el.hidden = true;
+        syncCta();
+        onChange(null);
+        if (ctaWanted) ctaButtonEl.focus({ preventScroll: true });
+      },
+    });
+  }
+
+  // Shown once the end of the hallway is reached; hidden while the menu is
   // open or after scrolling back up.
   function setCtaVisible(visible) {
     if (visible === ctaWanted) return;
     ctaWanted = visible;
-    ctaEl.classList.toggle("is-shown", ctaWanted && state === null);
+    syncCta();
   }
 
-  ctaButtonEl.addEventListener("click", openMenu);
-  menuEl.querySelector(".game-menu-close").addEventListener("click", closeAll);
+  // --- Wiring -------------------------------------------------------------
+
+  ctaButtonEl.addEventListener("click", () => open("menu", { from: ctaButtonEl }));
+  closeEl.addEventListener("click", close);
+  backdropEl.addEventListener("click", close);
+
   for (const item of items) {
     item.addEventListener("click", () => {
       const target = item.dataset.open;
-      if (target === "contact") openPanel("about", { scrollTo: "contact" });
+      if (target === "contact") showScreen("about", { scrollTo: "contact" });
       else if (target === "top") {
-        closeAll();
+        close();
         onBackToStart();
-      } else openPanel(target);
+      } else showScreen(target);
     });
     // Hovering an item selects it, as in a game menu, so the keyboard picks
     // up from wherever the pointer left off. The highlight follows focus.
@@ -120,32 +276,29 @@ export function createGameMenu({ onChange = () => {}, onBackToStart = () => {} }
     item.addEventListener("focus", () => item.classList.add("is-selected"));
     item.addEventListener("blur", () => item.classList.remove("is-selected"));
   }
-  for (const panel of Object.values(panels)) {
-    panel.querySelector(".menu-panel-back").addEventListener("click", openMenu);
-    panel.querySelector(".menu-panel-close").addEventListener("click", closeAll);
+
+  // Wheel and touch scrolling over the modal scroll whichever screen is
+  // under them, and never the page (and the hallway) underneath.
+  function blockPageScroll(event) {
+    const scroller = event.target.closest(".work-modal-scroll, .menu-screen");
+    if (!scroller || scroller.scrollHeight <= scroller.clientHeight) event.preventDefault();
   }
+  root.addEventListener("wheel", blockPageScroll, { passive: false });
+  root.addEventListener("touchmove", blockPageScroll, { passive: false });
 
-  // The menu itself doesn't scroll; keep wheel and touch scrolling over it
-  // from moving the page (and the hallway) underneath.
-  const blockScroll = (event) => event.preventDefault();
-  menuEl.addEventListener("wheel", blockScroll, { passive: false });
-  menuEl.addEventListener("touchmove", blockScroll, { passive: false });
-
-  // The work modal and portrait viewer open over the panels and handle Esc
-  // themselves; leave it to them while either is up.
-  const modalIsOpen = () =>
-    document.querySelector(".work-modal:not([hidden]), .portrait-viewer:not([hidden])") !== null;
+  // The portrait viewer opens over the menu and handles Esc itself, as does
+  // a project's details (closing back to the works screen).
+  const viewerIsOpen = () => document.querySelector(".portrait-viewer:not([hidden])") !== null;
 
   window.addEventListener("keydown", (event) => {
-    if (modalIsOpen()) return;
+    if (viewerIsOpen()) return;
 
     if (event.key === "Escape") {
-      if (state === "menu") closeAll();
-      else if (state !== null) openMenu();
+      if (isOpen && !detail.isOpen()) back();
       return;
     }
 
-    if (state === "menu" && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+    if (isOpen && screen === "menu" && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       event.preventDefault();
       const current = items.indexOf(document.activeElement);
       const step = event.key === "ArrowDown" ? 1 : -1;
@@ -158,14 +311,20 @@ export function createGameMenu({ onChange = () => {}, onBackToStart = () => {} }
     // used on some other control.
     if (
       event.key === "Enter" &&
-      state === null &&
+      !isOpen &&
       ctaWanted &&
       (document.activeElement === document.body || document.activeElement === ctaButtonEl)
     ) {
       event.preventDefault();
-      openMenu();
+      open("menu", { from: ctaButtonEl });
     }
   });
 
-  return { setCtaVisible, openMenu, openPanel, closeAll, getState: () => state };
+  return {
+    setCtaVisible,
+    open,
+    close,
+    setDetail,
+    getState: () => (isOpen ? screen : null),
+  };
 }

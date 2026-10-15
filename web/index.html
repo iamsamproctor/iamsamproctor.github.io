@@ -462,10 +462,10 @@
       }
 
       /* The page ends at a resting view of the hallway. A menu button appears
-         at the bottom of the screen there, opening a game-style menu
-         (.game-menu) whose items open Work and About as full-screen panels
-         (.menu-panel). Stacked above the scene and nav, below the work modal
-         and portrait viewer (8). */
+         at the bottom of the screen there, opening the menu modal
+         (.menu-modal): one panel holding a stack of screens (the menu, then
+         works or about, then a project's details). Stacked above the scene
+         and nav, below the portrait viewer (8). */
       .menu-cta {
         position: fixed;
         left: 50%;
@@ -538,40 +538,198 @@
         text-transform: uppercase;
       }
 
-      .game-menu {
+      .menu-modal {
         position: fixed;
         inset: 0;
         z-index: 6;
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+      }
+
+      .menu-modal[hidden],
+      .menu-screen[hidden] {
+        display: none;
+      }
+
+      /* The hallway stays in view around the panel, softened. */
+      .menu-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+
+      .menu-modal-panel {
+        position: absolute;
+        inset: 24px;
+        overflow: hidden;
+        border-radius: 16px;
+        background: #161616;
+      }
+
+      /* Over every screen, including a project's details, so the way back
+         is always in the same place. */
+      .menu-modal-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 3;
         display: flex;
         align-items: center;
-        background: rgba(0, 0, 0, 0.86);
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 24px 32px;
+        background: linear-gradient(
+          to bottom,
+          rgba(22, 22, 22, 0.94) 50%,
+          rgba(22, 22, 22, 0)
+        );
+        pointer-events: none;
+      }
+
+      .menu-modal-bar > * {
+        pointer-events: auto;
+      }
+
+      .menu-modal-crumbs {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 10px;
+        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 15px;
+        letter-spacing: 0.06em;
+      }
+
+      .menu-crumb {
+        padding: 8px 0;
+        border: 0;
+        background: none;
+        color: rgba(255, 255, 255, 0.5);
+        font: inherit;
+        letter-spacing: inherit;
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+
+      .menu-crumb:focus {
+        outline: none;
+      }
+
+      .menu-crumb:hover,
+      .menu-crumb:focus-visible {
         color: #ffffff;
-        opacity: 0;
-        transition: opacity 0.35s ease;
       }
 
-      .game-menu.is-open {
-        opacity: 1;
+      .menu-crumb:focus-visible {
+        text-decoration: underline;
+        text-underline-offset: 6px;
       }
 
-      /* display rules above would otherwise override the hidden attribute,
-         leaving an invisible layer over the page that eats scrolling. */
-      .game-menu[hidden],
-      .menu-panel[hidden] {
+      .menu-crumb[aria-current] {
+        color: #ffffff;
+        cursor: default;
+      }
+
+      .menu-crumb-back {
+        margin-right: 8px;
+        font-size: 18px;
+      }
+
+      .menu-crumb-sep {
+        color: rgba(255, 255, 255, 0.25);
+      }
+
+      .menu-modal-close {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.35);
+        color: #ffffff;
+        cursor: pointer;
+        transition:
+          background 0.25s ease,
+          border-color 0.25s ease,
+          color 0.25s ease;
+      }
+
+      .menu-modal-close:hover {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #000000;
+      }
+
+      .menu-modal-close svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* Each screen fills the panel and scrolls on its own. */
+      .menu-screen {
+        position: absolute;
+        inset: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        animation: menu-screen-in 0.35s ease both;
+      }
+
+      @keyframes menu-screen-in {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      .menu-screen-menu {
+        display: flex;
+        align-items: center;
+      }
+
+      /* Room under the bar. */
+      .menu-screen .page-section {
+        padding-top: 96px;
+      }
+
+      /* A project's details open inside the panel, over the works screen,
+         rather than as a modal of their own: no backdrop or close button
+         of their own, since the menu's provide both. */
+      .menu-modal .work-modal {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+      }
+
+      .menu-modal .work-modal-panel {
+        inset: 0;
+        border-radius: inherit;
+      }
+
+      .menu-modal .work-modal-backdrop,
+      .menu-modal .work-modal-close {
         display: none;
       }
 
       .game-menu-inner {
-        padding: 0 clamp(24px, 10vw, 160px);
+        padding: 72px clamp(24px, 8vw, 120px) 40px;
       }
 
       .game-menu-eyebrow,
       .game-menu-keys {
         margin: 0;
         color: rgba(255, 255, 255, 0.45);
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
-          sans-serif;
         font-size: 11px;
         letter-spacing: 0.24em;
         text-transform: uppercase;
@@ -634,108 +792,14 @@
         letter-spacing: -0.01em;
       }
 
-      .game-menu-close,
-      .menu-panel-close {
-        width: 44px;
-        height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        background: rgba(0, 0, 0, 0.2);
-        color: #ffffff;
-        cursor: pointer;
-        transition: background 0.25s ease, border-color 0.25s ease;
-      }
-
-      .game-menu-close:hover,
-      .menu-panel-close:hover {
-        background: rgba(255, 255, 255, 0.12);
-        border-color: #ffffff;
-      }
-
-      .game-menu-close svg,
-      .menu-panel-close svg {
-        width: 18px;
-        height: 18px;
-      }
-
-      .game-menu-close {
-        position: absolute;
-        top: 20px;
-        right: 32px;
-      }
-
-      .menu-panel {
-        position: fixed;
-        inset: 0;
-        z-index: 7;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        background: #121212;
-        opacity: 0;
-        transform: translateY(24px);
-        transition:
-          opacity 0.35s ease,
-          transform 0.35s ease;
-      }
-
-      .menu-panel.is-open {
-        opacity: 1;
-        transform: none;
-      }
-
-      .menu-panel-bar {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 20px 32px;
-        background: linear-gradient(to bottom, #121212 60%, rgba(18, 18, 18, 0));
-      }
-
-      .menu-panel-back {
-        padding: 10px 0;
-        border: 0;
-        background: none;
-        color: rgba(255, 255, 255, 0.7);
-        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
-        font-size: 16px;
-        letter-spacing: 0.08em;
-        cursor: pointer;
-        transition: color 0.2s ease;
-      }
-
-      .menu-panel-back:focus {
-        outline: none;
-      }
-
-      .menu-panel-back:hover,
-      .menu-panel-back:focus-visible {
-        color: #ffffff;
-      }
-
-      .menu-panel-back:focus-visible {
-        text-decoration: underline;
-        text-underline-offset: 6px;
-      }
-
-      /* The bar already gives the top of the panel some room. */
-      .menu-panel .page-section {
-        padding-top: 40px;
-      }
-
       @media (max-width: 640px) {
-        .game-menu-close {
-          top: 16px;
-          right: 16px;
+        .menu-modal-panel {
+          inset: 0;
+          border-radius: 0;
         }
 
-        .menu-panel-bar {
-          padding: 16px 20px;
+        .menu-modal-bar {
+          padding: 14px 16px 24px;
         }
 
         .menu-cta-button {
@@ -1931,57 +1995,58 @@
       <p class="menu-cta-hint" aria-hidden="true">press enter</p>
     </div>
 
-    <!-- A game-style menu over the end of the hallway. Each item opens a
-         full-screen panel (below), which can go back to this menu. -->
-    <div class="game-menu" hidden>
-      <div class="game-menu-inner" role="dialog" aria-modal="true" aria-label="Menu">
-        <p class="game-menu-eyebrow">Sam Proctor</p>
-        <ul class="game-menu-list">
-          <li>
-            <button type="button" class="game-menu-item" data-open="work">
-              <span class="game-menu-index">01</span>
-              <span class="game-menu-label">selected works</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="game-menu-item" data-open="about">
-              <span class="game-menu-index">02</span>
-              <span class="game-menu-label">about</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="game-menu-item" data-open="contact">
-              <span class="game-menu-index">03</span>
-              <span class="game-menu-label">contact</span>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="game-menu-item" data-open="top">
-              <span class="game-menu-index">04</span>
-              <span class="game-menu-label">back to start</span>
-            </button>
-          </li>
-        </ul>
-        <p class="game-menu-keys" aria-hidden="true">
-          &uarr;&darr; select &nbsp;&middot;&nbsp; enter open &nbsp;&middot;&nbsp; esc close
-        </p>
-      </div>
-      <button type="button" class="game-menu-close" aria-label="Close menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
-      </button>
-    </div>
+    <!-- The menu: a modal that grows out of whatever opened it, holding a
+         stack of screens (menu, then works or about). A project's details
+         open as a deeper screen inside it, growing out of its card. The
+         bar's breadcrumb steps back through them. See gameMenu.js. -->
+    <div class="menu-modal" hidden>
+      <div class="menu-modal-backdrop"></div>
+      <div class="menu-modal-panel" role="dialog" aria-modal="true" aria-label="Menu">
+        <div class="menu-modal-bar">
+          <nav class="menu-modal-crumbs" aria-label="Breadcrumb"></nav>
+          <button type="button" class="menu-modal-close" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
 
-    <div class="menu-panel" data-panel="work" hidden>
-      <div class="menu-panel-bar">
-        <button type="button" class="menu-panel-back">&larr; menu</button>
-        <button type="button" class="menu-panel-close" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
-      </div>
+        <div class="menu-screen menu-screen-menu" data-screen="menu" hidden>
+          <div class="game-menu-inner">
+            <p class="game-menu-eyebrow">Sam Proctor</p>
+            <ul class="game-menu-list">
+              <li>
+                <button type="button" class="game-menu-item" data-open="work">
+                  <span class="game-menu-index">01</span>
+                  <span class="game-menu-label">selected works</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="game-menu-item" data-open="about">
+                  <span class="game-menu-index">02</span>
+                  <span class="game-menu-label">about</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="game-menu-item" data-open="contact">
+                  <span class="game-menu-index">03</span>
+                  <span class="game-menu-label">contact</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="game-menu-item" data-open="top">
+                  <span class="game-menu-index">04</span>
+                  <span class="game-menu-label">back to start</span>
+                </button>
+              </li>
+            </ul>
+            <p class="game-menu-keys" aria-hidden="true">
+              &uarr;&darr; select &nbsp;&middot;&nbsp; enter open &nbsp;&middot;&nbsp; esc close
+            </p>
+          </div>
+        </div>
+
+        <div class="menu-screen" data-screen="work" hidden>
     <section id="work" class="page-section">
       <header class="work-header">
         <p class="work-eyebrow">Work</p>
@@ -2123,17 +2188,9 @@
         </button>
       </div>
     </section>
-    </div>
+        </div>
 
-    <div class="menu-panel" data-panel="about" hidden>
-      <div class="menu-panel-bar">
-        <button type="button" class="menu-panel-back">&larr; menu</button>
-        <button type="button" class="menu-panel-close" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
-      </div>
+        <div class="menu-screen" data-screen="about" hidden>
     <section id="about" class="page-section about">
       <div class="about-grid">
         <div
@@ -2190,6 +2247,60 @@
 
       <footer class="site-footer">&copy; 2026 Sam Proctor</footer>
     </section>
+        </div>
+
+        <div class="work-modal" hidden>
+          <div class="work-modal-backdrop"></div>
+          <div
+            class="work-modal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="work-modal-title"
+          >
+            <button type="button" class="work-modal-close" aria-label="Close">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+            <div class="work-modal-scroll">
+              <div class="work-modal-hero">
+                <img class="work-modal-poster" alt="" />
+              </div>
+              <div class="work-modal-body">
+                <header class="work-modal-header">
+                  <h2
+                    class="work-modal-title"
+                    id="work-modal-title"
+                    data-reveal
+                  ></h2>
+                  <dl class="work-modal-meta" data-reveal>
+                    <div>
+                      <dt>Year</dt>
+                      <dd class="work-modal-year"></dd>
+                    </div>
+                    <div>
+                      <dt>Company</dt>
+                      <dd class="work-modal-company"></dd>
+                    </div>
+                    <div class="work-modal-role-item">
+                      <dt>Role</dt>
+                      <dd class="work-modal-role"></dd>
+                    </div>
+                  </dl>
+                </header>
+                <p class="work-modal-summary" data-reveal></p>
+                <div class="work-modal-callouts"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="portrait-viewer" hidden>
@@ -2212,58 +2323,6 @@
           </svg>
         </button>
         <p class="portrait-viewer-hint">Drag to turn</p>
-      </div>
-    </div>
-
-    <div class="work-modal" hidden>
-      <div class="work-modal-backdrop"></div>
-      <div
-        class="work-modal-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="work-modal-title"
-      >
-        <button type="button" class="work-modal-close" aria-label="Close">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-          >
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
-        <div class="work-modal-scroll">
-          <div class="work-modal-hero">
-            <img class="work-modal-poster" alt="" />
-          </div>
-          <div class="work-modal-body">
-            <header class="work-modal-header">
-              <h2
-                class="work-modal-title"
-                id="work-modal-title"
-                data-reveal
-              ></h2>
-              <dl class="work-modal-meta" data-reveal>
-                <div>
-                  <dt>Year</dt>
-                  <dd class="work-modal-year"></dd>
-                </div>
-                <div>
-                  <dt>Company</dt>
-                  <dd class="work-modal-company"></dd>
-                </div>
-                <div class="work-modal-role-item">
-                  <dt>Role</dt>
-                  <dd class="work-modal-role"></dd>
-                </div>
-              </dl>
-            </header>
-            <p class="work-modal-summary" data-reveal></p>
-            <div class="work-modal-callouts"></div>
-          </div>
-        </div>
       </div>
     </div>
 

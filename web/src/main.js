@@ -172,15 +172,21 @@ function sizeScrollSpacer() {
 sizeScrollSpacer();
 window.addEventListener("resize", sizeScrollSpacer);
 
-// Work and About live in a game-style menu that opens from a button at the
-// end of the hallway (see gameMenu.js). The right-side dots open them
-// directly, and highlight whichever is open.
+// Work and About live in a game-style menu modal that opens from a button at
+// the end of the hallway (see gameMenu.js), with a project's details as its
+// deepest screen (workModal.js). The right-side dots open them directly, and
+// highlight whichever is open.
 const sectionNavEl = document.querySelector(".section-nav");
 const navButtons = sectionNavEl
   ? Array.from(sectionNavEl.querySelectorAll("button[data-section]"))
   : [];
 const hallwayMenuShowAt = 0.92; // hallway progress at which the menu button appears
+const workModal = createWorkModal({
+  onOpen: (work) => gameMenu.setDetail(work.title),
+  onClose: () => gameMenu.setDetail(null),
+});
 const gameMenu = createGameMenu({
+  detail: workModal,
   onChange: (state) => {
     const activeId = state === "work" || state === "about" ? state : "hero";
     for (const button of navButtons) {
@@ -193,10 +199,10 @@ for (const button of navButtons) {
   button.addEventListener("click", () => {
     const id = button.dataset.section;
     if (id === "hero") {
-      gameMenu.closeAll();
+      gameMenu.close();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      gameMenu.openPanel(id);
+      gameMenu.open(id, { from: button });
     }
   });
 }
@@ -711,10 +717,7 @@ renderer.setAnimationLoop(() => {
     if (Math.abs(hallwayBlend - hallwayProgress) < 0.0005) hallwayBlend = hallwayProgress;
     gameMenu.setCtaVisible(hallwayBlend >= hallwayMenuShowAt);
 
-    const state = gameMenu.getState();
-    if (state === "work" || state === "about") {
-      // An opaque panel covers the whole screen; skip drawing underneath.
-    } else if (hallwayBlend <= 0) {
+    if (hallwayBlend <= 0) {
       renderer.render(scene, camera);
       hallwayQuote?.hide();
     } else {
@@ -729,7 +732,6 @@ renderer.setAnimationLoop(() => {
   revealBurn.render(renderer);
 });
 
-const workModal = createWorkModal();
 
 document.querySelectorAll('.work-cell').forEach((cell) => {
   const video = cell.querySelector('video');
@@ -769,5 +771,8 @@ if (workIntro) {
 }
 
 document.querySelector(".contact-button")?.addEventListener("click", () => {
-  gameMenu.openPanel("about", { scrollTo: "contact" });
+  gameMenu.open("about", {
+    from: document.querySelector(".contact-button"),
+    scrollTo: "contact",
+  });
 });
