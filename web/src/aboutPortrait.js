@@ -153,7 +153,10 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
     { rootMargin: "50% 0px" },
   ).observe(containerEl);
 
+  // Mouse only: a touch leaves its position behind, which would leave the
+  // figure turned toward the last tap.
   window.addEventListener("pointermove", (event) => {
+    if (event.pointerType !== "mouse") return;
     pointerX = (event.clientX / window.innerWidth) * 2 - 1;
     pointerY = (event.clientY / window.innerHeight) * 2 - 1;
   });

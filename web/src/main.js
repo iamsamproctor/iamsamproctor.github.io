@@ -282,7 +282,11 @@ let targetPitch = 0;
 let currentYaw = 0;
 let currentPitch = 0;  
 
+// Only a mouse steers the look. On touch screens every tap and scroll swipe
+// reports a pointer position too, and with nothing to bring it back the view
+// would stay turned toward wherever the finger last was.
 window.addEventListener("pointermove", (event) => {
+  if (event.pointerType !== "mouse") return;
   const horizontalPosition = THREE.MathUtils.clamp(
     (event.clientX / window.innerWidth) * 2 - 1,
     -1,
