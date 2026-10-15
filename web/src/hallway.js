@@ -5,7 +5,8 @@ import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUnifo
 // After the splat camera finishes its keyframes, the splat scene is rendered
 // into a texture and hung as a portrait at the end of a dark gallery hallway.
 // Scrolling further pulls the camera backward down the hallway, past framed
-// works on the walls, until fog swallows everything to black.
+// works on the walls, to a resting view from behind the museum visitor's
+// bench, where the page ends and the menu button appears.
 //
 // At progress 0 the portrait exactly fills the viewport, so switching from
 // rendering the splat straight to the screen to rendering it via the
@@ -16,10 +17,10 @@ const EYE_HEIGHT = 1.6;
 const HALL_WIDTH = 7;
 const HALL_HEIGHT = 4;
 const HALL_LENGTH = 34;
-// How far back the camera ends up, in world units. Scaled with main.js's
-// hallwayScrollRange so the pull-back keeps its pace; it passes the bench and
-// the first few works before the fog closes in.
-const END_DISTANCE = 13;
+// How far back the camera ends up, in world units: just behind the bench,
+// with the portrait, quote, and first work in view. Scaled with main.js's
+// hallwayScrollRange so the pull-back keeps its pace.
+const END_DISTANCE = 10.5;
 const RIB_SPACING = 3;
 const RIB_DEPTH = 0.3; // pilaster/beam thickness
 const FRAME_BORDER = 0.12; // total extra width/height of a work's frame
@@ -46,9 +47,9 @@ export function createHallway({ renderer, works = [] }) {
 
   // Portrait. Spark writes sRGB values straight into whatever it renders to,
   // so the texture is passed through untouched (a ShaderMaterial skips
-  // three's output color conversion). It ignores the fog and has its own
-  // brightness instead, so it stays the last thing visible as the hallway
-  // goes dark around it.
+  // three's output color conversion). It ignores the fog, so it stays fully
+  // lit at any distance, and has a brightness uniform (left at 1) for
+  // dimming it if that's ever wanted.
   const portraitMaterial = new THREE.ShaderMaterial({
     uniforms: {
       map: { value: null },
@@ -243,7 +244,7 @@ export function createHallway({ renderer, works = [] }) {
     sizeRenderTarget();
   }
 
-  // progress: 0 = portrait fills the screen, 1 = fully faded to black.
+  // progress: 0 = portrait fills the screen, 1 = the resting view at the end.
   // yaw/pitch: the same pointer look offsets the splat camera uses, eased in
   // as the camera pulls back so the frame stays locked at the seam.
   function update(progress, yaw, pitch) {
@@ -254,12 +255,6 @@ export function createHallway({ renderer, works = [] }) {
     const look = THREE.MathUtils.smoothstep(progress, 0, 0.15);
     camera.rotation.set(pitch * 0.25 * look, yaw * 0.25 * look, 0);
 
-    // Fog closes in on the hallway first; the portrait dims last.
-    const fade = THREE.MathUtils.smoothstep(progress, 0.5, 0.9);
-    scene.fog.near = THREE.MathUtils.lerp(6, 0, fade);
-    scene.fog.far = THREE.MathUtils.lerp(50, 0.5, fade);
-    portraitMaterial.uniforms.brightness.value =
-      1 - THREE.MathUtils.smoothstep(progress, 0.8, 1);
 
     // How much of the screen height the portrait covers, for resolution.
     const coverage = startDistance / distance;

@@ -2,10 +2,10 @@ import * as THREE from "three";
 import gsap from "gsap";
 import { SparkRenderer, SplatMesh, dyno } from "@sparkjsdev/spark";
 
-// A Gaussian splat of a person shown inside the About photo frame. Scrolling
-// the frame through the viewport turns the figure from one side to the
-// other, with a little extra tilt from the cursor. The flat photo stays in
-// place underneath until the splat has loaded.
+// A Gaussian splat of a person shown inside the About photo frame. Moving the
+// cursor across the screen turns the figure from one side to the other, and
+// up and down tilts it a little. The flat photo stays in place underneath
+// until the splat has loaded.
 //
 // Clicking the frame opens a full-body viewer: the frame grows out to a
 // large panel while the camera pulls back from head-and-shoulders to the
@@ -17,9 +17,9 @@ import { SparkRenderer, SplatMesh, dyno } from "@sparkjsdev/spark";
 // splat until then either, so it costs nothing on the landing scene.
 
 const FOV = 30;
-const MAX_TURN = THREE.MathUtils.degToRad(35); // yaw at either end of the scroll
-const MAX_TILT = THREE.MathUtils.degToRad(8); // extra yaw/pitch from the cursor
-const TURN_SMOOTHING = 6; // rate the turn chases scroll; lower = more lag
+const MAX_TURN = THREE.MathUtils.degToRad(35); // yaw with the cursor at either side of the screen
+const MAX_TILT = THREE.MathUtils.degToRad(8); // pitch with the cursor at the top or bottom
+const TURN_SMOOTHING = 6; // rate the turn chases the cursor; lower = more lag
 const FRAMING = 0.36; // fraction of the figure's height (from the top) that fills the frame
 const FULL_FRAMING = 1.32; // full-body view: whole figure plus room above and below
 const FULL_ELEVATION = THREE.MathUtils.degToRad(14); // full-body view: camera raised, looking down
@@ -75,11 +75,9 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
   let splat = null;
   let bounds = null; // { center, top, height } once loaded
   let isVisible = false;
-  let targetTurn = 0;
   let currentTurn = 0;
   let pointerX = 0;
   let pointerY = 0;
-  let currentPointerX = 0;
   let currentPointerY = 0;
 
   // 0 = head and shoulders, 1 = full body. Driven by the open/close morph.
@@ -179,24 +177,9 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
       currentPointerY = lerp(currentPointerY, 0, smoothing);
       pivot.rotation.set(currentPointerY * MAX_TILT, spin, 0);
     } else {
-      // 0 as the frame enters at the bottom of the screen, 1 as it leaves the top.
-      const rect = containerEl.getBoundingClientRect();
-      const passage = THREE.MathUtils.clamp(
-        (window.innerHeight - rect.top) / (window.innerHeight + rect.height),
-        0,
-        1,
-      );
-      targetTurn = lerp(-MAX_TURN, MAX_TURN, passage);
-
-      currentTurn = lerp(currentTurn, targetTurn, smoothing);
-      currentPointerX = lerp(currentPointerX, pointerX, smoothing);
+      currentTurn = lerp(currentTurn, pointerX * MAX_TURN, smoothing);
       currentPointerY = lerp(currentPointerY, pointerY, smoothing);
-
-      pivot.rotation.set(
-        currentPointerY * MAX_TILT,
-        currentTurn + currentPointerX * MAX_TILT,
-        0,
-      );
+      pivot.rotation.set(currentPointerY * MAX_TILT, currentTurn, 0);
     }
 
     breathingTime.value = currentTime / 1000;
@@ -264,8 +247,8 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
       if (viewer || !bounds) return;
       viewer = { closing: false, dragging: false };
 
-      // Pick up the spin exactly where the scroll/cursor turn left it.
-      spin = currentTurn + currentPointerX * MAX_TILT;
+      // Pick up the spin exactly where the cursor turn left it.
+      spin = currentTurn;
       spinVelocity = 0;
 
       lockScroll();
@@ -301,10 +284,9 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
       viewer.closing = true;
       viewer.dragging = false;
 
-      // Hand the spin back to the scroll turn by its nearest equivalent
+      // Hand the spin back to the cursor turn by its nearest equivalent
       // angle, so it unwinds the short way rather than spinning back round.
       currentTurn = Math.atan2(Math.sin(spin), Math.cos(spin));
-      currentPointerX = 0;
 
       const wasMorphing = morphTween?.isActive();
       morphTween?.kill();

@@ -24,6 +24,7 @@ import { createChromeBlob } from "./chromeBlob.js";
 import { createSplatShockwave } from "./splatShockwave.js";
 import { createSplatRipples } from "./splatRipples.js";
 import { createSplatSparkle } from "./splatSparkle.js";
+import { createGameMenu } from "./gameMenu.js";
 import quotes from "./quotes.json";
 
 const revealBurn = createRevealBurn();
@@ -149,20 +150,19 @@ let heroRevealAmount = 1; // last value handed to heroHeadingReveal.scrub
 
 // Past the last camera keyframe (the sky point), continuing to scroll pulls
 // back from the splat scene to reveal it as a portrait at the end of a
-// hallway (see hallway.js), retreating down the hallway until it fades to
-// black, before the Work section scrolls in.
-// Kept short so the Work section arrives sooner; hallway.js's END_DISTANCE is
-// shortened to match, so the walk back keeps the same pace per px scrolled.
-const hallwayScrollRange = 1000; // px of scroll, after cameraScrollRange, for this phase
+// hallway (see hallway.js), retreating down the hallway to a resting view
+// behind the bench, where the page ends and the menu button appears.
+// Kept short so the menu arrives soon; scaled with hallway.js's END_DISTANCE,
+// so the walk back keeps the same pace per px scrolled.
+const hallwayScrollRange = 800; // px of scroll, after cameraScrollRange, for this phase
 const hallwayBlendSmoothing = 3; // rate the hallway dolly chases scroll; lower = more lag
 let hallwayProgress = 0; // raw 0-1
 let hallwayBlend = 0; // smoothed toward hallwayProgress each frame
 
-// The scroll-spacer exists purely to give the fixed hero/transition elements
-// room to animate. It needs to cover that scroll distance *plus* one extra
-// viewport height of buffer — otherwise the next section's opaque background
-// scrolls into view (and visually clips the shrinking/sliding frame) before
-// the slide-away animation has actually carried it off-screen.
+// The scroll-spacer exists purely to give the fixed scene and its transitions
+// room to animate, and it's the whole page: scrolling ends where the hallway
+// fades to black. Its height is that scroll distance plus one viewport, so
+// the last px of scroll lands exactly at the end of the hallway.
 const scrollSpacerEl = document.querySelector(".scroll-spacer");
 function sizeScrollSpacer() {
   if (scrollSpacerEl) {
@@ -172,45 +172,33 @@ function sizeScrollSpacer() {
 sizeScrollSpacer();
 window.addEventListener("resize", sizeScrollSpacer);
 
-// Right-side dot navigation: jumps to and highlights the current section.
-// Highlighting is applied once per rendered frame (see applyScrollEffects)
-// rather than on every raw scroll event, for the same reason as above.
+// Work and About live in a game-style menu that opens from a button at the
+// end of the hallway (see gameMenu.js). The right-side dots open them
+// directly, and highlight whichever is open.
 const sectionNavEl = document.querySelector(".section-nav");
-let updateActiveSection = () => {};
-if (sectionNavEl) {
-  const navButtons = Array.from(sectionNavEl.querySelectorAll("button[data-section]"));
-  const sectionTargets = navButtons.map((button) => {
+const navButtons = sectionNavEl
+  ? Array.from(sectionNavEl.querySelectorAll("button[data-section]"))
+  : [];
+const hallwayMenuShowAt = 0.92; // hallway progress at which the menu button appears
+const gameMenu = createGameMenu({
+  onChange: (state) => {
+    const activeId = state === "work" || state === "about" ? state : "hero";
+    for (const button of navButtons) {
+      button.classList.toggle("is-active", button.dataset.section === activeId);
+    }
+  },
+  onBackToStart: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+});
+for (const button of navButtons) {
+  button.addEventListener("click", () => {
     const id = button.dataset.section;
-    const el = id === "hero" ? null : document.getElementById(id);
-    return { button, id, el };
-  });
-
-  navButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const id = button.dataset.section;
-      if (id === "hero") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-      }
-    });
-  });
-
-  updateActiveSection = (scrollY) => {
-    let activeId = "hero";
-    for (const target of sectionTargets) {
-      if (!target.el) continue;
-      if (scrollY >= target.el.offsetTop - window.innerHeight / 2) {
-        activeId = target.id;
-      }
+    if (id === "hero") {
+      gameMenu.closeAll();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      gameMenu.openPanel(id);
     }
-    for (const { button, id } of sectionTargets) {
-      button.classList.toggle("is-active", id === activeId);
-    }
-  };
-
-  window.addEventListener("resize", () => updateActiveSection(window.scrollY));
-  updateActiveSection(window.scrollY);
+  });
 }
 
 // Scroll events on mobile can fire much more frequently than animation
@@ -277,8 +265,6 @@ function applyScrollEffects(scrollY) {
     0,
     1,
   );
-
-  updateActiveSection(scrollY);
 }
 applyScrollEffects(latestScrollY);
  
@@ -650,13 +636,13 @@ renderer.setAnimationLoop(() => {
   shockwave.update(currentTime / 1000);
   ripples.update(currentTime / 1000);
   updateChromeBlob(currentTime / 1000);
-  // Runs as long as the scene is visible at all: on its own, or as the
-  // hallway's portrait until that has faded to black.
+  // Runs whenever the scene is visible: on its own, or as the hallway's
+  // portrait.
   sparkle.update(
     currentTime / 1000,
     chromeBlob.mesh.position,
     debugMode ||
-      (hallwayBlend < 1 && !document.body.classList.contains("is-loading")),
+      !document.body.classList.contains("is-loading"),
     camera.position.distanceTo(chromeBlob.mesh.position),
   );
   environmentSplat.updateVersion();
@@ -665,7 +651,6 @@ renderer.setAnimationLoop(() => {
     chromeBlobEnabled &&
     realReflection &&
     !isTouchDevice &&
-    hallwayBlend < 1 &&
     currentTime / 1000 - lastReflectionRefresh >= reflectionRefreshSeconds
   ) {
     lastReflectionRefresh = currentTime / 1000;
@@ -724,13 +709,13 @@ renderer.setAnimationLoop(() => {
     const hallwaySmoothing = 1 - Math.exp(-hallwayBlendSmoothing * deltaTime);
     hallwayBlend = THREE.MathUtils.lerp(hallwayBlend, hallwayProgress, hallwaySmoothing);
     if (Math.abs(hallwayBlend - hallwayProgress) < 0.0005) hallwayBlend = hallwayProgress;
+    gameMenu.setCtaVisible(hallwayBlend >= hallwayMenuShowAt);
 
-    if (hallwayBlend <= 0) {
+    const state = gameMenu.getState();
+    if (state === "work" || state === "about") {
+      // An opaque panel covers the whole screen; skip drawing underneath.
+    } else if (hallwayBlend <= 0) {
       renderer.render(scene, camera);
-      hallwayQuote?.hide();
-    } else if (hallwayBlend >= 1) {
-      // Fully faded to black: skip the splat and hallway passes entirely.
-      renderer.clear();
       hallwayQuote?.hide();
     } else {
       museumVisitor.update(deltaTime);
@@ -784,5 +769,5 @@ if (workIntro) {
 }
 
 document.querySelector(".contact-button")?.addEventListener("click", () => {
-  document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+  gameMenu.openPanel("about", { scrollTo: "contact" });
 });

@@ -461,13 +461,292 @@
         opacity: 0.8;
       }
 
-      /* Work and About share one background. The hallway ends on pure black,
-         so it starts black and eases into the page color rather than
-         showing a hard edge where Work begins. */
-      .pages {
-        position: relative;
-        z-index: 1;
-        background: linear-gradient(to bottom, #000000 0, #121212 50vh);
+      /* The page ends at a resting view of the hallway. A menu button appears
+         at the bottom of the screen there, opening a game-style menu
+         (.game-menu) whose items open Work and About as full-screen panels
+         (.menu-panel). Stacked above the scene and nav, below the work modal
+         and portrait viewer (8). */
+      .menu-cta {
+        position: fixed;
+        left: 50%;
+        bottom: 40px;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        opacity: 0;
+        transform: translate(-50%, 16px);
+        pointer-events: none;
+        transition:
+          opacity 0.7s ease,
+          transform 0.7s ease;
+      }
+
+      .menu-cta.is-shown {
+        opacity: 1;
+        transform: translate(-50%, 0);
+        pointer-events: auto;
+      }
+
+      .menu-cta-button {
+        padding: 18px 52px;
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        border-radius: 999px;
+        /* Dark enough to stand out over the lit floor and bench. */
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: #ffffff;
+        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: clamp(26px, 3.4vw, 40px);
+        letter-spacing: 0.12em;
+        cursor: pointer;
+        animation: menu-cta-glow 2.4s ease-in-out infinite;
+        transition:
+          background 0.25s ease,
+          color 0.25s ease,
+          transform 0.25s ease;
+      }
+
+      .menu-cta-button:hover,
+      .menu-cta-button:focus-visible {
+        background: #ffffff;
+        color: #000000;
+        transform: scale(1.04);
+        outline: none;
+      }
+
+      @keyframes menu-cta-glow {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35), 0 0 24px rgba(255, 255, 255, 0.12);
+        }
+        50% {
+          box-shadow: 0 0 0 10px rgba(255, 255, 255, 0), 0 0 48px rgba(255, 255, 255, 0.28);
+        }
+      }
+
+      .menu-cta-hint {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.45);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+      }
+
+      .game-menu {
+        position: fixed;
+        inset: 0;
+        z-index: 6;
+        display: flex;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.86);
+        color: #ffffff;
+        opacity: 0;
+        transition: opacity 0.35s ease;
+      }
+
+      .game-menu.is-open {
+        opacity: 1;
+      }
+
+      /* display rules above would otherwise override the hidden attribute,
+         leaving an invisible layer over the page that eats scrolling. */
+      .game-menu[hidden],
+      .menu-panel[hidden] {
+        display: none;
+      }
+
+      .game-menu-inner {
+        padding: 0 clamp(24px, 10vw, 160px);
+      }
+
+      .game-menu-eyebrow,
+      .game-menu-keys {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.45);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+      }
+
+      .game-menu-list {
+        margin: 28px 0 36px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .game-menu-item {
+        --reveal-dim: rgba(255, 255, 255, 0.3);
+        --reveal-bright: #ffffff;
+        display: flex;
+        align-items: baseline;
+        gap: 20px;
+        padding: 8px 0;
+        border: 0;
+        background: none;
+        color: rgba(255, 255, 255, 0.5);
+        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        text-align: left;
+        cursor: pointer;
+        transition:
+          color 0.2s ease,
+          transform 0.2s ease;
+      }
+
+      /* is-selected follows focus (gameMenu.js), so the selected item is
+         lit however it got there: pointer, arrow keys, or on opening. */
+      .game-menu-item:focus {
+        outline: none;
+      }
+
+      .game-menu-item.is-selected {
+        color: #ffffff;
+        transform: translateX(14px);
+      }
+
+      .game-menu-index {
+        width: 2.2em;
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        opacity: 0.6;
+      }
+
+      .game-menu-item.is-selected .game-menu-index {
+        opacity: 1;
+      }
+
+      /* The text reveal colors done characters bright; keep idle items dim. */
+      .game-menu-item .reveal-char.is-done {
+        color: inherit;
+      }
+
+      .game-menu-label {
+        font-size: clamp(28px, 5vw, 58px);
+        line-height: 1.15;
+        letter-spacing: -0.01em;
+      }
+
+      .game-menu-close,
+      .menu-panel-close {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.2);
+        color: #ffffff;
+        cursor: pointer;
+        transition: background 0.25s ease, border-color 0.25s ease;
+      }
+
+      .game-menu-close:hover,
+      .menu-panel-close:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: #ffffff;
+      }
+
+      .game-menu-close svg,
+      .menu-panel-close svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .game-menu-close {
+        position: absolute;
+        top: 20px;
+        right: 32px;
+      }
+
+      .menu-panel {
+        position: fixed;
+        inset: 0;
+        z-index: 7;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: #121212;
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.35s ease,
+          transform 0.35s ease;
+      }
+
+      .menu-panel.is-open {
+        opacity: 1;
+        transform: none;
+      }
+
+      .menu-panel-bar {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 32px;
+        background: linear-gradient(to bottom, #121212 60%, rgba(18, 18, 18, 0));
+      }
+
+      .menu-panel-back {
+        padding: 10px 0;
+        border: 0;
+        background: none;
+        color: rgba(255, 255, 255, 0.7);
+        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 16px;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+
+      .menu-panel-back:focus {
+        outline: none;
+      }
+
+      .menu-panel-back:hover,
+      .menu-panel-back:focus-visible {
+        color: #ffffff;
+      }
+
+      .menu-panel-back:focus-visible {
+        text-decoration: underline;
+        text-underline-offset: 6px;
+      }
+
+      /* The bar already gives the top of the panel some room. */
+      .menu-panel .page-section {
+        padding-top: 40px;
+      }
+
+      @media (max-width: 640px) {
+        .game-menu-close {
+          top: 16px;
+          right: 16px;
+        }
+
+        .menu-panel-bar {
+          padding: 16px 20px;
+        }
+
+        .menu-cta-button {
+          padding: 16px 40px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .menu-cta-button {
+          animation: none;
+        }
       }
 
       .page-section {
@@ -1646,7 +1925,63 @@
 
     <div class="scroll-spacer"></div>
 
-    <div class="pages">
+    <!-- Appears at the end of the hallway, where the page ends. -->
+    <div class="menu-cta">
+      <button type="button" class="menu-cta-button">menu</button>
+      <p class="menu-cta-hint" aria-hidden="true">press enter</p>
+    </div>
+
+    <!-- A game-style menu over the end of the hallway. Each item opens a
+         full-screen panel (below), which can go back to this menu. -->
+    <div class="game-menu" hidden>
+      <div class="game-menu-inner" role="dialog" aria-modal="true" aria-label="Menu">
+        <p class="game-menu-eyebrow">Sam Proctor</p>
+        <ul class="game-menu-list">
+          <li>
+            <button type="button" class="game-menu-item" data-open="work">
+              <span class="game-menu-index">01</span>
+              <span class="game-menu-label">selected works</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="game-menu-item" data-open="about">
+              <span class="game-menu-index">02</span>
+              <span class="game-menu-label">about</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="game-menu-item" data-open="contact">
+              <span class="game-menu-index">03</span>
+              <span class="game-menu-label">contact</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="game-menu-item" data-open="top">
+              <span class="game-menu-index">04</span>
+              <span class="game-menu-label">back to start</span>
+            </button>
+          </li>
+        </ul>
+        <p class="game-menu-keys" aria-hidden="true">
+          &uarr;&darr; select &nbsp;&middot;&nbsp; enter open &nbsp;&middot;&nbsp; esc close
+        </p>
+      </div>
+      <button type="button" class="game-menu-close" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="menu-panel" data-panel="work" hidden>
+      <div class="menu-panel-bar">
+        <button type="button" class="menu-panel-back">&larr; menu</button>
+        <button type="button" class="menu-panel-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
     <section id="work" class="page-section">
       <header class="work-header">
         <p class="work-eyebrow">Work</p>
@@ -1788,7 +2123,17 @@
         </button>
       </div>
     </section>
+    </div>
 
+    <div class="menu-panel" data-panel="about" hidden>
+      <div class="menu-panel-bar">
+        <button type="button" class="menu-panel-back">&larr; menu</button>
+        <button type="button" class="menu-panel-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
     <section id="about" class="page-section about">
       <div class="about-grid">
         <div
