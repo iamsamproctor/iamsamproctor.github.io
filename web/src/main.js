@@ -22,6 +22,7 @@ import { createHallwayQuote } from "./hallwayQuote.js";
 import { addDustDevil } from "./dustDevil.js";
 import { createChromeBlob } from "./chromeBlob.js";
 import { createSplatShockwave } from "./splatShockwave.js";
+import { createSplatCharge } from "./splatCharge.js";
 import { createSplatRipples } from "./splatRipples.js";
 import { createSplatSparkle } from "./splatSparkle.js";
 import { createGameMenu } from "./gameMenu.js";
@@ -447,6 +448,9 @@ environmentSplat.updateGenerator();
 // gentle wander, which the chrome blob follows.
 const dustDevilEnabled = false;
 const shockwave = createSplatShockwave();
+// Holding the pointer down on the desert charges the splats there; letting
+// go sends the shockwave out from that spot (see the pointer handlers below).
+const splatCharge = createSplatCharge();
 // Moving the pointer over the desert ripples the ground like water.
 const ripples = createSplatRipples();
 const desertFloorY = -0.7;
@@ -456,7 +460,7 @@ ripples.setGround(desertFloorY);
 const sparkle = createSplatSparkle();
 const dustDevil = addDustDevil(environmentSplat, {
   home: new THREE.Vector3(0, desertFloorY, 0),
-  stages: [sparkle.apply, ripples.apply, shockwave.apply],
+  stages: [sparkle.apply, splatCharge.apply, ripples.apply, shockwave.apply],
 });
 dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
 
@@ -478,7 +482,7 @@ const chromeBlobScrollRise = 1.5;
 const chromeBlobAnchor = new THREE.Vector3();
 if (chromeBlobEnabled) scene.add(chromeBlob.mesh);
 function updateChromeBlob(seconds) {
-  if (chargeStart !== null) chromeBlob.setCharge(chargeAmount());
+  if (chargeTarget === "blob") chromeBlob.setCharge(chargeAmount());
   chromeBlobAnchor.copy(dustDevil.center);
   chromeBlobAnchor.y +=
     chromeBlobLift +
@@ -536,37 +540,77 @@ renderer.domElement.addEventListener("pointermove", (event) => {
   }
   renderer.domElement.style.cursor = pointerIsOnBlob(event) ? "pointer" : "";
 });
-// Holding the blob charges it; letting go releases a bigger, louder warp the
-// longer it was held. A quick tap is the plain impact.
+// Holding the blob, or anywhere on the desert, charges it up (the blob draws
+// in and shivers; the splats under the pointer gather, shiver, and glow);
+// letting go releases a bigger, louder shockwave the longer it was held. A
+// quick tap is the plain impact.
 const CHARGE_SECONDS = 2;
 let chargeStart = null;
+let chargeTarget = null; // "blob" or "splats" while held
+const chargeOrigin = new THREE.Vector3(); // where on the ground, for "splats"
+const groundRaycaster = new THREE.Raycaster();
+const groundPointer = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -desertFloorY);
+const groundMaxDistance = 25; // ignore hits out toward the horizon
+// Where on the desert floor the pointer is, into `out`; false if it's
+// pointing at the sky or too far away.
+function pointerGroundPoint(event, out) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  groundPointer.set(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1,
+  );
+  groundRaycaster.setFromCamera(groundPointer, camera);
+  if (!groundRaycaster.ray.intersectPlane(groundPlane, out)) return false;
+  return out.distanceTo(camera.position) <= groundMaxDistance;
+}
 function chargeAmount() {
   if (chargeStart === null) return 0;
   const held = performance.now() / 1000 - chargeStart;
   return THREE.MathUtils.smoothstep(held / CHARGE_SECONDS, 0, 1);
 }
-function releaseBlob() {
-  if (chargeStart === null) return;
-  const power = chargeAmount();
+function endCharge() {
   chargeStart = null;
+  chargeTarget = null;
   stopChargeSound();
   chromeBlob.setCharge(0);
+  splatCharge.set(null, 0);
+}
+function releaseCharge() {
+  if (chargeStart === null) return;
+  const power = chargeAmount();
+  const target = chargeTarget;
+  endCharge();
   const seconds = performance.now() / 1000;
-  chromeBlob.hit(seconds, power);
-  shockwave.trigger(chromeBlob.mesh.position, seconds, power);
+  if (target === "blob") {
+    chromeBlob.hit(seconds, power);
+    shockwave.trigger(chromeBlob.mesh.position, seconds, power);
+  } else {
+    shockwave.trigger(chargeOrigin, seconds, power);
+  }
   playImpactSound(power);
 }
 renderer.domElement.addEventListener("pointerdown", (event) => {
-  if (!pointerIsOnBlob(event)) return;
+  if (event.button !== 0) return;
+  if (pointerIsOnBlob(event)) {
+    chargeTarget = "blob";
+  } else if (
+    hallwayBlend <= 0 &&
+    !debugMode &&
+    !document.body.classList.contains("is-loading") &&
+    pointerGroundPoint(event, chargeOrigin)
+  ) {
+    chargeTarget = "splats";
+    splatCharge.set(chargeOrigin, 0);
+  } else {
+    return;
+  }
   chargeStart = performance.now() / 1000;
   startChargeSound(CHARGE_SECONDS);
 });
-window.addEventListener("pointerup", releaseBlob);
-window.addEventListener("pointercancel", () => {
-  chargeStart = null;
-  stopChargeSound();
-  chromeBlob.setCharge(0);
-});
+window.addEventListener("pointerup", releaseCharge);
+// e.g. a touch that turns into a scroll: no blast.
+window.addEventListener("pointercancel", endCharge);
 
 let debugCamera;
 let debugControls;
@@ -644,6 +688,8 @@ renderer.setAnimationLoop(() => {
   waveTime.value = currentTime / 1000;
   dustDevil.update(currentTime / 1000);
   shockwave.update(currentTime / 1000);
+  splatCharge.update(currentTime / 1000);
+  if (chargeTarget === "splats") splatCharge.set(null, chargeAmount());
   ripples.update(currentTime / 1000);
   updateChromeBlob(currentTime / 1000);
   // Runs whenever the scene is visible: on its own, or as the hallway's
