@@ -1,4 +1,5 @@
-// A quiet impact played when the chrome blob is tapped. Follows the same
+// A quiet impact played when a shockwave goes off (the desert or the chrome
+// blob, tapped or charged and released). Follows the same
 // pattern as revealSound.js: the file is fetched up front, decoded once the
 // AudioContext exists (which needs a click), and only plays while sound is on.
 
@@ -32,14 +33,23 @@ export function setImpactSoundEnabled(on) {
   master.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.1);
 }
 
+// Blasts further from the camera sound quieter, falling off like a sound in
+// space would: full volume out to NEAR_DISTANCE, then inversely with
+// distance at a rate set by ROLLOFF (about half at 10 world units, a quarter
+// at 25).
+const NEAR_DISTANCE = 4; // world units
+const ROLLOFF = 0.1;
+
 // power: 0 for a plain tap up to 1 for a fully charged blast, which is
-// louder and lower.
-export function playImpactSound(power = 0) {
+// louder and lower. distance: world units from the camera to the blast.
+export function playImpactSound(power = 0, distance = 0) {
   if (!enabled || !buffer) return;
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   const gain = ctx.createGain();
-  gain.gain.value = VOLUME * (1 + power * 2.2);
+  const beyond = Math.max(distance - NEAR_DISTANCE, 0);
+  const falloff = NEAR_DISTANCE / (NEAR_DISTANCE + ROLLOFF * beyond);
+  gain.gain.value = VOLUME * (1 + power * 2.2) * falloff;
   source.playbackRate.value = 1 - power * 0.35;
   source.connect(gain).connect(master);
   source.start();

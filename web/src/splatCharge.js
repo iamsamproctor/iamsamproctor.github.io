@@ -17,6 +17,7 @@ const SHIVER = 0.03; // world units of jitter at full charge
 const SHIVER_SPEED = 38; // jitter frequency
 const GLOW = new THREE.Color(1.0, 0.72, 0.38); // warm ember color they brighten toward
 const GLOW_AMOUNT = 0.9; // how far toward it at full charge, at the center
+const RELEASE = 0.5; // seconds the gathered splats take to ease back on release
 
 export function createSplatCharge() {
   const time = dyno.dynoFloat(0);
@@ -77,17 +78,32 @@ export function createSplatCharge() {
     return stage.apply({ gsplat, t: time, origin, charge }).gsplat;
   }
 
+  let releasing = null; // { from, start } while easing back after a release
+
   // at: world-space point on the ground being held. amount: 0-1, how
-  // charged it is; 0 when nothing is held.
+  // charged it is.
   function set(at, amount) {
     if (at) origin.value.copy(at);
+    releasing = null;
     charge.value = amount;
+  }
+
+  // Lets go: the gathered splats ease back over RELEASE seconds rather than
+  // snapping back in one frame, which looked like a gunshot.
+  function release() {
+    if (charge.value > 0) releasing = { from: charge.value, start: time.value };
   }
 
   // seconds: page time. Call before splat.updateVersion().
   function update(seconds) {
     time.value = seconds;
+    if (releasing) {
+      const t = Math.min((seconds - releasing.start) / RELEASE, 1);
+      // Eases out: quick at first, settling gently.
+      charge.value = releasing.from * (1 - t) * (1 - t);
+      if (t >= 1) releasing = null;
+    }
   }
 
-  return { apply, set, update };
+  return { apply, set, release, update };
 }

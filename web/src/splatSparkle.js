@@ -20,7 +20,7 @@ const GROW = 8; // seconds to swell back
 const SPREAD = 0.6;
 const SPREAD_DISTANCE = 10;
 
-const STAR_SIZE = 0.006; // world-space radius of a star, seen from STAR_SIZE_DISTANCE
+const STAR_SIZE = 0.001; // world-space radius of a star, seen from STAR_SIZE_DISTANCE
 // Stars grow with the camera's distance from the blob beyond this, so they
 // keep their size on screen as the view zooms out instead of shrinking below
 // a pixel and fading away.
@@ -127,5 +127,13 @@ export function createSplatSparkle() {
     nextAt = -Infinity;
   }
 
-  return { apply, update, triggerNow };
+  // 0-1: how sparkled the scene is as a whole, i.e. once the outward spread
+  // has reached even the furthest splats. For things that should only change
+  // while it's (nearly) all stars.
+  function level() {
+    const t = THREE.MathUtils.clamp(amount.value * (1 + SPREAD) - SPREAD, 0, 1);
+    return THREE.MathUtils.smoothstep(t, 0, 1);
+  }
+
+  return { apply, update, triggerNow, level };
 }

@@ -137,7 +137,7 @@ let activeHeight = orbitHeight;
 
 let scrollProgress = 0; // raw 0-1 across the camera keyframe sequence
 let scrollBlend = 0; // smoothed toward scrollProgress each frame
-const cameraScrollRange = 2400; // px of scroll to move through all camera keyframes
+const cameraScrollRange = 1500; // px of scroll to move through all camera keyframes
 const scrollBlendSmoothing = 1.5; // rate scrollBlend chases scrollProgress; lower = more lag/slower dolly
 
 const heroHeadingEl = document.querySelector(".hero-heading");
@@ -319,6 +319,14 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.querySelector(".scene-window").appendChild(renderer.domElement);
 
 const spark = new SparkRenderer({ renderer });
+// Spark softens every splat by a fixed amount on screen (anti-aliasing) and
+// draws each as a soft Gaussian. Invisible on ordinary splats, but it smears
+// the sparkle effect's pinpoint stars into dim, out-of-focus blobs, so both
+// ease toward sharp while the scene is stars (see the animation loop).
+const splatBlurNormal = spark.blurAmount;
+const splatFalloffNormal = spark.falloff;
+const splatBlurStars = 0.04;
+const splatFalloffStars = 0.55; // firmer-edged points rather than soft blobs
 
 const hallway = createHallway({
   renderer,
@@ -574,7 +582,7 @@ function endCharge() {
   chargeTarget = null;
   stopChargeSound();
   chromeBlob.setCharge(0);
-  splatCharge.set(null, 0);
+  splatCharge.release();
 }
 function releaseCharge() {
   if (chargeStart === null) return;
@@ -582,13 +590,11 @@ function releaseCharge() {
   const target = chargeTarget;
   endCharge();
   const seconds = performance.now() / 1000;
-  if (target === "blob") {
-    chromeBlob.hit(seconds, power);
-    shockwave.trigger(chromeBlob.mesh.position, seconds, power);
-  } else {
-    shockwave.trigger(chargeOrigin, seconds, power);
-  }
-  playImpactSound(power);
+  const origin = target === "blob" ? chromeBlob.mesh.position : chargeOrigin;
+  if (target === "blob") chromeBlob.hit(seconds, power);
+  shockwave.trigger(origin, seconds, power);
+  // Quieter the further away it went off.
+  playImpactSound(power, camera.position.distanceTo(origin));
 }
 renderer.domElement.addEventListener("pointerdown", (event) => {
   if (event.button !== 0) return;
@@ -701,6 +707,9 @@ renderer.setAnimationLoop(() => {
       !document.body.classList.contains("is-loading"),
     camera.position.distanceTo(chromeBlob.mesh.position),
   );
+  const starLevel = sparkle.level();
+  spark.blurAmount = THREE.MathUtils.lerp(splatBlurNormal, splatBlurStars, starLevel);
+  spark.falloff = THREE.MathUtils.lerp(splatFalloffNormal, splatFalloffStars, starLevel);
   environmentSplat.updateVersion();
 
   if (

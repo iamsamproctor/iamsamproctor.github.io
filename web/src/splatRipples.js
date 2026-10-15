@@ -14,8 +14,8 @@ const SLOTS = 12; // ripples alive at once; new ones replace the oldest
 const SPEED = 0.2; // world units per second the crests travel
 const WAVELENGTH = 2; // distance between crests
 const WIDTH = 0.5; // how wide the band of crests is
-const LIFT = 0.07; // how far a full-strength crest lifts splats
-const GLOW = 0.12; // how much a crest brightens splats
+const LIFT = 0.12; // how far a full-strength crest lifts splats
+const GLOW = 0.22; // how much a crest brightens splats
 const LIFE = 2.2; // seconds until a ripple has died out
 const ATTACK = 0.35; // seconds a ripple takes to swell in, so it doesn't pop
 
