@@ -35,6 +35,9 @@ const backgroundMusic = createBackgroundMusic();
 
 const heroHeadingTitleEl = document.querySelector(".hero-heading h2");
 const heroHeadingSubEl = document.querySelector(".hero-heading p");
+const missionHeadingEl = document.querySelector(".mission-heading");
+const missionTitleEl = missionHeadingEl?.querySelector("h2");
+const missionReveal = missionTitleEl ? createTextReveal(missionTitleEl, { lockWidths: true }) : null;
 const heroHeadingReveal = heroHeadingTitleEl
   ? createTextReveal(heroHeadingTitleEl, { lockWidths: true })
   : null;
@@ -150,39 +153,72 @@ const heroScrambleEnd = 700; // px of scroll the title is fully scrambled out by
 const heroDrift = 24; // px it rises over that span, for a little parallax
 let heroRevealAmount = 1; // last value handed to heroHeadingReveal.scrub
 
-// Past the last camera keyframe (the sky point), continuing to scroll pulls
-// back from the splat scene to reveal it as a portrait at the end of a
-// hallway (see hallway.js), retreating down the hallway to a resting view
-// behind the bench, where the page ends and the menu button appears.
-// Kept short so the menu arrives soon; scaled with hallway.js's END_DISTANCE,
-// so the walk back keeps the same pace per px scrolled.
-const hallwayScrollRange = 800; // px of scroll, after cameraScrollRange, for this phase
+// At the last camera keyframe (the sky point), the scroll holds a while for
+// the mission statement, centered in the open sky: it scrambles in as the
+// camera nears the sky point and back out as the hallway begins.
+const missionHoldRange = 600; // px of scroll the camera holds at the sky point
+const missionInRange = 500; // px before the sky point over which it scrambles in
+const missionOutRange = 400; // px, straddling the hallway's start, it scrambles out over
+let missionRevealAmount = 0; // last value handed to missionReveal.scrub
+
+// Then continuing to scroll pulls back from the splat scene to reveal it as a
+// portrait at the end of a hallway (see hallway.js), retreating down the
+// hallway to a resting view behind the bench (the Gallery stop), where the
+// page ends and "walk the gallery" appears. Kept short so it arrives soon;
+// scaled with hallway.js's END_DISTANCE, so the walk back keeps the same pace
+// per px scrolled.
+const hallwayStart = cameraScrollRange + missionHoldRange; // px of scroll it begins at
+const hallwayScrollRange = 800; // px of scroll for this phase
 const hallwayBlendSmoothing = 3; // rate the hallway dolly chases scroll; lower = more lag
 let hallwayProgress = 0; // raw 0-1
 let hallwayBlend = 0; // smoothed toward hallwayProgress each frame
 
+// Where each stop is, in px of scroll: the mission in the middle of its hold.
+const scrollStops = {
+  hero: 0,
+  mission: cameraScrollRange + missionHoldRange / 2,
+  gallery: hallwayStart + hallwayScrollRange,
+};
+
 // The scroll-spacer exists purely to give the fixed scene and its transitions
 // room to animate, and it's the whole page: scrolling ends where the hallway
-// fades to black. Its height is that scroll distance plus one viewport, so
-// the last px of scroll lands exactly at the end of the hallway.
+// does. Its height is that scroll distance plus one viewport, so the last px
+// of scroll lands exactly at the last stop.
 const scrollSpacerEl = document.querySelector(".scroll-spacer");
 function sizeScrollSpacer() {
   if (scrollSpacerEl) {
-    scrollSpacerEl.style.height = `${cameraScrollRange + hallwayScrollRange + window.innerHeight}px`;
+    scrollSpacerEl.style.height = `${scrollStops.gallery + window.innerHeight}px`;
   }
 }
 sizeScrollSpacer();
 window.addEventListener("resize", sizeScrollSpacer);
 
-// Work and About live in a game-style menu modal that opens from a button at
-// the end of the hallway (see gameMenu.js), with a project's details as its
-// deepest screen (workModal.js). The right-side dots open them directly, and
-// highlight whichever is open.
+// Work and About live in a game-style menu modal that opens from the menu
+// button (see gameMenu.js), with a project's details as its deepest screen
+// (workModal.js). The right-side notches jump along the scroll instead (see
+// scrollStops): to the start, the mission, or the end of the hallway where
+// the visitor sits on the bench. The nearest one is highlighted.
 const sectionNavEl = document.querySelector(".section-nav");
 const navButtons = sectionNavEl
   ? Array.from(sectionNavEl.querySelectorAll("button[data-section]"))
   : [];
-const hallwayMenuShowAt = 0.92; // hallway progress at which the menu button appears
+let navSection = "hero";
+function setNavSection(scrollY) {
+  let id = navSection;
+  let nearest = Infinity;
+  for (const [stop, y] of Object.entries(scrollStops)) {
+    if (Math.abs(scrollY - y) < nearest) {
+      nearest = Math.abs(scrollY - y);
+      id = stop;
+    }
+  }
+  if (id === navSection) return;
+  navSection = id;
+  for (const button of navButtons) {
+    button.classList.toggle("is-active", button.dataset.section === id);
+  }
+}
+const hallwayMenuShowAt = 0.92; // hallway progress at which "walk the gallery" appears
 const workModal = createWorkModal({
   onOpen: (work) => gameMenu.setDetail(work.title),
   onClose: () => gameMenu.setDetail(null),
@@ -190,23 +226,12 @@ const workModal = createWorkModal({
 });
 const gameMenu = createGameMenu({
   detail: workModal,
-  onChange: (state) => {
-    const activeId = state === "work" || state === "about" ? state : "hero";
-    for (const button of navButtons) {
-      button.classList.toggle("is-active", button.dataset.section === activeId);
-    }
-  },
   onBackToStart: () => window.scrollTo({ top: 0, behavior: "smooth" }),
 });
 for (const button of navButtons) {
   button.addEventListener("click", () => {
-    const id = button.dataset.section;
-    if (id === "hero") {
-      gameMenu.close();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      gameMenu.open(id, { from: button });
-    }
+    gameMenu.close();
+    window.scrollTo({ top: scrollStops[button.dataset.section], behavior: "smooth" });
   });
 }
 
@@ -269,11 +294,31 @@ function applyScrollEffects(scrollY) {
     }
   }
 
-  hallwayProgress = THREE.MathUtils.clamp(
-    (scrollY - cameraScrollRange) / hallwayScrollRange,
-    0,
-    1,
-  );
+  if (missionHeadingEl) {
+    if (document.body.classList.contains("is-loading")) {
+      missionHeadingEl.style.opacity = "0";
+    } else {
+      const inT = THREE.MathUtils.clamp((scrollY - (cameraScrollRange - missionInRange)) / missionInRange, 0, 1);
+      const outT = THREE.MathUtils.clamp(
+        (scrollY - (hallwayStart - missionOutRange / 2)) / missionOutRange,
+        0,
+        1,
+      );
+      const amount = Math.min(inT, 1 - outT);
+      if (amount !== missionRevealAmount) {
+        missionRevealAmount = amount;
+        missionReveal?.scrub(amount);
+      }
+      // Fully hidden outside its range, so reduced-motion (where scrub is a
+      // no-op) still clears it. The label and second line fade with it.
+      missionHeadingEl.style.opacity = amount <= 0 ? "0" : "1";
+      missionHeadingEl.style.setProperty("--mission-fade", String(THREE.MathUtils.smoothstep(amount, 0.3, 1)));
+      missionHeadingEl.style.setProperty("--mission-drift", `${((1 - inT) - outT) * heroDrift}px`);
+    }
+  }
+
+  hallwayProgress = THREE.MathUtils.clamp((scrollY - hallwayStart) / hallwayScrollRange, 0, 1);
+  setNavSection(scrollY);
 }
 applyScrollEffects(latestScrollY);
  

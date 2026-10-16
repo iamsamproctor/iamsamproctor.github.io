@@ -5,10 +5,10 @@ import { createTextReveal } from "./textReveal.js";
 // screens like a game's pause menu.
 //
 //   menu  ->  selected works  ->  a project's details
-//         ->  about
+//         ->  about + contact
 //
-// It grows out of whatever opened it (the menu button, a nav dot, the
-// contact button) the way a project grows out of its card, and shrinks back
+// It grows out of whatever opened it (the menu button, the contact button)
+// the way a project grows out of its card, and shrinks back
 // into the menu button on close. A project's details are the deepest screen:
 // workModal.js grows them out of their card inside this same panel, passed
 // in as `detail`. The bar along the top shows where you are as a breadcrumb,
@@ -28,13 +28,16 @@ const OPEN_DURATION = reduceMotion ? 0.01 : 0.75;
 const CLOSE_DURATION = reduceMotion ? 0.01 : 0.6;
 const ITEM_STAGGER = 0.07; // seconds between each menu item's scramble-in
 
-const SCREEN_TITLES = { menu: "menu", work: "selected works", about: "about" };
+const SCREEN_TITLES = { menu: "menu", work: "selected works", about: "about + contact" };
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
 export function createGameMenu({ detail, onChange = () => {}, onBackToStart = () => {} }) {
   const ctaEl = document.querySelector(".menu-cta");
-  const ctaButtonEl = ctaEl.querySelector(".menu-cta-button");
+  const menuButtonEl = document.querySelector(".menu-button");
+  // The menu button is hidden while loading and while walking the gallery.
+  const menuButtonShown = () =>
+    menuButtonEl.getClientRects().length > 0 && !document.body.classList.contains("is-loading");
   const root = document.querySelector(".menu-modal");
   const backdropEl = root.querySelector(".menu-modal-backdrop");
   const panelEl = root.querySelector(".menu-modal-panel");
@@ -291,15 +294,8 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     tween?.kill();
     isOpen = false;
     // Shrink back into the menu button if it's on screen, otherwise fade.
-    // Measured before it reappears, since it's offset while hidden.
-    const target = ctaWanted ? ctaButtonEl : null;
+    const target = menuButtonShown() ? menuButtonEl : null;
     rects = measure(target);
-    if (target) {
-      // Its shown position: the hidden state is nudged down a little.
-      const shown = ctaButtonEl.getBoundingClientRect();
-      const offset = parseFloat(getComputedStyle(ctaEl).transform.split(",")[5]) || 0;
-      rects.from = new DOMRect(shown.left, shown.top - offset, shown.width, shown.height);
-    }
     morph.value = 1;
     gsap.to(backdropEl, { opacity: 0, duration: 0.5, delay: 0.1, ease: "power2.inOut" });
     tween = gsap.to(morph, {
@@ -316,13 +312,13 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
         for (const el of Object.values(screens)) el.hidden = true;
         syncCta();
         onChange(null);
-        if (ctaWanted) ctaButtonEl.focus({ preventScroll: true });
+        if (target) menuButtonEl.focus({ preventScroll: true });
       },
     });
   }
 
-  // Shown once the end of the hallway is reached; hidden while the menu is
-  // open or after scrolling back up.
+  // The invitation to walk the gallery: shown once the end of the hallway is
+  // reached; hidden while the menu is open or after scrolling back up.
   function setCtaVisible(visible) {
     if (visible === ctaWanted) return;
     ctaWanted = visible;
@@ -331,15 +327,14 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
 
   // --- Wiring -------------------------------------------------------------
 
-  ctaButtonEl.addEventListener("click", () => open("menu", { from: ctaButtonEl }));
+  menuButtonEl.addEventListener("click", () => open("menu", { from: menuButtonEl }));
   closeEl.addEventListener("click", close);
   backdropEl.addEventListener("click", close);
 
   for (const item of items) {
     item.addEventListener("click", () => {
       const target = item.dataset.open;
-      if (target === "contact") showScreen("about", { scrollTo: "contact" });
-      else if (target === "top") {
+      if (target === "top") {
         close();
         onBackToStart();
       } else showScreen(target);
@@ -381,16 +376,15 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
       return;
     }
 
-    // Enter opens the menu from the end of the hallway, unless it's being
-    // used on some other control.
+    // Enter opens the menu, unless it's being used on some other control.
     if (
       event.key === "Enter" &&
       !isOpen &&
-      ctaWanted &&
-      (document.activeElement === document.body || document.activeElement === ctaButtonEl)
+      menuButtonShown() &&
+      (document.activeElement === document.body || document.activeElement === menuButtonEl)
     ) {
       event.preventDefault();
-      open("menu", { from: ctaButtonEl });
+      open("menu", { from: menuButtonEl });
     }
   });
 

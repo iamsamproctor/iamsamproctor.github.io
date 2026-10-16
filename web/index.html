@@ -313,6 +313,86 @@
         transform: translateY(0);
       }
 
+      /* The mission statement, in the hero title's corner once the camera has
+         pulled out, but quieter: a small label, a light statement, and a
+         dimmer line under it. main.js scrambles the statement in and out,
+         fades the rest with --mission-fade, and drifts it with
+         --mission-drift. */
+      .mission-heading {
+        position: fixed;
+        left: 32px;
+        bottom: 64px;
+        z-index: 1;
+        width: min(560px, calc(100% - 64px));
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(var(--mission-drift, 0px));
+        transition: opacity 0.8s ease-out;
+      }
+
+      /* A soft dark glow from the corner, as behind the hero title. */
+      .mission-heading::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: -32px;
+        bottom: -64px;
+        width: calc(100% + 32px + 240px);
+        height: calc(100% + 64px + 160px);
+        background: radial-gradient(
+          ellipse at 0% 100%,
+          rgba(0, 0, 0, 0.5) 0%,
+          rgba(0, 0, 0, 0.3) 30%,
+          rgba(0, 0, 0, 0.08) 65%,
+          rgba(0, 0, 0, 0) 100%
+        );
+        opacity: var(--mission-fade, 0);
+      }
+
+      .mission-eyebrow,
+      .mission-sub {
+        opacity: var(--mission-fade, 0);
+      }
+
+      .mission-eyebrow {
+        margin: 0 0 14px;
+        font-size: 11px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.55);
+      }
+
+      .mission-heading h2 {
+        --reveal-dim: rgba(255, 255, 255, 0.32);
+        --reveal-bright: #ffffff;
+        margin: 0;
+        font-size: clamp(24px, 2.8vw, 36px);
+        font-weight: 300;
+        line-height: 1.25;
+        letter-spacing: -0.01em;
+      }
+
+      .mission-sub {
+        margin: 12px 0 0;
+        font-size: clamp(15px, 1.4vw, 18px);
+        font-weight: 300;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      /* As the hero title on phones: clear of the controls along the bottom. */
+      @media (max-width: 640px) {
+        .mission-heading {
+          left: 20px;
+          bottom: 76px;
+          width: calc(100% - 40px);
+        }
+      }
+
       /* Lettered on the hallway's end wall above the portrait. Laid out at
          100px per world unit; hallwayQuote.js moves and scales it into place. */
       .hallway-quote {
@@ -402,6 +482,9 @@
         text-transform: uppercase;
       }
 
+      /* Notches down the right edge, one per section: a short line each, the
+         current section's drawn out longer with its name beside it. Hovering
+         one draws it out a little and names it too. */
       .section-nav {
         position: fixed;
         top: 50%;
@@ -409,63 +492,91 @@
         z-index: 3;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 18px;
+        align-items: flex-end;
+        gap: 4px;
         transform: translateY(-50%);
       }
 
+      /* The button is just the notch (plus some height to hit); the label
+         hangs off its left so it never becomes an invisible click target. */
       .section-nav button {
         position: relative;
-        width: 10px;
-        height: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        width: 48px;
+        height: 24px;
         padding: 0;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 50%;
+        border: 0;
         background: transparent;
         cursor: pointer;
+      }
+
+      .section-nav button::after {
+        content: "";
+        width: 22px;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.55);
+        /* Keeps it readable over the bright parts of the scene. */
+        box-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
         transition:
-          background 0.25s ease,
-          border-color 0.25s ease,
-          transform 0.25s ease;
+          width 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+          background 0.25s ease;
       }
 
-      .section-nav button:hover {
-        border-color: #ffffff;
-      }
-
-      .section-nav button.is-active {
+      .section-nav button:hover::after,
+      .section-nav button:focus-visible::after {
+        width: 30px;
         background: #ffffff;
-        border-color: #ffffff;
-        transform: scale(1.2);
+      }
+
+      .section-nav button.is-active::after {
+        width: 48px;
+        background: #ffffff;
+      }
+
+      .section-nav button:focus-visible {
+        outline: none;
       }
 
       .section-nav button .section-nav-label {
         position: absolute;
-        right: 22px;
+        right: calc(100% + 14px);
         top: 50%;
-        transform: translateY(-50%);
+        transform: translate(6px, -50%);
         white-space: nowrap;
         color: #ffffff;
         font-family:
           -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
           sans-serif;
         font-size: 11px;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.22em;
         text-transform: uppercase;
+        text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.2s ease;
+        transition:
+          opacity 0.25s ease,
+          transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
       }
 
-      .section-nav button:hover .section-nav-label {
-        opacity: 0.8;
+      .section-nav button:hover .section-nav-label,
+      .section-nav button:focus-visible .section-nav-label {
+        opacity: 0.75;
+        transform: translate(0, -50%);
       }
 
-      /* The page ends at a resting view of the hallway. A menu button appears
-         at the bottom of the screen there, opening the menu modal
-         (.menu-modal): one panel holding a stack of screens (the menu, then
-         works or about, then a project's details). Stacked above the scene
-         and nav, below the portrait viewer (8). */
+      .section-nav button.is-active .section-nav-label {
+        opacity: 1;
+        transform: translate(0, -50%);
+      }
+
+      /* The page ends at a resting view of the hallway. An invitation to walk
+         the gallery appears at the bottom of the screen there. The menu
+         itself (.menu-modal: one panel holding a stack of screens, the menu,
+         then works or about, then a project's details) opens from the menu
+         button. Stacked above the scene and nav, below the portrait viewer
+         (8). */
       .menu-cta {
         position: fixed;
         left: 50%;
@@ -489,51 +600,54 @@
         pointer-events: auto;
       }
 
-      .menu-cta-button {
-        padding: 18px 52px;
-        border: 1px solid rgba(255, 255, 255, 0.85);
+      /* The menu button: always there, beside the sound toggle and in the
+         same pill, so the menu (and the work in it) is one click away from
+         the start. The menu modal grows out of it and shrinks back into it.
+         Below the modal (6), unlike the sound toggle. */
+      .menu-button {
+        position: fixed;
+        right: 164px; /* the sound toggle's width and inset, plus a gap */
+        bottom: 20px;
+        z-index: 5;
+        height: 64px;
+        padding: 0 30px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
         border-radius: 999px;
-        /* Dark enough to stand out over the lit floor and bench. */
-        background: rgba(0, 0, 0, 0.45);
-        backdrop-filter: blur(6px);
+        background: rgba(0, 0, 0, 0.2);
         -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
         color: #ffffff;
         font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
-        font-size: clamp(26px, 3.4vw, 40px);
+        font-size: 22px;
         letter-spacing: 0.12em;
         cursor: pointer;
-        animation: menu-cta-glow 2.4s ease-in-out infinite;
         transition:
           background 0.25s ease,
+          border-color 0.25s ease,
           color 0.25s ease,
-          transform 0.25s ease;
+          transform 0.25s ease,
+          opacity 0.8s ease;
       }
 
-      .menu-cta-button:hover,
-      .menu-cta-button:focus-visible {
+      .menu-button:hover,
+      .menu-button:focus-visible {
         background: #ffffff;
+        border-color: #ffffff;
         color: #000000;
         transform: scale(1.04);
         outline: none;
       }
 
-      @keyframes menu-cta-glow {
-        0%,
-        100% {
-          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35), 0 0 24px rgba(255, 255, 255, 0.12);
-        }
-        50% {
-          box-shadow: 0 0 0 10px rgba(255, 255, 255, 0), 0 0 48px rgba(255, 255, 255, 0.28);
+      @media (max-width: 640px) {
+        .menu-button {
+          right: 104px;
+          bottom: 12px;
+          height: 42px;
+          padding: 0 18px;
+          font-size: 16px;
         }
       }
 
-      .menu-cta-buttons {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-      }
-
-      /* Quieter than the menu button beside it. */
       .menu-cta-explore {
         padding: 14px 26px;
         border: 1px solid rgba(255, 255, 255, 0.4);
@@ -632,21 +746,12 @@
       /* While walking the gallery, the scrolling page's own overlays step
          aside. The quote is positioned for the scrolled view's camera. */
       body.is-exploring .hero-heading,
+      body.is-exploring .mission-heading,
       body.is-exploring .section-nav,
       body.is-exploring .menu-cta,
+      body.is-exploring .menu-button,
       body.is-exploring .hallway-quote {
         display: none !important;
-      }
-
-      .menu-cta-hint {
-        margin: 0;
-        color: rgba(255, 255, 255, 0.45);
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
-          sans-serif;
-        font-size: 11px;
-        letter-spacing: 0.24em;
-        text-transform: uppercase;
       }
 
       .menu-modal {
@@ -917,16 +1022,6 @@
 
         .menu-modal-bar {
           padding: 14px 16px 24px;
-        }
-
-        .menu-cta-button {
-          padding: 16px 40px;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .menu-cta-button {
-          animation: none;
         }
       }
 
@@ -1960,18 +2055,20 @@
       body.is-loading .title-block,
       body.is-loading .contact-button,
       body.is-loading .audio-toggle,
+      body.is-loading .menu-button,
       body.is-loading .section-nav,
       body.is-loading .hero-heading {
         opacity: 0;
       }
 
       @media (max-width: 640px) {
+        /* Clear of the menu button and sound toggle along the bottom. */
         .hero-heading {
           left: 20px;
-          bottom: 48px;
+          bottom: 76px;
           max-width: calc(100% - 40px);
           --hero-inset-x: 20px;
-          --hero-inset-y: 48px;
+          --hero-inset-y: 76px;
         }
       }
 
@@ -2079,20 +2176,33 @@
       </svg>
     </button>
 
+    <!-- Opens the menu (gameMenu.js), from anywhere on the page. -->
+    <button type="button" class="menu-button">menu</button>
+
     <div class="hero-heading">
       <h2>creative technologist</h2>
       <p>XR | Games | Gaussian Splats | Music</p>
     </div>
 
+    <!-- The mission, shown once the camera has pulled out to the sky point
+         (main.js). -->
+    <div class="mission-heading">
+      <p class="mission-eyebrow">Mission</p>
+      <h2>I make interactive realities.</h2>
+      <p class="mission-sub">
+        Immersive media, games, and digital art, as lenses for seeing the world differently.
+      </p>
+    </div>
+
     <nav class="section-nav" aria-label="Section navigation">
-      <button type="button" data-section="hero" aria-label="Welcome">
+      <button type="button" data-section="hero" aria-label="Welcome" class="is-active">
         <span class="section-nav-label">Welcome</span>
       </button>
-      <button type="button" data-section="work" aria-label="Work">
-        <span class="section-nav-label">Work</span>
+      <button type="button" data-section="mission" aria-label="Mission">
+        <span class="section-nav-label">Mission</span>
       </button>
-      <button type="button" data-section="about" aria-label="About">
-        <span class="section-nav-label">About</span>
+      <button type="button" data-section="gallery" aria-label="Gallery">
+        <span class="section-nav-label">Gallery</span>
       </button>
     </nav>
 
@@ -2108,13 +2218,9 @@
 
     <!-- Appears at the end of the hallway, where the page ends. -->
     <div class="menu-cta">
-      <div class="menu-cta-buttons">
-        <button type="button" class="menu-cta-button">menu</button>
-        <!-- Walks the hallway in 3D (galleryExplore.js). Mouse and keyboard
-             only for now, so it's hidden on touch screens. -->
-        <button type="button" class="menu-cta-explore">walk the gallery</button>
-      </div>
-      <p class="menu-cta-hint" aria-hidden="true">press enter</p>
+      <!-- Walks the hallway in 3D (galleryExplore.js). Mouse and keyboard
+           only for now, so it's hidden on touch screens. -->
+      <button type="button" class="menu-cta-explore">walk the gallery</button>
     </div>
 
     <!-- Walking the gallery: the fade between modes, and the controls. -->
@@ -2156,18 +2262,12 @@
               <li>
                 <button type="button" class="game-menu-item" data-open="about">
                   <span class="game-menu-index">02</span>
-                  <span class="game-menu-label">about</span>
-                </button>
-              </li>
-              <li>
-                <button type="button" class="game-menu-item" data-open="contact">
-                  <span class="game-menu-index">03</span>
-                  <span class="game-menu-label">contact</span>
+                  <span class="game-menu-label">about + contact</span>
                 </button>
               </li>
               <li>
                 <button type="button" class="game-menu-item" data-open="top">
-                  <span class="game-menu-index">04</span>
+                  <span class="game-menu-index">03</span>
                   <span class="game-menu-label">back to start</span>
                 </button>
               </li>
