@@ -1,9 +1,12 @@
 import * as THREE from "three";
 import gsap from "gsap";
+import { loadJosh } from "./josh.js";
+import { createBlendTree1D } from "./blendTree1D.js";
 
 // Walking the gallery: from the end of the hallway, the scene fades to black
-// and back in with a stand-in character (a capsule, for now) in the museum
-// visitor's place, which walks the hallway in third person. Leaving fades
+// and back in with the museum visitor (Josh, see josh.js) standing up from
+// the bench, and he walks the hallway in third person. Idle, walk and run
+// are blended by his speed (see blendTree1D.js). Leaving fades
 // back out and returns to the visitor sitting on the bench, exactly where
 // the page was left.
 //
@@ -19,14 +22,21 @@ import gsap from "gsap";
 
 const FADE = 0.55; // seconds for each half of the fade through black
 
-const RADIUS = 0.28; // capsule radius
-const BODY = 1.1; // capsule length between its rounded ends
+const RADIUS = 0.28; // how close he gets to walls and the bench
 const WALK_SPEED = 2.1; // world units per second
 const RUN_SPEED = 3.6;
-const ACCELERATION = 10; // how quickly it reaches speed and stops
+const ACCELERATION = 10; // how quickly he reaches speed and stops
 const TURN_SPEED = THREE.MathUtils.degToRad(100); // ←/→ keys, per second
 const SPAWN = new THREE.Vector3(0, 0, 3.7); // just in front of the bench
-const BOB = 0.035; // how much it bobs as it walks
+
+// How fast the walk and run clips cover ground at normal speed, measured from
+// how fast a planted foot slides back in each. Walking faster or slower than
+// this plays the clip faster or slower, so the feet don't skate.
+const WALK_CLIP_SPEED = 1.7;
+const RUN_CLIP_SPEED = 3.34;
+// The walk's left foot comes forward slightly later in its cycle than the
+// run's; this lines them up.
+const WALK_CLIP_PHASE = 0.05;
 
 // Above and behind the character's right shoulder, looking slightly down, so
 // it sits low and to one side of the view instead of covering the middle.
@@ -56,13 +66,27 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   const exitEl = hudEl.querySelector(".gallery-exit");
   const canvas = document.querySelector(".scene-window canvas");
 
-  const character = new THREE.Mesh(
-    new THREE.CapsuleGeometry(RADIUS, BODY, 8, 20),
-    new THREE.MeshStandardMaterial({ color: 0x2c2c31, roughness: 0.55, metalness: 0.1 }),
-  );
-  const standHeight = RADIUS + BODY / 2;
+  // Josh is added once he's loaded (usually long before, for the bench).
+  const character = new THREE.Group();
   character.visible = false;
   hallway.scene.add(character);
+  let mixer = null;
+  let locomotion = null;
+
+  function addJosh() {
+    loadJosh().then((josh) => {
+      if (mixer) return;
+      const figure = josh.create();
+      figure.rotation.y = Math.PI; // Mixamo characters face +z; heading 0 is -z
+      character.add(figure);
+      mixer = new THREE.AnimationMixer(figure);
+      locomotion = createBlendTree1D(mixer, [
+        { clip: josh.clips.idle, at: 0 },
+        { clip: josh.clips.walk, at: WALK_SPEED, groundSpeed: WALK_CLIP_SPEED, phase: WALK_CLIP_PHASE },
+        { clip: josh.clips.run, at: RUN_SPEED, groundSpeed: RUN_CLIP_SPEED },
+      ]);
+    });
+  }
 
   const { halfWidth, length, height, ribDepth } = hallway.bounds;
   const benchBox = new THREE.Box3();
@@ -72,7 +96,6 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   const position = new THREE.Vector3();
   const velocity = new THREE.Vector3();
   let heading = 0; // radians; 0 faces the portrait (-z)
-  let walkPhase = 0;
   const keys = new Set();
 
   // Cursor in -1..1 across the screen, and the look it eases toward.
@@ -121,6 +144,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
 
   function enter() {
     if (active || busy) return;
+    addJosh();
     fadeThrough(() => {
       active = true;
       document.body.classList.add("is-exploring");
@@ -297,10 +321,15 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     position.addScaledVector(velocity, deltaTime);
     collide();
 
-    const speed = velocity.length();
-    walkPhase += speed * deltaTime * 4.2;
-    character.position.set(position.x, standHeight + Math.abs(Math.sin(walkPhase)) * BOB * Math.min(speed, 1), position.z);
+    character.position.set(position.x, 0, position.z);
     character.rotation.y = heading;
+    if (locomotion) {
+      // Stepping back plays the strides backwards.
+      const speed = velocity.length();
+      const backwards = velocity.dot(forward) < -0.3 * speed;
+      locomotion.update(deltaTime, backwards ? -speed : speed);
+      mixer.update(deltaTime);
+    }
 
     updateCamera(deltaTime);
   }

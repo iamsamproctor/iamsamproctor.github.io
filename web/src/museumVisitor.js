@@ -1,23 +1,22 @@
 import * as THREE from "three";
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { loadJosh } from "./josh.js";
 
 // A gallery bench with someone sitting on it, watching the portrait at the
 // end of the hallway. Seen from behind in a dark hall lit by the portrait,
 // they read mostly as a silhouette.
 //
-// The figure is a Mixamo character exported with a sitting-idle animation
-// (FBX, with skin). It's large, so it's only fetched when load() is called,
-// which main.js does partway through the landing scene. The bench is built
-// here and fitted to the animation: its seat goes just under where the hips
-// sit in the seated pose, so any sitting animation lines up.
+// The figure is Josh (see josh.js) playing his sitting idle. He's large, so
+// he's only fetched when load() is called, which main.js does partway through
+// the landing scene. The bench is built here and fitted to the animation: its
+// seat goes just under where the hips sit in the seated pose, so any sitting
+// animation lines up.
 
-const FIGURE_HEIGHT = 1.75; // standing height the figure is scaled to, in world units (m)
 const SEAT_BELOW_HIPS = 0.09; // how far the seat top sits below the hip joint
 const BENCH_LENGTH = 1.6;
 const BENCH_DEPTH = 0.42;
 const BENCH_THICKNESS = 0.06;
 
-export function createMuseumVisitor({ url }) {
+export function createMuseumVisitor() {
   // Faces local -Z, toward the portrait, once placed in the hallway.
   const group = new THREE.Group();
   group.rotation.y = Math.PI;
@@ -56,23 +55,14 @@ export function createMuseumVisitor({ url }) {
 
   function load() {
     if (loading) return loading;
-    loading = new FBXLoader().loadAsync(url).then((figure) => {
-      // Mixamo exports in centimeters; scale by the bind-pose height instead
-      // of assuming, so any character comes out the same size.
-      const box = new THREE.Box3().setFromObject(figure);
-      const height = box.max.y - box.min.y;
-      figure.scale.setScalar(FIGURE_HEIGHT / height);
-
-      figure.traverse((node) => {
-        if (node.isSkinnedMesh) node.frustumCulled = false;
-      });
+    loading = loadJosh().then((josh) => {
+      const figure = josh.create();
       // It may arrive while someone is walking the gallery in its place.
       figure.visible = figureVisible;
       group.add(figure);
 
       mixer = new THREE.AnimationMixer(figure);
-      const clip = figure.animations[0];
-      if (clip) mixer.clipAction(clip).play();
+      mixer.clipAction(josh.clips.sittingIdle).play();
       mixer.update(0);
 
       // Fit the bench under the seated hips, and shift the figure sideways

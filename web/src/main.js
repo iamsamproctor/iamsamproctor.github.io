@@ -349,7 +349,7 @@ const hallwayQuote = hallwayQuoteEl ? createHallwayQuote(hallwayQuoteEl, quotes)
 // part of the initial load. It's fetched once the landing scene has settled
 // (or on the first scroll, if that comes sooner), so that parsing it, which
 // briefly blocks the page, is less likely to land mid-scroll near the hallway.
-const museumVisitor = createMuseumVisitor({ url: "/assets/animations/sitting-idle.fbx" });
+const museumVisitor = createMuseumVisitor();
 museumVisitor.group.position.set(0, 0, 4.5);
 hallway.scene.add(museumVisitor.group);
 
