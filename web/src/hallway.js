@@ -25,6 +25,10 @@ const RIB_SPACING = 3;
 const RIB_DEPTH = 0.3; // pilaster/beam thickness
 const FRAME_BORDER = 0.12; // total extra width/height of a work's frame
 const FOV = 40;
+const CEILING_LIGHTS_FROM = 13.5; // the rib just behind the resting view
+const CEILING_PANEL_WIDTH = 1.2;
+const CEILING_LIGHT_COLOR = 0xfff1e0;
+const CEILING_LIGHT_INTENSITY = 8;
 
 // The render target only needs as many pixels as the portrait covers on
 // screen, so its resolution steps down as the camera backs away. Stepped
@@ -168,6 +172,35 @@ export function createHallway({ renderer, works = [] }) {
     beam.position.set(0, HALL_HEIGHT - RIB_DEPTH / 2, z);
     scene.add(beam);
   }
+
+  // Ceiling lights down the rest of the hall, from just behind the resting
+  // view to the far wall: a glowing panel in each bay, and one long soft area
+  // light under them standing in for all of them (one light is much cheaper
+  // than one per panel). The portrait end keeps its own low light; this only
+  // reaches it as a faint spill.
+  const panelLength = RIB_SPACING - RIB_DEPTH - 0.6;
+  const panelGeometry = new THREE.PlaneGeometry(CEILING_PANEL_WIDTH, panelLength);
+  const panelMaterial = new THREE.MeshBasicMaterial({ color: CEILING_LIGHT_COLOR });
+  for (
+    let z = CEILING_LIGHTS_FROM + RIB_SPACING / 2;
+    z + panelLength / 2 < HALL_LENGTH - 0.1;
+    z += RIB_SPACING
+  ) {
+    const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+    panel.rotation.x = Math.PI / 2;
+    panel.position.set(0, HALL_HEIGHT - 0.005, z);
+    scene.add(panel);
+  }
+  const ceilingLightLength = HALL_LENGTH - 0.1 - CEILING_LIGHTS_FROM;
+  const ceilingLight = new THREE.RectAreaLight(
+    CEILING_LIGHT_COLOR,
+    CEILING_LIGHT_INTENSITY,
+    CEILING_PANEL_WIDTH,
+    ceilingLightLength,
+  );
+  ceilingLight.rotation.x = -Math.PI / 2; // facing down, its length along the hall
+  ceilingLight.position.set(0, HALL_HEIGHT - 0.01, CEILING_LIGHTS_FROM + ceilingLightLength / 2);
+  scene.add(ceilingLight);
 
   // Selected works hung along the walls, alternating sides, each under its
   // own picture light. Each one is centered in the bay between two ribs and
