@@ -44,8 +44,8 @@ const heroHeadingReveal = heroHeadingTitleEl
 
 const audioToggleEl = document.querySelector(".audio-toggle");
 
-// Both start/enable calls must happen inside a click, which is why this is
-// only ever called from the Enter button or the toggle itself.
+// Both start/enable calls must happen inside a click or key press, which is
+// why this is only ever called from the Enter button, the toggle, or M.
 function setAudio(on, { fadeSeconds = 1.5 } = {}) {
   audioToggleEl?.setAttribute("aria-pressed", String(on));
   setRevealSoundEnabled(on);
@@ -62,6 +62,16 @@ function setAudio(on, { fadeSeconds = 1.5 } = {}) {
 
 audioToggleEl?.addEventListener("click", () => {
   setAudio(audioToggleEl.getAttribute("aria-pressed") !== "true");
+});
+
+// M toggles the sound from anywhere past the loader, as in a video player,
+// e.g. while walking the gallery with the mouse captured.
+window.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() !== "m" || event.repeat) return;
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  if (document.body.classList.contains("is-loading")) return;
+  if (event.target.closest?.("input, textarea, [contenteditable]")) return;
+  setAudio(audioToggleEl?.getAttribute("aria-pressed") !== "true");
 });
 
 const loadingScreen = createLoadingScreen({
@@ -226,7 +236,12 @@ const workModal = createWorkModal({
 });
 const gameMenu = createGameMenu({
   detail: workModal,
-  onBackToStart: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+  onBackToStart: () => {
+    // From a walk through the gallery, back out of it first; the page can't
+    // scroll until then.
+    if (galleryExplore.isActive()) galleryExplore.exit({ onLeft: () => window.scrollTo(0, 0) });
+    else window.scrollTo({ top: 0, behavior: "smooth" });
+  },
 });
 for (const button of navButtons) {
   button.addEventListener("click", () => {
@@ -405,6 +420,7 @@ const workCells = Array.from(document.querySelectorAll(".work-cell"));
 const galleryExplore = createGalleryExplore({
   hallway,
   museumVisitor,
+  onOpenMenu: () => gameMenu.open("menu", { from: document.querySelector(".menu-button") }),
   onOpenWork: (index, fromRect) => {
     const cell = workCells[index];
     if (cell) gameMenu.openWork(cell, { fromRect });

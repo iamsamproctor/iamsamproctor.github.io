@@ -11,16 +11,19 @@ import { createBlendTree1D } from "./blendTree1D.js";
 // returns to the visitor sitting on the bench, exactly where the page was
 // left.
 //
-// Controls (mouse and keyboard; it isn't offered on touch screens yet):
-//  - W/S or ↑/↓ walk, A/D step sideways, ←/→ turn, Shift runs.
-//  - Moving the mouse looks around a little; pushing it toward the left or
-//    right edge of the screen keeps turning that way. The cursor stays free
-//    so works can be clicked.
-//  - Clicking a work on the wall brings the camera round to face it;
+// Controls (mouse and keyboard; it isn't offered on touch screens yet), as in
+// most third-person games:
+//  - Clicking the scene captures the mouse (pointer lock), which then turns
+//    the camera; nothing else does. Esc frees it again.
+//  - WASD or the arrow keys walk relative to the camera (W away from it, S
+//    toward it, A/D across), Shift runs. He turns to face where he's going.
+//  - Clicking a work under the crosshair brings the camera round to face it;
 //    clicking it again opens its project (onOpenWork). Exhibits in the grand
 //    room work the same way, a second click touching them instead. Walking,
-//    clicking elsewhere, or Esc steps back from it.
-//  - Esc (when not looking at a work) leaves.
+//    looking away, clicking elsewhere, or Esc steps back from it.
+//  - Tab (or Enter, see gameMenu.js) opens the menu, and M toggles the sound
+//    (main.js), for while the mouse is captured.
+//  - Esc with the mouse free (and not looking at a work) leaves.
 
 const FADE = 0.55; // seconds for each half of the fade through black
 
@@ -28,7 +31,7 @@ const RADIUS = 0.28; // how close he gets to walls and things on the floor
 const WALK_SPEED = 2.1; // world units per second
 const RUN_SPEED = 3.6;
 const ACCELERATION = 10; // how quickly he reaches speed and stops
-const TURN_SPEED = THREE.MathUtils.degToRad(100); // ←/→ keys, per second
+const FACE_SMOOTHING = 10; // how quickly he turns to face where he's going
 const SPAWN = new THREE.Vector3(0, 0, 3.7); // just in front of the bench
 const DOOR_REACH = 3.5; // how close the doors open at
 
@@ -51,22 +54,29 @@ const CAMERA_PITCH = THREE.MathUtils.degToRad(-9); // looking slightly down
 const CAMERA_SMOOTHING = 12;
 const WALL_GAP = 0.15; // closest the camera gets to a wall
 
-const LOOK_YAW = THREE.MathUtils.degToRad(25); // with the cursor at the screen edge
-const LOOK_PITCH = THREE.MathUtils.degToRad(16);
-const EDGE = 0.7; // fraction of the way to the screen edge where turning starts
-const EDGE_TURN = THREE.MathUtils.degToRad(110); // per second, right at the edge
-const LOOK_SMOOTHING = 8;
+// Looking around with the mouse, once it's captured (pointer lock).
+const MOUSE_TURN = THREE.MathUtils.degToRad(0.12); // camera turn per px of mouse movement
+const PITCH_MIN = THREE.MathUtils.degToRad(-35); // furthest it looks down
+const PITCH_MAX = THREE.MathUtils.degToRad(20); // and up
+const LOOK_AWAY = 60; // px of mouse movement that looks away from a work being faced
+// The Esc that frees the mouse may reach the page too; one this soon after
+// is that one, not a second press to leave.
+const UNLOCK_ESC_GRACE = 250; // ms
+const ESC_HINT_FRESH = 3000; // ms the "esc to free your cursor" hint stays bright
 
 const FOCUS_DURATION = 0.9; // seconds to swing round to face a work
 const FOCUS_MARGIN = 1.35; // room around a work when facing it
 
-export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isModalOpen }) {
+export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, onOpenMenu, isModalOpen }) {
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.05, 100);
   camera.rotation.order = "YXZ";
 
   const fadeEl = document.querySelector(".gallery-fade");
   const hudEl = document.querySelector(".gallery-hud");
   const exitEl = hudEl.querySelector(".gallery-exit");
+  const crosshairEl = hudEl.querySelector(".gallery-crosshair");
+  const lookHintEl = hudEl.querySelector(".gallery-look-hint");
+  const escHintEl = hudEl.querySelector(".gallery-esc-hint");
   const canvas = document.querySelector(".scene-window canvas");
 
   // Josh is added once he's loaded (usually long before, for the bench).
@@ -98,18 +108,14 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   let busy = false; // mid-fade
   const position = new THREE.Vector3();
   const velocity = new THREE.Vector3();
-  let heading = 0; // radians; 0 faces the portrait (-z)
+  let heading = 0; // the way he faces, in radians; 0 faces the portrait (-z)
+  let cameraYaw = 0; // the way the camera faces, likewise; only the mouse turns it
+  let cameraPitch = CAMERA_PITCH;
   const keys = new Set();
-
-  // Cursor in -1..1 across the screen, and the look it eases toward.
-  let pointerX = 0;
-  let pointerY = 0;
-  let pointerKnown = false;
-  let lookYaw = 0;
-  let lookPitch = 0;
 
   // Facing a work: which one, and how far the camera has swung round to it.
   let focused = null; // a hallway.pieces or hallway.exhibits entry, or "portrait"
+  let lookAway = 0; // px the mouse has moved since facing it
   const focus = { amount: 0 };
   let focusTween = null;
   const focusPosition = new THREE.Vector3();
@@ -148,18 +154,20 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   function enter() {
     if (active || busy) return;
     addJosh();
+    lockScroll();
+    // While the click that entered still counts as one, so it's allowed.
+    captureMouse();
     fadeThrough(() => {
       active = true;
       document.body.classList.add("is-exploring");
-      document.documentElement.style.overflow = "hidden";
       museumVisitor.setFigureVisible(false);
       hallway.setGrandRoomVisible(true);
       character.visible = true;
       position.copy(SPAWN);
       velocity.set(0, 0, 0);
       heading = 0;
-      lookYaw = 0;
-      lookPitch = 0;
+      cameraYaw = 0;
+      cameraPitch = CAMERA_PITCH;
       clearFocus({ instant: true });
       keys.clear();
       updateCamera(0, { snap: true });
@@ -167,12 +175,15 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     });
   }
 
-  function exit() {
+  // onLeft: called once the page is back underneath (and can scroll again),
+  // hidden by the fade.
+  function exit({ onLeft } = {}) {
     if (!active || busy) return;
+    releaseMouse();
     fadeThrough(() => {
       active = false;
       document.body.classList.remove("is-exploring");
-      document.documentElement.style.overflow = "";
+      unlockScroll();
       museumVisitor.setFigureVisible(true);
       hallway.setGrandRoomVisible(false);
       character.visible = false;
@@ -180,6 +191,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
       keys.clear();
       canvas.style.cursor = "";
       hudEl.hidden = true;
+      onLeft?.();
     });
   }
 
@@ -210,10 +222,17 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     );
   }
 
+  // What the crosshair is on, in the middle of the screen.
+  function pickAtCenter() {
+    const rect = canvas.getBoundingClientRect();
+    return pick(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+
   const normal = new THREE.Vector3();
   const size = new THREE.Vector3();
   function focusOn(target) {
     focused = target;
+    lookAway = 0;
     focusTween?.kill();
     focusTween = gsap.to(focus, { amount: 1, duration: FOCUS_DURATION, ease: "power2.inOut" });
 
@@ -341,40 +360,36 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   const right = new THREE.Vector3();
   const desired = new THREE.Vector3();
 
+  // The signed turn from angle `from` to angle `to`, the short way round.
+  const angleTo = (from, to) => THREE.MathUtils.euclideanModulo(to - from + Math.PI, Math.PI * 2) - Math.PI;
+
   function update(deltaTime) {
     if (!active) return;
     const paused = isModalOpen() || busy;
+    // The menu or a project needs the cursor back.
+    if (isModalOpen()) releaseMouse();
+    syncLookUi();
 
-    // Look: a little with the cursor, and turning near the edges.
-    const smoothing = 1 - Math.exp(-LOOK_SMOOTHING * deltaTime);
-    const lookingAround = pointerKnown && !paused && !focused;
-    lookYaw = THREE.MathUtils.lerp(lookYaw, lookingAround ? -pointerX * LOOK_YAW : 0, smoothing);
-    lookPitch = THREE.MathUtils.lerp(lookPitch, lookingAround ? -pointerY * LOOK_PITCH : 0, smoothing);
-    if (lookingAround && Math.abs(pointerX) > EDGE) {
-      const push = (Math.abs(pointerX) - EDGE) / (1 - EDGE);
-      heading -= Math.sign(pointerX) * Math.pow(push, 1.5) * EDGE_TURN * deltaTime;
-    }
-
-    // Walk.
+    // Walk, relative to the camera: away from it, toward it, or across.
     let ahead = 0;
     let sideways = 0;
-    let turn = 0;
     if (!paused) {
       if (keys.has("w") || keys.has("arrowup")) ahead += 1;
       if (keys.has("s") || keys.has("arrowdown")) ahead -= 1;
-      if (keys.has("d")) sideways += 1;
-      if (keys.has("a")) sideways -= 1;
-      if (keys.has("arrowleft")) turn += 1;
-      if (keys.has("arrowright")) turn -= 1;
+      if (keys.has("d") || keys.has("arrowright")) sideways += 1;
+      if (keys.has("a") || keys.has("arrowleft")) sideways -= 1;
     }
-    if ((ahead || sideways || turn) && focused) clearFocus();
-    heading += turn * TURN_SPEED * deltaTime;
+    if ((ahead || sideways) && focused) clearFocus();
 
-    forward.set(-Math.sin(heading), 0, -Math.cos(heading));
-    right.set(Math.cos(heading), 0, -Math.sin(heading));
+    forward.set(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+    right.set(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
     desired.set(0, 0, 0).addScaledVector(forward, ahead).addScaledVector(right, sideways);
     if (desired.lengthSq() > 0) {
-      desired.normalize().multiplyScalar(keys.has("shift") ? RUN_SPEED : WALK_SPEED);
+      desired.normalize();
+      // He turns to face that way, the short way round.
+      const facing = Math.atan2(-desired.x, -desired.z);
+      heading += angleTo(heading, facing) * (1 - Math.exp(-FACE_SMOOTHING * deltaTime));
+      desired.multiplyScalar(keys.has("shift") ? RUN_SPEED : WALK_SPEED);
     }
     velocity.lerp(desired, 1 - Math.exp(-ACCELERATION * deltaTime));
     position.addScaledVector(velocity, deltaTime);
@@ -386,10 +401,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     character.position.set(position.x, 0, position.z);
     character.rotation.y = heading;
     if (locomotion) {
-      // Stepping back plays the strides backwards.
-      const speed = velocity.length();
-      const backwards = velocity.dot(forward) < -0.3 * speed;
-      locomotion.update(deltaTime, backwards ? -speed : speed);
+      locomotion.update(deltaTime, velocity.length());
       mixer.update(deltaTime);
     }
 
@@ -397,8 +409,8 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   }
 
   function updateCamera(deltaTime, { snap = false } = {}) {
-    const yaw = heading + lookYaw;
-    const pitch = CAMERA_PITCH + lookPitch;
+    const yaw = cameraYaw;
+    const pitch = cameraPitch;
     const lookDirection = new THREE.Vector3(
       -Math.sin(yaw) * Math.cos(pitch),
       Math.sin(pitch),
@@ -441,11 +453,21 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   const MOVE_KEYS = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"]);
 
   window.addEventListener("keydown", (event) => {
-    if (!active || busy || isModalOpen()) return;
+    // defaultPrevented: already handled, e.g. Esc closing the menu.
+    if (!active || busy || isModalOpen() || event.defaultPrevented) return;
     const key = event.key.toLowerCase();
     if (key === "escape") {
+      // The first Esc frees the mouse (the browser does that itself).
+      if (isMouseCaptured() || performance.now() - mouseFreedAt < UNLOCK_ESC_GRACE) return;
       if (focused) clearFocus();
       else exit();
+      return;
+    }
+    // Tab opens the menu, as in a game (freeing the mouse, see update).
+    if (key === "tab") {
+      event.preventDefault();
+      keys.clear();
+      onOpenMenu();
       return;
     }
     if (MOVE_KEYS.has(key)) {
@@ -457,22 +479,106 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   // Letting go of everything if the window loses focus mid-walk.
   window.addEventListener("blur", () => keys.clear());
 
-  window.addEventListener("pointermove", (event) => {
-    if (!active || event.pointerType !== "mouse") return;
-    pointerX = THREE.MathUtils.clamp((event.clientX / window.innerWidth) * 2 - 1, -1, 1);
-    pointerY = THREE.MathUtils.clamp((event.clientY / window.innerHeight) * 2 - 1, -1, 1);
-    pointerKnown = true;
-    if (!isModalOpen() && !busy) {
-      canvas.style.cursor = pick(event.clientX, event.clientY) ? "pointer" : "";
+  // The page under the walk stays put (from entering until the fade back
+  // out). overflow: hidden alone doesn't stop every browser or trackpad
+  // scrolling the root, so the wheel and scrolling keys are swallowed too,
+  // and any scroll that still gets through is undone. Not inside the menu or
+  // a project, which scroll themselves.
+  let lockedScrollY = null;
+  const SCROLL_KEYS = new Set([" ", "pageup", "pagedown", "home", "end"]);
+  const ownsScroll = (event) =>
+    event.target.closest?.(".menu-modal, .portrait-viewer, button, a, input, textarea") != null;
+
+  function lockScroll() {
+    lockedScrollY = window.scrollY;
+    document.documentElement.style.overflow = "hidden";
+  }
+
+  function unlockScroll() {
+    lockedScrollY = null;
+    document.documentElement.style.overflow = "";
+  }
+
+  window.addEventListener(
+    "wheel",
+    (event) => {
+      if (lockedScrollY !== null && !ownsScroll(event)) event.preventDefault();
+    },
+    { passive: false },
+  );
+  window.addEventListener("keydown", (event) => {
+    if (lockedScrollY !== null && SCROLL_KEYS.has(event.key.toLowerCase()) && !ownsScroll(event)) {
+      event.preventDefault();
     }
   });
-  document.documentElement.addEventListener("pointerleave", () => {
-    pointerKnown = false;
+  window.addEventListener("scroll", () => {
+    if (lockedScrollY !== null && window.scrollY !== lockedScrollY) window.scrollTo(0, lockedScrollY);
   });
 
-  canvas.addEventListener("click", (event) => {
+  // The mouse turns the camera once it's captured (pointer lock): clicking
+  // the scene captures it, and Esc, the menu or a project frees it. While
+  // captured, a crosshair in the middle of the screen picks works.
+  const isMouseCaptured = () => document.pointerLockElement === canvas;
+  let mouseFreedAt = -Infinity;
+
+  function captureMouse() {
+    if (isMouseCaptured()) return;
+    // Refused e.g. just after Esc freed it; the hint stays up to try again.
+    try {
+      canvas.requestPointerLock()?.catch?.(() => {});
+    } catch {
+      // Not supported: the hint stays up.
+    }
+  }
+
+  function releaseMouse() {
+    if (isMouseCaptured()) document.exitPointerLock();
+  }
+
+  // Each time the mouse is captured, the Esc hint starts out bright.
+  let escHintFade = null;
+  document.addEventListener("pointerlockchange", () => {
+    if (isMouseCaptured()) {
+      escHintEl.classList.add("is-fresh");
+      clearTimeout(escHintFade);
+      escHintFade = setTimeout(() => escHintEl.classList.remove("is-fresh"), ESC_HINT_FRESH);
+    } else {
+      mouseFreedAt = performance.now();
+    }
+    syncLookUi();
+  });
+
+  // The crosshair (filled in over something to click) and how to free the
+  // cursor while captured, and an invitation to click into the scene while not.
+  function syncLookUi() {
+    const captured = isMouseCaptured();
+    hudEl.classList.toggle("is-captured", captured);
+    escHintEl.hidden = !captured || busy;
+    crosshairEl.hidden = !captured || busy;
+    crosshairEl.classList.toggle("is-over", captured && !busy && pickAtCenter() !== null);
+    lookHintEl.hidden = captured || !active || busy || isModalOpen();
+    canvas.style.cursor = lookHintEl.hidden ? "" : "pointer";
+  }
+
+  document.addEventListener("mousemove", (event) => {
+    if (!active || busy || !isMouseCaptured()) return;
+    // Facing a work holds the view until the mouse moves a little way.
+    if (focused) {
+      lookAway += Math.abs(event.movementX) + Math.abs(event.movementY);
+      if (lookAway < LOOK_AWAY) return;
+      clearFocus();
+    }
+    cameraYaw -= event.movementX * MOUSE_TURN;
+    cameraPitch = THREE.MathUtils.clamp(cameraPitch - event.movementY * MOUSE_TURN, PITCH_MIN, PITCH_MAX);
+  });
+
+  canvas.addEventListener("click", () => {
     if (!active || busy || isModalOpen()) return;
-    const target = pick(event.clientX, event.clientY);
+    if (!isMouseCaptured()) {
+      captureMouse();
+      return;
+    }
+    const target = pickAtCenter();
     if (!target) {
       clearFocus();
       return;
@@ -481,13 +587,16 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     // exhibit, touches it.
     if (target === focused && target !== "portrait" && focus.amount > 0.9) {
       if (target.interact) target.interact();
-      else onOpenWork(target.index, () => screenRect(target));
+      else {
+        releaseMouse();
+        onOpenWork(target.index, () => screenRect(target));
+      }
       return;
     }
     focusOn(target);
   });
 
-  exitEl.addEventListener("click", exit);
+  exitEl.addEventListener("click", () => exit());
 
   return { enter, exit, update, render, setSize, isActive: () => active };
 }

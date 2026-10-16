@@ -732,6 +732,109 @@
         outline: none;
       }
 
+      /* A key, drawn as a keycap. */
+      .gallery-hud kbd {
+        display: inline-block;
+        margin-right: 10px;
+        padding: 3px 7px;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 5px;
+        box-shadow: 0 2px 0 rgba(255, 255, 255, 0.25);
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 0.8em;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        text-transform: uppercase;
+        vertical-align: 0.1em;
+      }
+
+      /* While the cursor's captured, Esc frees it rather than leaving. */
+      .gallery-hud.is-captured .gallery-exit kbd {
+        display: none;
+      }
+
+      /* At the top of the screen while the cursor's captured: bright as it's
+         captured (is-fresh), then quieter, but always there. */
+      .gallery-esc-hint {
+        position: fixed;
+        left: 50%;
+        top: 28px;
+        margin: 0;
+        padding: 10px 18px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        opacity: 0.6;
+        transform: translateX(-50%);
+        transition:
+          opacity 0.6s ease,
+          transform 0.6s ease;
+      }
+
+      .gallery-esc-hint.is-fresh {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.08);
+        transition-duration: 0.2s;
+      }
+
+      /* A hollow ring in the middle of the screen, closing into a solid dot
+         over something that can be clicked. */
+      .gallery-crosshair {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        width: 16px;
+        height: 16px;
+        box-sizing: border-box;
+        border: 1.5px solid rgba(255, 255, 255, 0.85);
+        border-radius: 50%;
+        background: transparent;
+        box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+        transform: translate(-50%, -50%);
+        transition:
+          width 0.2s ease,
+          height 0.2s ease,
+          background 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      .gallery-crosshair.is-over {
+        width: 10px;
+        height: 10px;
+        border-color: #ffffff;
+        background: #ffffff;
+      }
+
+      .gallery-look-hint {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        margin: 0;
+        padding: 10px 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: rgba(255, 255, 255, 0.85);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        transform: translate(-50%, -50%);
+      }
+
       .gallery-keys {
         margin: 0;
         color: rgba(255, 255, 255, 0.45);
@@ -739,8 +842,13 @@
           -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
           sans-serif;
         font-size: 11px;
+        line-height: 1.9;
         letter-spacing: 0.2em;
         text-transform: uppercase;
+        text-align: center;
+        /* Wrapping before it reaches the menu and sound buttons. */
+        max-width: 600px;
+        padding: 0 16px;
       }
 
       /* While walking the gallery, the scrolling page's own overlays step
@@ -749,7 +857,6 @@
       body.is-exploring .mission-heading,
       body.is-exploring .section-nav,
       body.is-exploring .menu-cta,
-      body.is-exploring .menu-button,
       body.is-exploring .hallway-quote {
         display: none !important;
       }
@@ -2160,6 +2267,8 @@
       type="button"
       class="audio-toggle"
       aria-label="Sound"
+      aria-keyshortcuts="M"
+      title="Sound (M)"
       aria-pressed="false"
     >
 <svg viewBox="0 0 32 16" fill="none" aria-hidden="true">
@@ -2177,7 +2286,7 @@
     </button>
 
     <!-- Opens the menu (gameMenu.js), from anywhere on the page. -->
-    <button type="button" class="menu-button">menu</button>
+    <button type="button" class="menu-button" aria-keyshortcuts="Enter" title="Menu (Enter)">menu</button>
 
     <div class="hero-heading">
       <h2>creative technologist</h2>
@@ -2226,10 +2335,19 @@
     <!-- Walking the gallery: the fade between modes, and the controls. -->
     <div class="gallery-fade" aria-hidden="true"></div>
     <div class="gallery-hud" hidden>
-      <button type="button" class="gallery-exit">&larr; back to the bench</button>
+      <!-- In the middle of the screen while the mouse is captured, picking
+           whatever it's over; or, while it's free, the way to capture it. -->
+      <div class="gallery-crosshair" aria-hidden="true" hidden></div>
+      <p class="gallery-look-hint" aria-hidden="true" hidden>click to look around</p>
+      <!-- What Esc does right now: frees the cursor while it's captured (this),
+           or leaves while it's free (the badge on the exit button). -->
+      <p class="gallery-esc-hint" aria-hidden="true" hidden><kbd>esc</kbd> to free your cursor</p>
+      <button type="button" class="gallery-exit"><kbd>esc</kbd> back to the bench</button>
       <p class="gallery-keys" aria-hidden="true">
-        wasd to walk &nbsp;&middot;&nbsp; mouse to look &nbsp;&middot;&nbsp;
-        click a work to view it &nbsp;&middot;&nbsp; esc to leave
+        <!-- Non-breaking within each, so lines only wrap between them. -->
+        wasd&nbsp;to&nbsp;walk &nbsp;&middot;&nbsp; mouse&nbsp;to&nbsp;look &nbsp;&middot;&nbsp;
+        click&nbsp;a&nbsp;work&nbsp;to&nbsp;view&nbsp;it &nbsp;&middot;&nbsp;
+        tab&nbsp;for&nbsp;the&nbsp;menu &nbsp;&middot;&nbsp; m&nbsp;for&nbsp;sound
       </p>
     </div>
 

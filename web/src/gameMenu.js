@@ -35,7 +35,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 export function createGameMenu({ detail, onChange = () => {}, onBackToStart = () => {} }) {
   const ctaEl = document.querySelector(".menu-cta");
   const menuButtonEl = document.querySelector(".menu-button");
-  // The menu button is hidden while loading and while walking the gallery.
+  // The menu button is hidden while loading.
   const menuButtonShown = () =>
     menuButtonEl.getClientRects().length > 0 && !document.body.classList.contains("is-loading");
   const root = document.querySelector(".menu-modal");
@@ -363,7 +363,11 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     if (viewerIsOpen()) return;
 
     if (event.key === "Escape") {
-      if (isOpen && !detail.isOpen()) back();
+      if (isOpen && !detail.isOpen()) {
+        back();
+        // Handled, so it doesn't also e.g. leave the gallery walk underneath.
+        event.preventDefault();
+      }
       return;
     }
 
