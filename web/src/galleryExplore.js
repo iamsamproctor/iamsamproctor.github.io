@@ -5,10 +5,11 @@ import { createBlendTree1D } from "./blendTree1D.js";
 
 // Walking the gallery: from the end of the hallway, the scene fades to black
 // and back in with the museum visitor (Josh, see josh.js) standing up from
-// the bench, and he walks the hallway in third person. Idle, walk and run
-// are blended by his speed (see blendTree1D.js). Leaving fades
-// back out and returns to the visitor sitting on the bench, exactly where
-// the page was left.
+// the bench, and he walks the hallway in third person, and on through the
+// doors at its far end into the grand room (grandRoom.js). Idle, walk and run
+// are blended by his speed (see blendTree1D.js). Leaving fades back out and
+// returns to the visitor sitting on the bench, exactly where the page was
+// left.
 //
 // Controls (mouse and keyboard; it isn't offered on touch screens yet):
 //  - W/S or ↑/↓ walk, A/D step sideways, ←/→ turn, Shift runs.
@@ -16,18 +17,20 @@ import { createBlendTree1D } from "./blendTree1D.js";
 //    right edge of the screen keeps turning that way. The cursor stays free
 //    so works can be clicked.
 //  - Clicking a work on the wall brings the camera round to face it;
-//    clicking it again opens its project (onOpenWork). Walking, clicking
-//    elsewhere, or Esc steps back from it.
+//    clicking it again opens its project (onOpenWork). Exhibits in the grand
+//    room work the same way, a second click touching them instead. Walking,
+//    clicking elsewhere, or Esc steps back from it.
 //  - Esc (when not looking at a work) leaves.
 
 const FADE = 0.55; // seconds for each half of the fade through black
 
-const RADIUS = 0.28; // how close he gets to walls and the bench
+const RADIUS = 0.28; // how close he gets to walls and things on the floor
 const WALK_SPEED = 2.1; // world units per second
 const RUN_SPEED = 3.6;
 const ACCELERATION = 10; // how quickly he reaches speed and stops
 const TURN_SPEED = THREE.MathUtils.degToRad(100); // ←/→ keys, per second
 const SPAWN = new THREE.Vector3(0, 0, 3.7); // just in front of the bench
+const DOOR_REACH = 3.5; // how close the doors open at
 
 // How fast the walk and run clips cover ground at normal speed, measured from
 // how fast a planted foot slides back in each. Walking faster or slower than
@@ -88,7 +91,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     });
   }
 
-  const { halfWidth, length, height, ribDepth } = hallway.bounds;
+  const { areas, obstacles } = hallway.floorPlan;
   const benchBox = new THREE.Box3();
 
   let active = false;
@@ -106,7 +109,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
   let lookPitch = 0;
 
   // Facing a work: which one, and how far the camera has swung round to it.
-  let focused = null; // a hallway.pieces entry, or "portrait"
+  let focused = null; // a hallway.pieces or hallway.exhibits entry, or "portrait"
   const focus = { amount: 0 };
   let focusTween = null;
   const focusPosition = new THREE.Vector3();
@@ -150,6 +153,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
       document.body.classList.add("is-exploring");
       document.documentElement.style.overflow = "hidden";
       museumVisitor.setFigureVisible(false);
+      hallway.setGrandRoomVisible(true);
       character.visible = true;
       position.copy(SPAWN);
       velocity.set(0, 0, 0);
@@ -170,6 +174,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
       document.body.classList.remove("is-exploring");
       document.documentElement.style.overflow = "";
       museumVisitor.setFigureVisible(true);
+      hallway.setGrandRoomVisible(false);
       character.visible = false;
       clearFocus({ instant: true });
       keys.clear();
@@ -182,7 +187,11 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
 
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const pickables = () => [hallway.portrait, ...hallway.pieces.map((piece) => piece.picture)];
+  const pickables = () => [
+    hallway.portrait,
+    ...hallway.pieces.map((piece) => piece.picture),
+    ...hallway.exhibits.map((exhibit) => exhibit.hitbox),
+  ];
 
   function pick(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
@@ -194,12 +203,27 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     const hit = raycaster.intersectObjects(pickables(), false)[0];
     if (!hit) return null;
     if (hit.object === hallway.portrait) return "portrait";
-    return hallway.pieces.find((piece) => piece.picture === hit.object) ?? null;
+    return (
+      hallway.pieces.find((piece) => piece.picture === hit.object) ??
+      hallway.exhibits.find((exhibit) => exhibit.hitbox === hit.object) ??
+      null
+    );
   }
 
   const normal = new THREE.Vector3();
   const size = new THREE.Vector3();
   function focusOn(target) {
+    focused = target;
+    focusTween?.kill();
+    focusTween = gsap.to(focus, { amount: 1, duration: FOCUS_DURATION, ease: "power2.inOut" });
+
+    // Exhibits know where to be viewed from.
+    if (target.focusPosition) {
+      focusPosition.copy(target.focusPosition);
+      focusTarget.copy(target.focusTarget);
+      return;
+    }
+
     const mesh = target === "portrait" ? hallway.portrait : target.picture;
     mesh.updateWorldMatrix(true, false);
     mesh.getWorldPosition(focusTarget);
@@ -211,11 +235,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     const fitWidth = size.x / 2 / (Math.tan(halfFov) * camera.aspect);
     const distance = Math.max(fitHeight, fitWidth) * FOCUS_MARGIN;
     focusPosition.copy(focusTarget).addScaledVector(normal, distance);
-    clampToHall(focusPosition);
-
-    focused = target;
-    focusTween?.kill();
-    focusTween = gsap.to(focus, { amount: 1, duration: FOCUS_DURATION, ease: "power2.inOut" });
+    confine(focusPosition, WALL_GAP, { vertical: true });
   }
 
   function clearFocus({ instant = false } = {}) {
@@ -249,24 +269,35 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
 
   // --- Moving ----------------------------------------------------------
 
-  function clampToHall(point) {
-    point.x = THREE.MathUtils.clamp(point.x, -halfWidth + WALL_GAP, halfWidth - WALL_GAP);
-    point.y = THREE.MathUtils.clamp(point.y, 0.3, height - 0.3);
-    point.z = THREE.MathUtils.clamp(point.z, WALL_GAP + 0.1, length - 0.1 - WALL_GAP);
+  // Keeps a point on the open floor (hallway.floorPlan's areas), at least
+  // `margin` from any wall: if it's strayed outside all of them, it's moved to
+  // the nearest point that isn't, which slides it along walls. With
+  // `vertical`, it's also kept under that area's ceiling (for the camera).
+  const clamped = new THREE.Vector3();
+  const nearest = new THREE.Vector3();
+  function confine(point, margin, { vertical = false } = {}) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const area of areas) {
+      if (area.door && !hallway.doors.isOpen()) continue;
+      clamped.set(
+        THREE.MathUtils.clamp(point.x, area.minX + margin, area.maxX - margin),
+        point.y,
+        THREE.MathUtils.clamp(point.z, area.minZ + margin, area.maxZ - margin),
+      );
+      const distance = clamped.distanceToSquared(point);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = area;
+        nearest.copy(clamped);
+      }
+      if (distance === 0) break;
+    }
+    point.copy(nearest);
+    if (vertical) point.y = THREE.MathUtils.clamp(point.y, 0.3, best.height - 0.3);
   }
 
-  function collide() {
-    // Inside the pilasters along the walls, and short of either end.
-    const sideLimit = halfWidth - ribDepth - RADIUS;
-    position.x = THREE.MathUtils.clamp(position.x, -sideLimit, sideLimit);
-    position.z = THREE.MathUtils.clamp(position.z, 0.45 + RADIUS, length - 0.1 - RADIUS);
-
-    // Round the bench: push out along whichever side is nearest.
-    museumVisitor.getBenchBounds(benchBox);
-    const minX = benchBox.min.x - RADIUS;
-    const maxX = benchBox.max.x + RADIUS;
-    const minZ = benchBox.min.z - RADIUS;
-    const maxZ = benchBox.max.z + RADIUS;
+  function pushOutOfBox(minX, maxX, minZ, maxZ) {
     if (position.x > minX && position.x < maxX && position.z > minZ && position.z < maxZ) {
       const pushes = [
         [position.x - minX, () => (position.x = minX)],
@@ -276,6 +307,34 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
       ];
       pushes.sort((a, b) => a[0] - b[0])[0][1]();
     }
+  }
+
+  function collide() {
+    confine(position, RADIUS);
+
+    // Round whatever's on the floor: out along whichever side is nearest.
+    for (const obstacle of obstacles) {
+      if (obstacle.radius) {
+        const dx = position.x - obstacle.x;
+        const dz = position.z - obstacle.z;
+        const reach = obstacle.radius + RADIUS;
+        const distance = Math.hypot(dx, dz);
+        if (distance < reach && distance > 0) {
+          position.x = obstacle.x + (dx / distance) * reach;
+          position.z = obstacle.z + (dz / distance) * reach;
+        }
+      } else {
+        const { min, max } = obstacle;
+        pushOutOfBox(min.x - RADIUS, max.x + RADIUS, min.z - RADIUS, max.z + RADIUS);
+      }
+    }
+    museumVisitor.getBenchBounds(benchBox);
+    pushOutOfBox(
+      benchBox.min.x - RADIUS,
+      benchBox.max.x + RADIUS,
+      benchBox.min.z - RADIUS,
+      benchBox.max.z + RADIUS,
+    );
   }
 
   const forward = new THREE.Vector3();
@@ -319,6 +378,9 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
     }
     velocity.lerp(desired, 1 - Math.exp(-ACCELERATION * deltaTime));
     position.addScaledVector(velocity, deltaTime);
+    // The doors into the grand room open as he comes up to them, from either
+    // side, and close once he's moved on.
+    hallway.doors.update(deltaTime, position.distanceTo(hallway.doors.center) < DOOR_REACH);
     collide();
 
     character.position.set(position.x, 0, position.z);
@@ -347,7 +409,7 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
       .set(position.x, EYE_HEIGHT + CAMERA_RISE, position.z)
       .addScaledVector(lookDirection, -CAMERA_DISTANCE)
       .add(new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).multiplyScalar(CAMERA_SHOULDER));
-    clampToHall(followPosition);
+    confine(followPosition, WALL_GAP, { vertical: true });
 
     // Swing between following and facing a work.
     const t = focus.amount;
@@ -415,9 +477,11 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, isMod
       clearFocus();
       return;
     }
-    // A second click on the work being faced opens its project.
+    // A second click on the work being faced opens its project, or on an
+    // exhibit, touches it.
     if (target === focused && target !== "portrait" && focus.amount > 0.9) {
-      onOpenWork(target.index, () => screenRect(target));
+      if (target.interact) target.interact();
+      else onOpenWork(target.index, () => screenRect(target));
       return;
     }
     focusOn(target);
