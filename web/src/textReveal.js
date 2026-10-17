@@ -106,7 +106,8 @@ export function createTextReveal(
       const char = chars[i];
       const start = i * stagger;
 
-      if (now < start) {
+      // <=, so the first character is hidden too once a hide() reaches 0.
+      if (now <= start) {
         applyPhase(char, HIDDEN);
       } else if (now < start + scrambleDuration) {
         applyPhase(char, SCRAMBLING);
@@ -134,6 +135,12 @@ export function createTextReveal(
       duration: Math.abs(target - proxy.t) / speed,
       ease: "none",
       onUpdate: () => render(proxy.t),
+      // GSAP rounds tweened values to 4 decimals, so the last update can
+      // stop a hair short of `total` and leave the last character settling.
+      onComplete: () => {
+        proxy.t = target;
+        render(target);
+      },
     });
   };
 
