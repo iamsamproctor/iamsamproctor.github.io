@@ -86,11 +86,9 @@ const loadingScreen = createLoadingScreen({
     backgroundMusic.fadeIn(4);
     revealBurn.play({
       onReveal: () => {
+        // The hero heading's intro plays from applyScrollEffects once this
+        // is gone, unless the page was reloaded scrolled past it.
         document.body.classList.remove("is-loading");
-        heroHeadingReveal?.play();
-        // Let the title's scramble read as the lead beat before the
-        // subtext settles in underneath it, rather than both landing at once.
-        setTimeout(() => heroHeadingSubEl?.classList.add("is-visible"), 550);
         scheduleMuseumVisitor();
       },
     });
@@ -156,21 +154,23 @@ const cameraScrollRange = 1500; // px of scroll to move through all camera keyfr
 const scrollBlendSmoothing = 1.5; // rate scrollBlend chases scrollProgress; lower = more lag/slower dolly
 
 const heroHeadingEl = document.querySelector(".hero-heading");
-// The hero heading stays put in the corner like a title card. As the camera
-// starts to pull away, the subtitle fades and the title scrambles back out,
-// the reverse of its intro; scrolling back up scrambles it in again.
-const heroSubFadeEnd = 250; // px of scroll the subtitle is gone by
-const heroScrambleEnd = 700; // px of scroll the title is fully scrambled out by
-const heroDrift = 24; // px it rises over that span, for a little parallax
-let heroRevealAmount = 1; // last value handed to heroHeadingReveal.scrub
+// The hero heading stays put in the corner like a title card. Its transitions
+// are all or nothing, so there's never a half-scrambled title to scroll to:
+// scrolling past heroOutAt plays the whole exit (the subtitle fades and the
+// title scrambles back out, the reverse of its intro), and scrolling back
+// above it plays the whole intro again.
+const heroOutAt = 250; // px of scroll
+const heroSubDelay = 550; // ms after the title starts that the subtitle follows
+let heroShown = null; // null until first set, so a reload scrolled past it still hides its scrim
+let heroSubTimer = null;
 
 // At the last camera keyframe (the sky point), the scroll holds a while for
-// the mission statement, centered in the open sky: it scrambles in as the
-// camera nears the sky point and back out as the hallway begins.
+// the mission statement, in the hero title's corner. Like the hero, it's in
+// or out: it scrambles in as the camera nears the sky point and back out as
+// the hallway begins.
 const missionHoldRange = 600; // px of scroll the camera holds at the sky point
-const missionInRange = 500; // px before the sky point over which it scrambles in
-const missionOutRange = 400; // px, straddling the hallway's start, it scrambles out over
-let missionRevealAmount = 0; // last value handed to missionReveal.scrub
+const missionInAt = cameraScrollRange - 250; // px of scroll
+let missionState = null; // "before", "in" or "past"; null until first set
 
 // Then continuing to scroll pulls back from the splat scene to reveal it as a
 // portrait at the end of a hallway (see hallway.js), retreating down the
@@ -179,6 +179,7 @@ let missionRevealAmount = 0; // last value handed to missionReveal.scrub
 // scaled with hallway.js's END_DISTANCE, so the walk back keeps the same pace
 // per px scrolled.
 const hallwayStart = cameraScrollRange + missionHoldRange; // px of scroll it begins at
+const missionOutAt = hallwayStart; // px of scroll
 const hallwayScrollRange = 800; // px of scroll for this phase
 const hallwayBlendSmoothing = 3; // rate the hallway dolly chases scroll; lower = more lag
 let hallwayProgress = 0; // raw 0-1
@@ -277,59 +278,35 @@ handleScroll();
 function applyScrollEffects(scrollY) {
   scrollProgress = THREE.MathUtils.clamp(scrollY / cameraScrollRange, 0, 1);
 
-  if (heroHeadingEl) {
-    // Gated on is-loading rather than left to the CSS rule for it: this
-    // element's opacity is also driven inline below, and an inline style
-    // always wins over a class-based rule, so without this check it would
-    // pop in the instant the loader is removed instead of waiting for the
-    // reveal-burn's fade-in.
-    if (document.body.classList.contains("is-loading")) {
-      heroHeadingEl.style.opacity = "0";
-    } else {
-      const exitT = THREE.MathUtils.clamp(scrollY / heroScrambleEnd, 0, 1);
-      // Only scrub on a change, so sitting at the top doesn't cut short the
-      // intro scramble that plays on reveal.
-      const revealAmount = 1 - exitT;
-      if (revealAmount !== heroRevealAmount) {
-        heroRevealAmount = revealAmount;
-        heroHeadingReveal?.scrub(revealAmount);
+  // Both headings wait for the loader to go, so the hero's intro lands with
+  // the reveal-burn.
+  if (!document.body.classList.contains("is-loading")) {
+    const heroWanted = scrollY < heroOutAt;
+    if (heroHeadingEl && heroWanted !== heroShown) {
+      heroShown = heroWanted;
+      // The scrim and a small rise go with it (see .hero-heading.is-past).
+      heroHeadingEl.classList.toggle("is-past", !heroShown);
+      clearTimeout(heroSubTimer);
+      if (heroShown) {
+        heroHeadingReveal?.show();
+        // Let the title's scramble read as the lead beat before the
+        // subtext settles in underneath it, rather than both landing at once.
+        heroSubTimer = setTimeout(() => heroHeadingSubEl?.classList.add("is-visible"), heroSubDelay);
+      } else {
+        heroHeadingSubEl?.classList.remove("is-visible");
+        heroHeadingReveal?.hide();
       }
-      // Left to the stylesheet at the top, so it doesn't override the
-      // subtitle's own delayed fade-in after the title's intro.
-      if (heroHeadingSubEl) {
-        heroHeadingSubEl.style.opacity =
-          scrollY > 0
-            ? String(1 - THREE.MathUtils.smoothstep(scrollY, 0, heroSubFadeEnd))
-            : "";
-      }
-      // Fully hidden past the end, so reduced-motion (where scrub is a no-op)
-      // still clears it.
-      heroHeadingEl.style.opacity = exitT >= 1 ? "0" : "1";
-      heroHeadingEl.style.setProperty("--hero-scrim", String(1 - exitT));
-      heroHeadingEl.style.transform = `translateY(${-exitT * heroDrift}px)`;
     }
-  }
 
-  if (missionHeadingEl) {
-    if (document.body.classList.contains("is-loading")) {
-      missionHeadingEl.style.opacity = "0";
-    } else {
-      const inT = THREE.MathUtils.clamp((scrollY - (cameraScrollRange - missionInRange)) / missionInRange, 0, 1);
-      const outT = THREE.MathUtils.clamp(
-        (scrollY - (hallwayStart - missionOutRange / 2)) / missionOutRange,
-        0,
-        1,
-      );
-      const amount = Math.min(inT, 1 - outT);
-      if (amount !== missionRevealAmount) {
-        missionRevealAmount = amount;
-        missionReveal?.scrub(amount);
-      }
-      // Fully hidden outside its range, so reduced-motion (where scrub is a
-      // no-op) still clears it. The label and second line fade with it.
-      missionHeadingEl.style.opacity = amount <= 0 ? "0" : "1";
-      missionHeadingEl.style.setProperty("--mission-fade", String(THREE.MathUtils.smoothstep(amount, 0.3, 1)));
-      missionHeadingEl.style.setProperty("--mission-drift", `${((1 - inT) - outT) * heroDrift}px`);
+    const missionWanted = scrollY < missionInAt ? "before" : scrollY < missionOutAt ? "in" : "past";
+    if (missionHeadingEl && missionWanted !== missionState) {
+      missionState = missionWanted;
+      // The label, second line and scrim fade, and it drifts up through
+      // its place (see .mission-heading.is-in and .is-past).
+      missionHeadingEl.classList.toggle("is-in", missionState === "in");
+      missionHeadingEl.classList.toggle("is-past", missionState === "past");
+      if (missionState === "in") missionReveal?.show();
+      else missionReveal?.hide();
     }
   }
 

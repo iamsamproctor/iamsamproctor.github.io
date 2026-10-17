@@ -47,6 +47,7 @@ export function createTextReveal(
     settleDelay = 0.14,
     scrambleChars = SCRAMBLE_CHARS,
     lockWidths = false,
+    hideSpeed = 2, // how much faster hide() runs the scramble back out than it came in
   } = {},
 ) {
   const text = el.textContent.replace(/\s+/g, " ").trim();
@@ -84,12 +85,17 @@ export function createTextReveal(
   }
 
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // No scramble: the text is simply there, or cut away at once.
     chars.forEach((char) => applyPhase(char, DONE));
-    return { play: () => {}, scrub: () => {} };
+    return {
+      play: () => {},
+      show: () => chars.forEach((char) => applyPhase(char, DONE)),
+      hide: () => chars.forEach((char) => applyPhase(char, HIDDEN)),
+    };
   }
 
   let ready = false;
-  let queuedPlay = false;
+  let queued = null; // play or show, asked for before setup finished
 
   const total =
     (chars.length - 1) * stagger + scrambleDuration + settleDelay;
@@ -117,44 +123,62 @@ export function createTextReveal(
     }
   };
 
-  const tween = gsap.to(proxy, {
-    t: total,
-    duration: total,
-    ease: "none",
-    paused: true,
-    onUpdate: () => render(proxy.t),
-  });
+  let tween = null;
+  let heading = 0; // the point in the scramble it's at or on its way to
 
-  const play = () => {
+  const runTo = (target, speed) => {
+    heading = target;
+    tween?.kill();
+    tween = gsap.to(proxy, {
+      t: target,
+      duration: Math.abs(target - proxy.t) / speed,
+      ease: "none",
+      onUpdate: () => render(proxy.t),
+    });
+  };
+
+  // Scrambles the text in from wherever it is, through to the end. Does
+  // nothing if it's already in or on its way in, so it can be called freely.
+  const show = () => {
     if (!ready) {
-      queuedPlay = true;
+      queued = show;
       return;
     }
+    if (heading === total) return;
     chars.forEach((char) => {
       char.lastSwap = -Infinity;
     });
-    tween.restart();
-    playRevealSound(el, total);
+    playRevealSound(el, total - proxy.t);
+    runTo(total, 1);
   };
 
-  // Drives the reveal by hand instead of over time: 1 is fully revealed, 0
-  // fully hidden, and values between run the scramble at that point. Takes
-  // over from a play() still in progress.
-  const scrub = (amount) => {
-    if (!ready) return;
-    tween.pause();
-    proxy.t = Math.min(Math.max(amount, 0), 1) * total;
-    render(proxy.t);
+  // Scrambles it back out from wherever it is, last character first.
+  const hide = () => {
+    if (!ready) {
+      queued = null; // setup leaves it hidden
+      return;
+    }
+    if (heading === 0) return;
+    runTo(0, hideSpeed);
+  };
+
+  // The whole scramble in from nothing, even if it's already showing.
+  const play = () => {
+    if (!ready) {
+      queued = play;
+      return;
+    }
+    proxy.t = 0;
+    heading = 0;
+    show();
   };
 
   const finishSetup = () => {
     if (lockWidths) lockCharWidths(chars);
     chars.forEach((char) => applyPhase(char, HIDDEN));
     ready = true;
-    if (queuedPlay) {
-      queuedPlay = false;
-      play();
-    }
+    queued?.();
+    queued = null;
   };
 
   if (lockWidths) {
@@ -177,7 +201,7 @@ export function createTextReveal(
     finishSetup();
   }
 
-  return { play, scrub };
+  return { play, show, hide };
 }
 
 export function revealOnEnter(el, options) {

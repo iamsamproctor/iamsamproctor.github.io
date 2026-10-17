@@ -194,8 +194,20 @@
         display: block;
         overflow: hidden;
         /* Soft ends, so the wave seems to pass through rather than being cut. */
-        -webkit-mask-image: linear-gradient(to right, transparent, #000 25%, #000 75%, transparent);
-        mask-image: linear-gradient(to right, transparent, #000 25%, #000 75%, transparent);
+        -webkit-mask-image: linear-gradient(
+          to right,
+          transparent,
+          #000 25%,
+          #000 75%,
+          transparent
+        );
+        mask-image: linear-gradient(
+          to right,
+          transparent,
+          #000 25%,
+          #000 75%,
+          transparent
+        );
       }
 
       .audio-toggle-amplitude {
@@ -248,13 +260,21 @@
         /* Inset from the screen corner, so the scrim below can reach it. */
         --hero-inset-x: 32px;
         --hero-inset-y: 64px;
-        transition: opacity 0.8s ease-out;
+        transition:
+          opacity 0.8s ease-out,
+          transform 0.8s ease-out;
+      }
+
+      /* Scrolled past: main.js scrambles the title out, and it rises a
+         little as it goes. */
+      .hero-heading.is-past {
+        transform: translateY(-24px);
       }
 
       /* A soft dark glow behind the heading so it reads over bright parts
          of the scene. It starts at the screen's bottom-left corner and fades
-         out well past the text, so it has no visible edge. --hero-scrim is
-         set from main.js so it fades out as the heading scrambles away. */
+         out well past the text, so it has no visible edge. It fades out with
+         the heading. */
       .hero-heading::before {
         content: "";
         position: absolute;
@@ -271,8 +291,12 @@
           rgba(0, 0, 0, 0.06) 72%,
           rgba(0, 0, 0, 0) 100%
         );
-        opacity: var(--hero-scrim, 1);
         pointer-events: none;
+        transition: opacity 0.6s ease-out;
+      }
+
+      .hero-heading.is-past::before {
+        opacity: 0;
       }
 
       .hero-heading h2 {
@@ -283,15 +307,17 @@
            small forms, so the heading text is left in normal case. Other
            candidates can be tried with ?fonts (fontPreview.js). */
         font-family:
-          "Major Mono Display",
-          ui-monospace,
-          "SF Mono",
-          Menlo,
-          monospace;
+          "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
         font-size: clamp(26px, 4.4vw, 61px);
         font-weight: 400;
         line-height: 1.15;
         letter-spacing: -0.02em;
+      }
+
+      /* One word per line. textReveal.js rebuilds the text, so a <br> in the
+         markup would be lost; it wraps each word in a .reveal-word, though. */
+      .hero-heading h2 .reveal-word {
+        display: block;
       }
 
       .hero-heading p {
@@ -315,9 +341,9 @@
 
       /* The mission statement, in the hero title's corner once the camera has
          pulled out, but quieter: a small label, a light statement, and a
-         dimmer line under it. main.js scrambles the statement in and out,
-         fades the rest with --mission-fade, and drifts it with
-         --mission-drift. */
+         dimmer line under it. main.js scrambles the statement in and out and
+         sets is-in while it's shown and is-past once scrolled beyond, so the
+         rest fades with it and it drifts up through its place. */
       .mission-heading {
         position: fixed;
         left: 32px;
@@ -329,9 +355,18 @@
           -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
           sans-serif;
         pointer-events: none;
-        opacity: 0;
-        transform: translateY(var(--mission-drift, 0px));
-        transition: opacity 0.8s ease-out;
+        transform: translateY(24px);
+        transition:
+          opacity 0.8s ease-out,
+          transform 0.9s ease-out;
+      }
+
+      .mission-heading.is-in {
+        transform: none;
+      }
+
+      .mission-heading.is-past {
+        transform: translateY(-24px);
       }
 
       /* A soft dark glow from the corner, as behind the hero title. */
@@ -350,12 +385,24 @@
           rgba(0, 0, 0, 0.08) 65%,
           rgba(0, 0, 0, 0) 100%
         );
-        opacity: var(--mission-fade, 0);
       }
 
+      .mission-heading::before,
       .mission-eyebrow,
       .mission-sub {
-        opacity: var(--mission-fade, 0);
+        opacity: 0;
+        transition: opacity 0.6s ease-out;
+      }
+
+      .mission-heading.is-in::before,
+      .mission-heading.is-in .mission-eyebrow,
+      .mission-heading.is-in .mission-sub {
+        opacity: 1;
+      }
+
+      /* On the way in, the second line follows the statement's scramble. */
+      .mission-heading.is-in .mission-sub {
+        transition-delay: 0.5s;
       }
 
       .mission-eyebrow {
@@ -617,7 +664,8 @@
         -webkit-backdrop-filter: blur(6px);
         backdrop-filter: blur(6px);
         color: #ffffff;
-        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-family:
+          "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
         font-size: 22px;
         letter-spacing: 0.12em;
         cursor: pointer;
@@ -656,7 +704,8 @@
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
         color: rgba(255, 255, 255, 0.85);
-        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-family:
+          "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
         font-size: clamp(14px, 1.4vw, 17px);
         letter-spacing: 0.08em;
         cursor: pointer;
@@ -715,7 +764,8 @@
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
         color: rgba(255, 255, 255, 0.85);
-        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-family:
+          "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
         font-size: 14px;
         letter-spacing: 0.08em;
         cursor: pointer;
@@ -975,7 +1025,8 @@
         flex-wrap: wrap;
         align-items: center;
         gap: 4px 10px;
-        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-family:
+          "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
         font-size: 15px;
         letter-spacing: 0.06em;
       }
@@ -1126,7 +1177,8 @@
         border: 0;
         background: none;
         color: rgba(255, 255, 255, 0.5);
-        font-family: "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
+        font-family:
+          "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
         text-align: left;
         cursor: pointer;
         transition:
@@ -2210,7 +2262,8 @@
       body.is-loading .audio-toggle,
       body.is-loading .menu-button,
       body.is-loading .section-nav,
-      body.is-loading .hero-heading {
+      body.is-loading .hero-heading,
+      body.is-loading .mission-heading {
         opacity: 0;
       }
 
@@ -2317,7 +2370,7 @@
       title="Sound (M)"
       aria-pressed="false"
     >
-<svg viewBox="0 0 32 16" fill="none" aria-hidden="true">
+      <svg viewBox="0 0 32 16" fill="none" aria-hidden="true">
         <g class="audio-toggle-amplitude">
           <path
             class="audio-toggle-wave"
@@ -2332,10 +2385,17 @@
     </button>
 
     <!-- Opens the menu (gameMenu.js), from anywhere on the page. -->
-    <button type="button" class="menu-button" aria-keyshortcuts="Enter" title="Menu (Enter)">menu</button>
+    <button
+      type="button"
+      class="menu-button"
+      aria-keyshortcuts="Enter"
+      title="Menu (Enter)"
+    >
+      menu
+    </button>
 
     <div class="hero-heading">
-      <h2>creative technologist</h2>
+      <h2>creative developer</h2>
       <p>XR | Games | Gaussian Splats | Music</p>
     </div>
 
@@ -2345,12 +2405,18 @@
       <p class="mission-eyebrow">Mission</p>
       <h2>I make interactive realities.</h2>
       <p class="mission-sub">
-        Immersive media, games, and digital art, as lenses for seeing the world differently.
+        Immersive media, games, and digital art, as lenses for seeing the world
+        differently.
       </p>
     </div>
 
     <nav class="section-nav" aria-label="Section navigation">
-      <button type="button" data-section="hero" aria-label="Welcome" class="is-active">
+      <button
+        type="button"
+        data-section="hero"
+        aria-label="Welcome"
+        class="is-active"
+      >
         <span class="section-nav-label">Welcome</span>
       </button>
       <button type="button" data-section="mission" aria-label="Mission">
@@ -2361,7 +2427,12 @@
       </button>
     </nav>
 
-    <div class="hallway-quote" role="button" tabindex="-1" aria-label="Show another quote">
+    <div
+      class="hallway-quote"
+      role="button"
+      tabindex="-1"
+      aria-label="Show another quote"
+    >
       <blockquote class="hallway-quote-inner">
         <p class="hallway-quote-text"></p>
         <footer class="hallway-quote-author"></footer>
@@ -2385,17 +2456,26 @@
            whatever it's over; or, while it's free, the way to capture it. -->
       <div class="gallery-crosshair" aria-hidden="true" hidden></div>
       <!-- Under the crosshair: what clicking will do to what it's over. -->
-      <p class="gallery-prompt" aria-live="polite" hidden><kbd>click</kbd><span></span></p>
-      <p class="gallery-look-hint" aria-hidden="true" hidden>click to look around</p>
+      <p class="gallery-prompt" aria-live="polite" hidden>
+        <kbd>click</kbd><span></span>
+      </p>
+      <p class="gallery-look-hint" aria-hidden="true" hidden>
+        click to look around
+      </p>
       <!-- What Esc does right now: frees the cursor while it's captured (this),
            or leaves while it's free (the badge on the exit button). -->
-      <p class="gallery-esc-hint" aria-hidden="true" hidden><kbd>esc</kbd> to free your cursor</p>
-      <button type="button" class="gallery-exit"><kbd>esc</kbd> back to the bench</button>
+      <p class="gallery-esc-hint" aria-hidden="true" hidden>
+        <kbd>esc</kbd> to free your cursor
+      </p>
+      <button type="button" class="gallery-exit">
+        <kbd>esc</kbd> back to the bench
+      </button>
       <p class="gallery-keys" aria-hidden="true">
         <!-- Non-breaking within each, so lines only wrap between them. -->
-        wasd&nbsp;to&nbsp;walk &nbsp;&middot;&nbsp; mouse&nbsp;to&nbsp;look &nbsp;&middot;&nbsp;
-        click&nbsp;a&nbsp;work&nbsp;to&nbsp;view&nbsp;it &nbsp;&middot;&nbsp;
-        tab&nbsp;for&nbsp;the&nbsp;menu &nbsp;&middot;&nbsp; m&nbsp;for&nbsp;sound
+        wasd&nbsp;to&nbsp;walk &nbsp;&middot;&nbsp; mouse&nbsp;to&nbsp;look
+        &nbsp;&middot;&nbsp; click&nbsp;a&nbsp;work&nbsp;to&nbsp;view&nbsp;it
+        &nbsp;&middot;&nbsp; tab&nbsp;for&nbsp;the&nbsp;menu
+        &nbsp;&middot;&nbsp; m&nbsp;for&nbsp;sound
       </p>
     </div>
 
@@ -2405,11 +2485,22 @@
          bar's breadcrumb steps back through them. See gameMenu.js. -->
     <div class="menu-modal" hidden>
       <div class="menu-modal-backdrop"></div>
-      <div class="menu-modal-panel" role="dialog" aria-modal="true" aria-label="Menu">
+      <div
+        class="menu-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+      >
         <div class="menu-modal-bar">
           <nav class="menu-modal-crumbs" aria-label="Breadcrumb"></nav>
           <button type="button" class="menu-modal-close" aria-label="Close">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            >
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
@@ -2439,212 +2530,221 @@
               </li>
             </ul>
             <p class="game-menu-keys" aria-hidden="true">
-              &uarr;&darr; select &nbsp;&middot;&nbsp; enter open &nbsp;&middot;&nbsp; esc close
+              &uarr;&darr; select &nbsp;&middot;&nbsp; enter open
+              &nbsp;&middot;&nbsp; esc close
             </p>
           </div>
         </div>
 
         <div class="menu-screen" data-screen="work" hidden>
-    <section id="work" class="page-section">
-      <header class="work-header">
-        <p class="work-eyebrow">Work</p>
-        <h2 class="work-heading">
-          Selected works,<br />
-          <span>across AR, game dev, and 3D art.</span>
-        </h2>
-        <p class="work-intro">
-          A few of my projects &mdash; real-time experiences, playable worlds,
-          and the tooling underneath them.
-        </p>
-      </header>
+          <section id="work" class="page-section">
+            <header class="work-header">
+              <p class="work-eyebrow">Work</p>
+              <h2 class="work-heading">
+                Selected works,<br />
+                <span>across AR, game dev, and 3D art.</span>
+              </h2>
+              <p class="work-intro">
+                A few of my projects &mdash; real-time experiences, playable
+                worlds, and the tooling underneath them.
+              </p>
+            </header>
 
-      <div class="work-cells">
-        <button
-          type="button"
-          class="work-cell"
-          data-work="Journey to the Sambaverse"
-        >
-          <span class="work-cell-media">
-            <img
-              src="/assets/images/Thumbnail_JourneyToTheSambaVerse.jpg"
-              alt="Journey to the Sambaverse"
-            />
-            <video
-              src="/assets/videos/trees.mp4"
-              muted
-              loop
-              playsinline
-              preload="none"
-            ></video>
-          </span>
-          <span class="work-cell-bar">
-            <span class="work-cell-title">Journey to the Sambaverse</span>
-            <span class="work-cell-meta">
-              <span class="work-cell-blurb"
-                >An interactive music video you move through.</span
+            <div class="work-cells">
+              <button
+                type="button"
+                class="work-cell"
+                data-work="Journey to the Sambaverse"
               >
-              <span class="work-cell-cta">Click to explore &rarr;</span>
-            </span>
-          </span>
-        </button>
+                <span class="work-cell-media">
+                  <img
+                    src="/assets/images/Thumbnail_JourneyToTheSambaVerse.jpg"
+                    alt="Journey to the Sambaverse"
+                  />
+                  <video
+                    src="/assets/videos/trees.mp4"
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                  ></video>
+                </span>
+                <span class="work-cell-bar">
+                  <span class="work-cell-title">Journey to the Sambaverse</span>
+                  <span class="work-cell-meta">
+                    <span class="work-cell-blurb"
+                      >An interactive music video you move through.</span
+                    >
+                    <span class="work-cell-cta">Click to explore &rarr;</span>
+                  </span>
+                </span>
+              </button>
 
-        <button type="button" class="work-cell" data-work="Jadu Fight">
-          <span class="work-cell-media">
-            <img
-              src="/assets/images/Thumbnail_JaduFight.jpg"
-              alt="Jadu Fight"
-            />
-            <video
-              src="/assets/videos/trees.mp4"
-              muted
-              loop
-              playsinline
-              preload="none"
-            ></video>
-          </span>
-          <span class="work-cell-bar">
-            <span class="work-cell-title">Jadu Fight</span>
-            <span class="work-cell-meta">
-              <span class="work-cell-blurb"
-                >Real-time avatar combat built for the browser.</span
-              >
-              <span class="work-cell-cta">Click to explore &rarr;</span>
-            </span>
-          </span>
-        </button>
+              <button type="button" class="work-cell" data-work="Jadu Fight">
+                <span class="work-cell-media">
+                  <img
+                    src="/assets/images/Thumbnail_JaduFight.jpg"
+                    alt="Jadu Fight"
+                  />
+                  <video
+                    src="/assets/videos/trees.mp4"
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                  ></video>
+                </span>
+                <span class="work-cell-bar">
+                  <span class="work-cell-title">Jadu Fight</span>
+                  <span class="work-cell-meta">
+                    <span class="work-cell-blurb"
+                      >Real-time avatar combat built for the browser.</span
+                    >
+                    <span class="work-cell-cta">Click to explore &rarr;</span>
+                  </span>
+                </span>
+              </button>
 
-        <button type="button" class="work-cell" data-work="Handheld Guy">
-          <span class="work-cell-media">
-            <img
-              src="/assets/images/Thumbnail_HandheldGuy.jpg"
-              alt="Handheld Guy"
-            />
-            <video
-              src="/assets/videos/trees.mp4"
-              muted
-              loop
-              playsinline
-              preload="none"
-            ></video>
-          </span>
-          <span class="work-cell-bar">
-            <span class="work-cell-title">Handheld Guy</span>
-            <span class="work-cell-meta">
-              <span class="work-cell-blurb"
-                >A character study in miniature hardware.</span
-              >
-              <span class="work-cell-cta">Click to explore &rarr;</span>
-            </span>
-          </span>
-        </button>
+              <button type="button" class="work-cell" data-work="Handheld Guy">
+                <span class="work-cell-media">
+                  <img
+                    src="/assets/images/Thumbnail_HandheldGuy.jpg"
+                    alt="Handheld Guy"
+                  />
+                  <video
+                    src="/assets/videos/trees.mp4"
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                  ></video>
+                </span>
+                <span class="work-cell-bar">
+                  <span class="work-cell-title">Handheld Guy</span>
+                  <span class="work-cell-meta">
+                    <span class="work-cell-blurb"
+                      >A character study in miniature hardware.</span
+                    >
+                    <span class="work-cell-cta">Click to explore &rarr;</span>
+                  </span>
+                </span>
+              </button>
 
-        <button type="button" class="work-cell" data-work="Panic">
-          <span class="work-cell-media">
-            <img src="/assets/images/Thumbnail_Panic.jpg" alt="Panic" />
-            <video
-              src="/assets/videos/trees.mp4"
-              muted
-              loop
-              playsinline
-              preload="none"
-            ></video>
-          </span>
-          <span class="work-cell-bar">
-            <span class="work-cell-title">Panic</span>
-            <span class="work-cell-meta">
-              <span class="work-cell-blurb"
-                >Short-form motion work under a tight clock.</span
-              >
-              <span class="work-cell-cta">Click to explore &rarr;</span>
-            </span>
-          </span>
-        </button>
+              <button type="button" class="work-cell" data-work="Panic">
+                <span class="work-cell-media">
+                  <img src="/assets/images/Thumbnail_Panic.jpg" alt="Panic" />
+                  <video
+                    src="/assets/videos/trees.mp4"
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                  ></video>
+                </span>
+                <span class="work-cell-bar">
+                  <span class="work-cell-title">Panic</span>
+                  <span class="work-cell-meta">
+                    <span class="work-cell-blurb"
+                      >Short-form motion work under a tight clock.</span
+                    >
+                    <span class="work-cell-cta">Click to explore &rarr;</span>
+                  </span>
+                </span>
+              </button>
 
-        <button type="button" class="work-cell" data-work="Curse of Calypso">
-          <span class="work-cell-media">
-            <img
-              src="/assets/images/cocposter.jpeg"
-              alt="Curse of Calypso poster"
-            />
-            <video
-              src="/assets/videos/trees.mp4"
-              muted
-              loop
-              playsinline
-              preload="none"
-            ></video>
-          </span>
-          <span class="work-cell-bar">
-            <span class="work-cell-title">Curse of Calypso</span>
-            <span class="work-cell-meta">
-              <span class="work-cell-blurb"
-                >An augmented reality experience from Palaye Royale.</span
+              <button
+                type="button"
+                class="work-cell"
+                data-work="Curse of Calypso"
               >
-              <span class="work-cell-cta">Click to explore &rarr;</span>
-            </span>
-          </span>
-        </button>
-      </div>
-    </section>
+                <span class="work-cell-media">
+                  <img
+                    src="/assets/images/cocposter.jpeg"
+                    alt="Curse of Calypso poster"
+                  />
+                  <video
+                    src="/assets/videos/trees.mp4"
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                  ></video>
+                </span>
+                <span class="work-cell-bar">
+                  <span class="work-cell-title">Curse of Calypso</span>
+                  <span class="work-cell-meta">
+                    <span class="work-cell-blurb"
+                      >An augmented reality experience from Palaye Royale.</span
+                    >
+                    <span class="work-cell-cta">Click to explore &rarr;</span>
+                  </span>
+                </span>
+              </button>
+            </div>
+          </section>
         </div>
 
         <div class="menu-screen" data-screen="about" hidden>
-    <section id="about" class="page-section about">
-      <div class="about-grid">
-        <div
-          class="about-photo"
-          role="button"
-          tabindex="0"
-          aria-label="View Sam in 3D"
-        >
-          <img src="/assets/images/me.jpg" alt="Sam Proctor" />
-          <span class="about-photo-hint" aria-hidden="true">View in 3D</span>
-        </div>
+          <section id="about" class="page-section about">
+            <div class="about-grid">
+              <div
+                class="about-photo"
+                role="button"
+                tabindex="0"
+                aria-label="View Sam in 3D"
+              >
+                <img src="/assets/images/me.jpg" alt="Sam Proctor" />
+                <span class="about-photo-hint" aria-hidden="true"
+                  >View in 3D</span
+                >
+              </div>
 
-        <div class="about-main">
-          <p class="section-eyebrow">About</p>
-          <h2 class="about-heading">
-            Sam Proctor,<br />
-            <span>creative technologist in XR, games, and 3D capture.</span>
-          </h2>
-          <p class="about-bio">
-            Placeholder bio. A couple of sentences about what you build, how you
-            like to work, and what you're drawn to: real-time worlds, playful
-            interfaces, the tools underneath them.
-          </p>
-          <p class="about-bio">
-            A second, shorter paragraph for what you're doing right now, or what
-            you're open to next.
-          </p>
+              <div class="about-main">
+                <p class="section-eyebrow">About</p>
+                <h2 class="about-heading">
+                  Sam Proctor,<br />
+                  <span
+                    >creative technologist in XR, games, and 3D capture.</span
+                  >
+                </h2>
+                <p class="about-bio">
+                  Placeholder bio. A couple of sentences about what you build,
+                  how you like to work, and what you're drawn to: real-time
+                  worlds, playful interfaces, the tools underneath them.
+                </p>
+                <p class="about-bio">
+                  A second, shorter paragraph for what you're doing right now,
+                  or what you're open to next.
+                </p>
 
-          <h3 class="about-subheading">Experience</h3>
-          <ul class="about-list">
-            <li>
-              <span class="about-list-name">Kainoa Labs Inc.</span>
-              <span class="about-list-role">Unity Engineer</span>
-              <span class="about-list-years">2026 &ndash; Now</span>
-            </li>
-            <li>
-              <span class="about-list-name">Jadu AR Inc.</span>
-              <span class="about-list-role">Gameplay Engineer</span>
-              <span class="about-list-years">2020 &ndash; 2025</span>
-            </li>
-          </ul>
-        </div>
-      </div>
+                <h3 class="about-subheading">Experience</h3>
+                <ul class="about-list">
+                  <li>
+                    <span class="about-list-name">Kainoa Labs Inc.</span>
+                    <span class="about-list-role">Unity Engineer</span>
+                    <span class="about-list-years">2026 &ndash; Now</span>
+                  </li>
+                  <li>
+                    <span class="about-list-name">Jadu AR Inc.</span>
+                    <span class="about-list-role">Gameplay Engineer</span>
+                    <span class="about-list-years">2020 &ndash; 2025</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
 
-      <div id="contact" class="contact">
-        <p class="section-eyebrow">Contact</p>
-        <ul class="contact-links">
-          <li><a href="mailto:iamsamproctor@gmail.com">Email</a></li>
-          <li><a href="#">LinkedIn</a></li>
-          <li><a href="#">GitHub</a></li>
-          <li><a href="#">R&eacute;sum&eacute;</a></li>
-        </ul>
-      </div>
+            <div id="contact" class="contact">
+              <p class="section-eyebrow">Contact</p>
+              <ul class="contact-links">
+                <li><a href="mailto:iamsamproctor@gmail.com">Email</a></li>
+                <li><a href="#">LinkedIn</a></li>
+                <li><a href="#">GitHub</a></li>
+                <li><a href="#">R&eacute;sum&eacute;</a></li>
+              </ul>
+            </div>
 
-      <footer class="site-footer">&copy; 2026 Sam Proctor</footer>
-    </section>
+            <footer class="site-footer">&copy; 2026 Sam Proctor</footer>
+          </section>
         </div>
 
         <div class="work-modal" hidden>
