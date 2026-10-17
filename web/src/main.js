@@ -359,7 +359,9 @@ renderer.setPixelRatio(isTouchDevice ? 1 : Math.min(window.devicePixelRatio, 2))
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.querySelector(".scene-window").appendChild(renderer.domElement);
 
-const spark = new SparkRenderer({ renderer });
+// focalAdjustment above 1 draws splats tighter on screen (2 matches how
+// PlayCanvas draws them), which sharpens the capture's big soft splats.
+const spark = new SparkRenderer({ renderer, focalAdjustment: 2 });
 // Spark softens every splat by a fixed amount on screen (anti-aliasing) and
 // draws each as a soft Gaussian. Invisible on ordinary splats, but it smears
 // the sparkle effect's pinpoint stars into dim, out-of-focus blobs, so both
@@ -451,6 +453,12 @@ const cursorInfluence = dyno.dynoFloat(0);
 const cursorRadius = dyno.dynoFloat(0.9);
 const scaleAmplitude = dyno.dynoFloat(0.6);
 const scaleSpeed = dyno.dynoFloat(2.0);
+// A color grade on the splat's own colors, cheaper than post-processing the
+// whole render and leaving the blob, Josh and the hallway as they are. 1 is
+// unchanged for each.
+const gradeBrightness = dyno.dynoFloat(1.1);
+const gradeSaturation = dyno.dynoFloat(1.2);
+const gradeContrast = dyno.dynoFloat(1.1);
 environmentSplat.objectModifier = dyno.dynoBlock(
   { gsplat: dyno.Gsplat },
   { gsplat: dyno.Gsplat },
@@ -463,6 +471,9 @@ environmentSplat.objectModifier = dyno.dynoBlock(
         cursor: "vec3",
         cursorInfluence: "float",
         cursorRadius: "float",
+        brightness: "float",
+        saturation: "float",
+        contrast: "float",
       },
       outTypes: { gsplat: dyno.Gsplat },
       globals: () => [
@@ -491,6 +502,13 @@ environmentSplat.objectModifier = dyno.dynoBlock(
         pos *= (1. + effect.x * .05 * amount);
         pos.y -= 1.;
         ${outputs.gsplat}.center = pos;
+
+        // The grade: contrast around mid grey, then saturation away from
+        // each color's own grey, then brightness.
+        vec3 graded = (${outputs.gsplat}.rgba.rgb - 0.5) * ${inputs.contrast} + 0.5;
+        float luma = dot(graded, vec3(0.2126, 0.7152, 0.0722));
+        graded = mix(vec3(luma), graded, ${inputs.saturation}) * ${inputs.brightness};
+        ${outputs.gsplat}.rgba.rgb = max(graded, 0.);
       `),
     });
 
@@ -501,6 +519,9 @@ environmentSplat.objectModifier = dyno.dynoBlock(
       cursor: cursorLocalPos,
       cursorInfluence,
       cursorRadius,
+      brightness: gradeBrightness,
+      saturation: gradeSaturation,
+      contrast: gradeContrast,
     }).gsplat;
     return { gsplat };
   },
@@ -549,6 +570,46 @@ const breathing = new dyno.Dyno({
 const breathe = (gsplat) =>
   breathing.apply({ gsplat, t: waveTime, scaleAmplitude, scaleSpeed }).gsplat;
 
+// Taming oversized splats: the capture fills what its photos didn't show
+// well with big soft splats and long needles, which smear across the screen
+// up close. Size is judged against distance from the camera, so it's how big
+// a splat looks that counts and the distant sky's big splats are left alone.
+// Each axis over the limit is cut back toward it (shortening the needles),
+// and splats well over it fade a little too. Cutting too hard opens gaps
+// those splats were covering.
+const oversizeLimit = dyno.dynoFloat(0.025); // splat size per unit of distance from the camera; about the top 2%
+const oversizeKeep = dyno.dynoFloat(0.3); // fraction of the size over the limit that's kept
+const oversizeFade = dyno.dynoFloat(0.5); // how much splats 3x over the limit fade
+const oversizeCamera = dyno.dynoVec3(new THREE.Vector3()); // set each frame
+const oversize = new dyno.Dyno({
+  inTypes: {
+    gsplat: dyno.Gsplat,
+    camera: "vec3",
+    limit: "float",
+    keep: "float",
+    fade: "float",
+  },
+  outTypes: { gsplat: dyno.Gsplat },
+  statements: ({ inputs, outputs }) => dyno.unindentLines(/* glsl */ `
+    ${outputs.gsplat} = ${inputs.gsplat};
+    vec3 s = ${inputs.gsplat}.scales;
+    float limit = ${inputs.limit} * max(length(${inputs.gsplat}.center - ${inputs.camera}), 0.1);
+    float biggest = max(s.x, max(s.y, s.z));
+    if (biggest > limit) {
+      ${outputs.gsplat}.scales = s - max(s - limit, 0.) * (1. - ${inputs.keep});
+      ${outputs.gsplat}.rgba.a *= 1. - ${inputs.fade} * smoothstep(1., 3., biggest / limit);
+    }
+  `),
+});
+const tameOversized = (gsplat) =>
+  oversize.apply({
+    gsplat,
+    camera: oversizeCamera,
+    limit: oversizeLimit,
+    keep: oversizeKeep,
+    fade: oversizeFade,
+  }).gsplat;
+
 // Home point sits on the desert floor at the center of the opening orbit.
 // Set dustDevilEnabled to false to switch the effect off; it still runs its
 // gentle wander, which the chrome blob follows.
@@ -566,7 +627,7 @@ ripples.setGround(desertFloorY);
 const sparkle = createSplatSparkle();
 const dustDevil = addDustDevil(environmentSplat, {
   home: new THREE.Vector3(0, desertFloorY, 0),
-  stages: [sparkle.apply, breathe, splatCharge.apply, ripples.apply, shockwave.apply],
+  stages: [tameOversized, sparkle.apply, breathe, splatCharge.apply, ripples.apply, shockwave.apply],
 });
 dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
 
@@ -791,6 +852,7 @@ renderer.setAnimationLoop(() => {
   previousTime = currentTime;
 
   waveTime.value = currentTime / 1000;
+  oversizeCamera.value.copy(camera.position);
   dustDevil.update(currentTime / 1000);
   shockwave.update(currentTime / 1000);
   splatCharge.update(currentTime / 1000);
