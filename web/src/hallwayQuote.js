@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { PORTRAIT_FRAME_TOP } from "./hallway.js";
 
 // A quote lettered on the hallway's end wall, above the portrait, like an
 // epigraph over a work in a gallery. It's HTML rather than 3D text so it stays
@@ -7,7 +8,7 @@ import * as THREE from "three";
 // another quote.
 
 // Bottom-center of the text block, on the end wall just above the frame.
-const ANCHOR = new THREE.Vector3(0, 2.52, -0.09);
+const ANCHOR = new THREE.Vector3(0, PORTRAIT_FRAME_TOP + 0.14, -0.09);
 const DESIGN_PX_PER_UNIT = 100; // the CSS is laid out at 100px per world unit
 const MAX_LENGTH = 120; // longer quotes don't fit the wall above the frame
 const SWAP_SECONDS = 0.6; // must match the .hallway-quote-inner transition

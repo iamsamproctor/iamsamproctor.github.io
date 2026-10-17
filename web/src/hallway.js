@@ -14,18 +14,25 @@ import { createPlacard } from "./placard.js";
 // rendering the splat straight to the screen to rendering it via the
 // portrait is invisible.
 
-const PORTRAIT_HEIGHT = 1.4;
+const PORTRAIT_HEIGHT = 2.01;
 const EYE_HEIGHT = 1.6;
+const PORTRAIT_FRAME_BORDER = 0.16; // total extra width/height of its frame
+// The top of the portrait's frame, for lettering the quote above it
+// (hallwayQuote.js).
+export const PORTRAIT_FRAME_TOP = EYE_HEIGHT + (PORTRAIT_HEIGHT + PORTRAIT_FRAME_BORDER) / 2;
 const HALL_WIDTH = 7;
 const HALL_HEIGHT = 4;
 // The hall gets one bay per work (see hallLength), but never so short that
 // the resting view and the ceiling lights behind it run into the doors.
 const MIN_HALL_LENGTH = 15;
 // How far back the camera ends up, in world units: just behind the bench,
-// with the portrait, quote, and first work in view. Scaled with main.js's
+// with the portrait and quote in view. Scaled with main.js's
 // hallwayScrollRange so the pull-back keeps its pace.
 const END_DISTANCE = 10.5;
 const RIB_SPACING = 3;
+// The bay the first work hangs in, counting from the portrait. The first is
+// left bare so no work sits in the bench's view of the portrait.
+const FIRST_WORK_BAY = 2;
 const RIB_DEPTH = 0.3; // pilaster/beam thickness
 const FRAME_BORDER = 0.12; // total extra width/height of a work's frame
 const PLACARD_WIDTH = 0.44; // the label under each work
@@ -52,7 +59,7 @@ export function createHallway({ renderer, works = [] }) {
 
   // Long enough for each work to hang in a bay of its own, ending at the rib
   // after the last one, where the doors into the grand room are.
-  const hallLength = Math.max(RIB_SPACING * (works.length + 1), MIN_HALL_LENGTH);
+  const hallLength = Math.max(RIB_SPACING * (works.length + FIRST_WORK_BAY), MIN_HALL_LENGTH);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
@@ -118,7 +125,7 @@ export function createHallway({ renderer, works = [] }) {
   const pictureLight = new THREE.SpotLight(0xffe2c0, 14, 7, 0.75, 0.9, 1.6);
   pictureLight.position.set(0, HALL_HEIGHT - 0.3, 1.6);
   // Aimed above the frame so the pool also takes in the quote on the wall.
-  pictureLight.target.position.set(0, EYE_HEIGHT + 0.55, -0.1);
+  pictureLight.target.position.set(0, PORTRAIT_FRAME_TOP - 0.25, -0.1);
   scene.add(pictureLight, pictureLight.target);
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.06));
@@ -262,7 +269,7 @@ export function createHallway({ renderer, works = [] }) {
   const pieces = [];
   works.forEach((work, index) => {
     const side = index % 2 === 0 ? -1 : 1;
-    const z = RIB_SPACING * (index + 1); // ribs sit at half-spacings, so this is mid-bay
+    const z = RIB_SPACING * (index + FIRST_WORK_BAY); // ribs sit at half-spacings, so this is mid-bay
 
     function sizeWork(aspect) {
       const height = Math.min(1, (bayClearWidth - FRAME_BORDER) / aspect);
@@ -455,7 +462,7 @@ export function createHallway({ renderer, works = [] }) {
   function sizePortrait(aspect) {
     const width = PORTRAIT_HEIGHT * aspect;
     portrait.scale.set(width, PORTRAIT_HEIGHT, 1);
-    frame.scale.set(width + 0.16, PORTRAIT_HEIGHT + 0.16, 1);
+    frame.scale.set(width + PORTRAIT_FRAME_BORDER, PORTRAIT_HEIGHT + PORTRAIT_FRAME_BORDER, 1);
     portraitLight.width = width;
     portraitLight.height = PORTRAIT_HEIGHT;
   }
