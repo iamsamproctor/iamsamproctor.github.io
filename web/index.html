@@ -75,6 +75,27 @@
         display: block;
       }
 
+      /* A vignette over the whole scene, deepest along the bottom where the
+         headings sit, so text reads over bright or busy parts of it. */
+      .scene-window::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(
+            to top,
+            rgba(0, 0, 0, 0.5) 0%,
+            rgba(0, 0, 0, 0.22) 30%,
+            rgba(0, 0, 0, 0) 55%
+          ),
+          radial-gradient(
+            ellipse at 50% 45%,
+            rgba(0, 0, 0, 0) 50%,
+            rgba(0, 0, 0, 0.35) 100%
+          );
+      }
+
       .title-block {
         position: fixed;
         top: 0;
@@ -417,18 +438,23 @@
         --reveal-dim: rgba(255, 255, 255, 0.32);
         --reveal-bright: #ffffff;
         margin: 0;
+        /* The same face as the hero heading. */
+        font-family:
+          "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
         font-size: clamp(24px, 2.8vw, 36px);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.25;
-        letter-spacing: -0.01em;
+        letter-spacing: -0.02em;
       }
 
       .mission-sub {
         margin: 12px 0 0;
+        font-family:
+          "Major Mono Display", ui-monospace, "SF Mono", Menlo, monospace;
         font-size: clamp(15px, 1.4vw, 18px);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.5;
-        color: rgba(255, 255, 255, 0.5);
+        color: rgba(255, 255, 255, 0.72);
       }
 
       /* As the hero title on phones: clear of the controls along the bottom. */
@@ -540,7 +566,7 @@
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        gap: 4px;
+        gap: 5px;
         transform: translateY(-50%);
       }
 
@@ -551,8 +577,8 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        width: 48px;
-        height: 24px;
+        width: 58px;
+        height: 29px;
         padding: 0;
         border: 0;
         background: transparent;
@@ -561,7 +587,7 @@
 
       .section-nav button::after {
         content: "";
-        width: 22px;
+        width: 26px;
         height: 1px;
         background: rgba(255, 255, 255, 0.55);
         /* Keeps it readable over the bright parts of the scene. */
@@ -573,12 +599,12 @@
 
       .section-nav button:hover::after,
       .section-nav button:focus-visible::after {
-        width: 30px;
+        width: 36px;
         background: #ffffff;
       }
 
       .section-nav button.is-active::after {
-        width: 48px;
+        width: 58px;
         background: #ffffff;
       }
 
@@ -588,15 +614,15 @@
 
       .section-nav button .section-nav-label {
         position: absolute;
-        right: calc(100% + 14px);
+        right: calc(100% + 17px);
         top: 50%;
-        transform: translate(6px, -50%);
+        transform: translate(7px, -50%);
         white-space: nowrap;
         color: #ffffff;
         font-family:
           -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
           sans-serif;
-        font-size: 11px;
+        font-size: 13px;
         letter-spacing: 0.22em;
         text-transform: uppercase;
         text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
@@ -2418,10 +2444,10 @@
          (main.js). -->
     <div class="mission-heading">
       <p class="mission-eyebrow">Mission</p>
-      <h2>I make interactive realities.</h2>
+      <h2>i make worlds you can step into.</h2>
       <p class="mission-sub">
-        Immersive media, games, and digital art, as lenses for seeing the world
-        differently.
+        exploring the human experience through immersive worlds, and
+        discovering new ways to see our own.
       </p>
     </div>
 
