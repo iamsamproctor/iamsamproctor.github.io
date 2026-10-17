@@ -10,13 +10,13 @@ import { dyno } from "@sparkjsdev/spark";
 // Like splatShockwave.js, it's a stage for the splat's world modifier (see
 // dustDevil.js's `stages`), so it composes with the shockwave.
 
-const SLOTS = 12; // ripples alive at once; new ones replace the oldest
+const SLOTS = 28; // ripples alive at once; new ones replace the oldest
 const SPEED = 0.2; // world units per second the crests travel
 const WAVELENGTH = 2; // distance between crests
 const WIDTH = 0.5; // how wide the band of crests is
 const LIFT = 0.12; // how far a full-strength crest lifts splats
 const GLOW = 0.22; // how much a crest brightens splats
-const LIFE = 2.2; // seconds until a ripple has died out
+const LIFE = 5; // seconds until a ripple has settled back down
 const ATTACK = 0.35; // seconds a ripple takes to swell in, so it doesn't pop
 
 const SPACING = 0.22; // world units the pointer travels between ripples
@@ -55,9 +55,10 @@ export function createSplatRipples() {
             float dist = length(p.xz - r.xz);
             float x = dist - age * ${SPEED.toFixed(3)};
             float band = exp(-(x * x) / ${(WIDTH * WIDTH).toFixed(4)});
-            float fade = 1. - age / ${LIFE.toFixed(3)};
+            // Holds up a while, then eases down, so the trail lingers.
+            float fade = 1. - smoothstep(0., 1., age / ${LIFE.toFixed(3)});
             float swell = smoothstep(0., ${ATTACK.toFixed(3)}, age);
-            float wave = sin(x * ${((2 * Math.PI) / WAVELENGTH).toFixed(4)}) * band * fade * fade * swell
+            float wave = sin(x * ${((2 * Math.PI) / WAVELENGTH).toFixed(4)}) * band * fade * swell
               * ${inputs[`s${i}`]};
             lift += wave;
             glow += abs(wave);
