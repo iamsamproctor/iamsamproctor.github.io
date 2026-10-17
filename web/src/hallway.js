@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { createGrandRoom, doorwayWallShape } from "./grandRoom.js";
+import { createPlacard } from "./placard.js";
 
 // After the splat camera finishes its keyframes, the splat scene is rendered
 // into a texture and hung as a portrait at the end of a dark gallery hallway.
@@ -27,6 +28,8 @@ const END_DISTANCE = 10.5;
 const RIB_SPACING = 3;
 const RIB_DEPTH = 0.3; // pilaster/beam thickness
 const FRAME_BORDER = 0.12; // total extra width/height of a work's frame
+const PLACARD_WIDTH = 0.44; // the label under each work
+const PLACARD_GAP = 0.1; // between the frame and its label
 const FOV = 40;
 const CEILING_LIGHTS_FROM = 13.5; // the rib just behind the resting view
 const CEILING_PANEL_WIDTH = 1.2;
@@ -245,15 +248,17 @@ export function createHallway({ renderer, works = [] }) {
   scene.add(ceilingLight);
 
   // Selected works hung along the walls, alternating sides, each under its
-  // own picture light. Each one is centered in the bay between two ribs and
-  // sized to fit inside it, so frames never cut into the pilasters.
+  // own picture light with a placard under it. Each one is centered in the
+  // bay between two ribs and sized to fit inside it, so frames never cut into
+  // the pilasters.
   const bayClearWidth = RIB_SPACING - RIB_DEPTH - 0.3; // leaves a little wall either side
   const textureLoader = new THREE.TextureLoader();
   // Resolves once every work's image has loaded (or failed), since a picture
   // gaining its texture changes its shader; see warmUp.
   const workLoads = [];
   // Each hung work, for picking them out when walking the gallery: index (as
-  // in `works`), the picture mesh, and its wall side (-1 left, 1 right).
+  // in `works`), the picture mesh, its wall side (-1 left, 1 right), and its
+  // group, frame and placard, for framing them together.
   const pieces = [];
   works.forEach((work, index) => {
     const side = index % 2 === 0 ? -1 : 1;
@@ -263,6 +268,14 @@ export function createHallway({ renderer, works = [] }) {
       const height = Math.min(1, (bayClearWidth - FRAME_BORDER) / aspect);
       picture.scale.set(height * aspect, height, 1);
       workFrame.scale.set(height * aspect + FRAME_BORDER, height + FRAME_BORDER, 1);
+      // Under the frame's right-hand corner.
+      if (placard) {
+        placard.position.set(
+          (height * aspect + FRAME_BORDER - PLACARD_WIDTH) / 2,
+          -(height + FRAME_BORDER) / 2 - PLACARD_GAP - placard.userData.height / 2,
+          0.005,
+        );
+      }
     }
 
     const group = new THREE.Group();
@@ -279,7 +292,18 @@ export function createHallway({ renderer, works = [] }) {
     );
     picture.position.z = 0.03;
     group.add(picture);
-    pieces.push({ index, picture, side });
+
+    // Title, then who it was for (or "Independent") and when, and the role
+    // if there's one, as on the project page.
+    const placard = work.title
+      ? createPlacard({
+          title: work.title,
+          lines: [`${work.company ?? "Independent"}, ${work.year}`, work.role].filter(Boolean),
+          width: PLACARD_WIDTH,
+        })
+      : null;
+    if (placard) group.add(placard);
+    pieces.push({ index, picture, side, group, frame: workFrame, placard });
 
     workLoads.push(
       new Promise((resolve) => {

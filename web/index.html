@@ -814,6 +814,52 @@
         background: #ffffff;
       }
 
+      /* Under the crosshair, saying what a click will do. Brighter, with a
+         slow pulse, once a work is faced and a click opens it (is-action). */
+      .gallery-prompt {
+        position: fixed;
+        left: 50%;
+        top: calc(50% + 26px);
+        margin: 0;
+        padding: 8px 16px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: rgba(255, 255, 255, 0.8);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        transform: translateX(-50%);
+      }
+
+      .gallery-prompt.is-action {
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        color: #ffffff;
+        font-size: 12px;
+        animation: gallery-prompt-pulse 1.6s ease-in-out infinite;
+      }
+
+      @keyframes gallery-prompt-pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .gallery-prompt.is-action {
+          animation: none;
+        }
+      }
+
       .gallery-look-hint {
         position: fixed;
         left: 50%;
@@ -2338,6 +2384,8 @@
       <!-- In the middle of the screen while the mouse is captured, picking
            whatever it's over; or, while it's free, the way to capture it. -->
       <div class="gallery-crosshair" aria-hidden="true" hidden></div>
+      <!-- Under the crosshair: what clicking will do to what it's over. -->
+      <p class="gallery-prompt" aria-live="polite" hidden><kbd>click</kbd><span></span></p>
       <p class="gallery-look-hint" aria-hidden="true" hidden>click to look around</p>
       <!-- What Esc does right now: frees the cursor while it's captured (this),
            or leaves while it's free (the badge on the exit button). -->

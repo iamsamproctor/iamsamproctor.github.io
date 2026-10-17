@@ -66,6 +66,7 @@ const ESC_HINT_FRESH = 3000; // ms the "esc to free your cursor" hint stays brig
 
 const FOCUS_DURATION = 0.9; // seconds to swing round to face a work
 const FOCUS_MARGIN = 1.35; // room around a work when facing it
+const FOCUS_HUD_ROOM = 0.25; // extra wall (m) below a work's placard, for the controls
 
 export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, onOpenMenu, isModalOpen }) {
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.05, 100);
@@ -77,6 +78,8 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, onOpe
   const crosshairEl = hudEl.querySelector(".gallery-crosshair");
   const lookHintEl = hudEl.querySelector(".gallery-look-hint");
   const escHintEl = hudEl.querySelector(".gallery-esc-hint");
+  const promptEl = hudEl.querySelector(".gallery-prompt");
+  const promptTextEl = promptEl.querySelector("span");
   const canvas = document.querySelector(".scene-window canvas");
 
   // Josh is added once he's loaded (usually long before, for the bench).
@@ -248,6 +251,15 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, onOpe
     mesh.getWorldPosition(focusTarget);
     mesh.getWorldDirection(normal);
     mesh.getWorldScale(size);
+    // A work on the wall is framed together with its placard under it, and
+    // a little wall below that, clear of the controls along the bottom.
+    if (target.frame) {
+      const { frame, placard, group } = target;
+      const top = frame.scale.y / 2;
+      const bottom = (placard ? placard.position.y - placard.userData.height / 2 : -top) - FOCUS_HUD_ROOM;
+      focusTarget.set(0, (top + bottom) / 2, 0).applyMatrix4(group.matrixWorld);
+      size.set(frame.scale.x, top - bottom, 1);
+    }
     // Far enough back to see the whole thing with some wall around it.
     const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
     const fitHeight = size.y / 2 / Math.tan(halfFov);
@@ -555,9 +567,20 @@ export function createGalleryExplore({ hallway, museumVisitor, onOpenWork, onOpe
     hudEl.classList.toggle("is-captured", captured);
     escHintEl.hidden = !captured || busy;
     crosshairEl.hidden = !captured || busy;
-    crosshairEl.classList.toggle("is-over", captured && !busy && pickAtCenter() !== null);
+    const over = captured && !busy ? pickAtCenter() : null;
+    crosshairEl.classList.toggle("is-over", over !== null);
     lookHintEl.hidden = captured || !active || busy || isModalOpen();
     canvas.style.cursor = lookHintEl.hidden ? "" : "pointer";
+
+    // What a click will do: look closer, then (facing it) open the project
+    // or touch the exhibit. The portrait, once faced, has nothing more.
+    const facing = over !== null && over === focused && focus.amount > 0.9;
+    let prompt = null;
+    if (facing) prompt = over.interact ? over.action : over === "portrait" ? null : "open the project";
+    else if (over) prompt = "look closer";
+    promptEl.hidden = !prompt;
+    promptEl.classList.toggle("is-action", Boolean(prompt) && facing);
+    if (prompt && promptTextEl.textContent !== prompt) promptTextEl.textContent = prompt;
   }
 
   document.addEventListener("mousemove", (event) => {

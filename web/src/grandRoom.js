@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import gsap from "gsap";
+import { createPlacard } from "./placard.js";
 
 // The grand room through the doors at the far end of the hallway: a tall hall
 // under a round skylight, a fountain in the middle, and exhibits on pedestals
@@ -31,12 +32,13 @@ const clayDark = new THREE.MeshStandardMaterial({ color: 0x5f5b55, roughness: 0.
 
 // Around the fountain, by angle from the entrance side (0° faces the doors,
 // so the way in stays clear). build() makes the stand-in, sitting on y = 0;
-// interact() is its reaction to being touched.
+// interact() is its reaction to being touched, and action what the prompt
+// calls that (none if there's nothing to do).
 const EXHIBITS = [
-  { title: "Cat", note: "Pet her to hear her purr", angle: -32, build: buildCat, interact: purr },
-  { title: "DJ controller", note: "Tap to drop a loop", angle: 32, build: buildDeck, interact: spinPlatters },
-  { title: "The desert", note: "Where I live", angle: -90, build: buildCactus, interact: sway },
-  { title: "The donut", note: "My first 3D model", angle: 90, build: buildDonut, interact: hop },
+  { title: "Cat", note: "Pet her to hear her purr", action: "pet her", angle: -32, build: buildCat, interact: purr },
+  { title: "DJ controller", note: "Tap to drop a loop", action: "drop a loop", angle: 32, build: buildDeck, interact: spinPlatters },
+  { title: "The desert", note: "Where I live", action: "give it a nudge", angle: -90, build: buildCactus, interact: sway },
+  { title: "The donut", note: "My first 3D model", action: "spin it", angle: 90, build: buildDonut, interact: hop },
   { title: "Open plinth", note: "Something new, soon", angle: -148, build: () => new THREE.Group(), interact: () => {} },
   { title: "Open plinth", note: "Something new, soon", angle: 148, build: () => new THREE.Group(), interact: () => {} },
 ];
@@ -171,7 +173,7 @@ export function createGrandRoom({ entranceZ, doorWidth, doorHeight, wallThicknes
   // A pedestal (or other base) facing the fountain, its exhibit on top, a
   // placard on its front, a spotlight from the ceiling, and a hitbox over the
   // lot for picking.
-  function addExhibit({ title, note, build, interact }, position, facing, options = {}) {
+  function addExhibit({ title, note, action, build, interact }, position, facing, options = {}) {
     const { baseHeight = PEDESTAL_HEIGHT, base, hitSize = [0.9, 1.6, 0.9], viewDistance = 2.3 } = options;
     const stand = new THREE.Group();
     stand.position.copy(position);
@@ -183,7 +185,7 @@ export function createGrandRoom({ entranceZ, doorWidth, doorHeight, wallThicknes
     object.position.y = baseHeight;
     stand.add(object);
 
-    const placard = createPlacard(title, note);
+    const placard = createPlacard({ title, lines: [note], width: 0.42 });
     placard.position.set(0, options.placardY ?? baseHeight * 0.72, (options.placardZ ?? PEDESTAL_SIZE / 2) + 0.012);
     placard.rotation.x = -0.2;
     stand.add(placard);
@@ -208,6 +210,7 @@ export function createGrandRoom({ entranceZ, doorWidth, doorHeight, wallThicknes
       // Where the camera goes to face it: in front, a little above.
       focusPosition: position.clone().addScaledVector(front, viewDistance).setY(1.6),
       focusTarget: position.clone().setY(baseHeight + 0.2),
+      action,
       interact: () => interact(object),
     });
   }
@@ -229,7 +232,7 @@ export function createGrandRoom({ entranceZ, doorWidth, doorHeight, wallThicknes
   const stage = new THREE.Mesh(new THREE.BoxGeometry(5, 0.2, 4), trimMaterial);
   stage.position.y = 0.1;
   addExhibit(
-    { title: "Piano", note: "Tap to play", build: buildPiano, interact: liftLid },
+    { title: "Piano", note: "Tap to play", action: "play it", build: buildPiano, interact: liftLid },
     toWorld(0, PIANO_Z),
     Math.PI,
     { baseHeight: 0.2, base: stage, hitSize: [3, 2, 3], viewDistance: 4.5, spotAngle: 0.28, placardY: 0.1, placardZ: 2 },
@@ -263,28 +266,6 @@ export function doorwayWallShape(width, height, doorWidth, doorHeight) {
     .lineTo(width / 2, height)
     .lineTo(-width / 2, height)
     .closePath();
-}
-
-// A small museum label: the title, with a note under it.
-function createPlacard(title, note) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 200;
-  const context = canvas.getContext("2d");
-  context.fillStyle = "#1c1a18";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#efe9df";
-  context.font = "600 52px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-  context.fillText(title.toUpperCase(), 36, 88);
-  context.fillStyle = "#a59d91";
-  context.font = "36px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-  context.fillText(note, 36, 150);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.Mesh(
-    new THREE.PlaneGeometry(0.42, 0.164),
-    new THREE.MeshStandardMaterial({ map: texture, roughness: 0.6 }),
-  );
 }
 
 // --- Stand-ins --------------------------------------------------------------

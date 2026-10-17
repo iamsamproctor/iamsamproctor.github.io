@@ -6,6 +6,7 @@ import { createTextReveal, revealOnEnter } from "./textReveal.js";
 import { createLoadingScreen } from "./loadingScreen.js";
 import { createRevealBurn } from "./revealBurn.js";
 import { createWorkModal } from "./workModal.js";
+import { works } from "./works.js";
 import { createWindScroll } from "./windScroll.js";
 import { createBackgroundMusic } from "./backgroundMusic.js";
 import { setRevealSoundEnabled } from "./revealSound.js";
@@ -393,8 +394,10 @@ const splatFalloffStars = 0.55; // firmer-edged points rather than soft blobs
 
 const hallway = createHallway({
   renderer,
-  works: Array.from(document.querySelectorAll(".work-cell img")).map((img) => ({
-    src: img.getAttribute("src"),
+  // Each card's thumbnail, and its details from works.js for its placard.
+  works: Array.from(document.querySelectorAll(".work-cell")).map((cell) => ({
+    src: cell.querySelector("img").getAttribute("src"),
+    ...works[cell.dataset.work],
   })),
 });
 hallway.setSize(window.innerWidth, window.innerHeight);
