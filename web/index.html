@@ -976,23 +976,36 @@
       .menu-modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.45);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
       }
 
+      /* Frosted glass: the scene shows through, blurred further and a little
+         richer in color, with a faint edge and top highlight so the panel
+         still reads as a pane in front of it. */
       .menu-modal-panel {
         position: absolute;
         inset: 24px;
         overflow: hidden;
         border-radius: 16px;
-        background: #161616;
+        background: rgba(20, 20, 20, 0.4);
+        backdrop-filter: blur(24px) saturate(140%);
+        -webkit-backdrop-filter: blur(24px) saturate(140%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.06),
+          0 24px 80px rgba(0, 0, 0, 0.45);
       }
 
       /* Opened straight into a project, e.g. from the gallery wall: nothing
          behind it, so the project grows out over the backdrop. */
       .menu-modal.is-detail-only .menu-modal-panel {
         background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border-color: transparent;
+        box-shadow: none;
       }
 
       /* Over every screen, including a project's details, so the way back
