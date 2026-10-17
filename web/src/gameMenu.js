@@ -5,7 +5,8 @@ import { createTextReveal } from "./textReveal.js";
 // screens like a game's pause menu.
 //
 //   menu  ->  selected works  ->  a project's details
-//         ->  about + contact
+//         ->  about
+//         ->  contact
 //
 // It grows out of whatever opened it (the menu button, the contact button)
 // the way a project grows out of its card, and shrinks back
@@ -20,7 +21,7 @@ import { createTextReveal } from "./textReveal.js";
 // of the picture, the breadcrumb reads "gallery / <project>", and going back
 // shrinks it back into the picture and closes the modal.
 //
-// onChange reports the current screen ("menu", "work", "about"), or null
+// onChange reports the current screen ("menu", "work", "about", "contact"), or null
 // once closed, e.g. to highlight the matching nav dot.
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -28,7 +29,7 @@ const OPEN_DURATION = reduceMotion ? 0.01 : 0.75;
 const CLOSE_DURATION = reduceMotion ? 0.01 : 0.6;
 const ITEM_STAGGER = 0.07; // seconds between each menu item's scramble-in
 
-const SCREEN_TITLES = { menu: "menu", work: "selected works", about: "about + contact" };
+const SCREEN_TITLES = { menu: "menu", work: "selected works", about: "about", contact: "contact" };
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -125,19 +126,13 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
 
   // --- Screens ------------------------------------------------------------
 
-  // name: "menu", "work" or "about". scrollTo: id of an element on that
-  // screen to scroll to, e.g. "contact".
-  function showScreen(name, { scrollTo = null } = {}) {
+  // name: "menu", "work", "about" or "contact".
+  function showScreen(name) {
     if (detail.isOpen()) detail.closeImmediately();
     const changed = name !== screen;
     screen = name;
     for (const [key, el] of Object.entries(screens)) el.hidden = key !== name;
-    const el = screens[name];
-    if (changed) el.scrollTop = 0;
-    if (scrollTo) {
-      const target = el.querySelector(`#${scrollTo}`);
-      if (target) requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth" }));
-    }
+    if (changed) screens[name].scrollTop = 0;
 
     if (name === "menu" && changed) {
       itemReveals.forEach((reveal, i) => gsap.delayedCall(i * ITEM_STAGGER, () => reveal.play()));
@@ -252,9 +247,9 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
   }
 
   // screenName: which screen to show. from: the element it grows out of.
-  function open(screenName = "menu", { from = null, scrollTo = null } = {}) {
+  function open(screenName = "menu", { from = null } = {}) {
     if (isOpen && !tween?.isActive()) {
-      showScreen(screenName, { scrollTo });
+      showScreen(screenName);
       return;
     }
     tween?.kill();
@@ -262,7 +257,7 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     isOpen = true;
     syncCta();
     root.hidden = false;
-    showScreen(screenName, { scrollTo });
+    showScreen(screenName);
 
     if (!wasClosed) {
       // Reopened mid-close: run the same morph forward from where it is.

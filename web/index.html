@@ -2047,10 +2047,16 @@
         }
       }
 
-      .contact {
-        margin-top: 160px;
-        padding-top: 48px;
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      .page-section .contact-heading {
+        margin: 0;
+        font-size: clamp(30px, 4.2vw, 52px);
+        font-weight: 300;
+        line-height: 1.15;
+        letter-spacing: -0.01em;
+      }
+
+      .contact-heading span {
+        color: rgba(255, 255, 255, 0.4);
       }
 
       .contact-links {
@@ -2109,10 +2115,6 @@
         .about-list-years {
           grid-row: 1 / span 2;
           grid-column: 2;
-        }
-
-        .contact {
-          margin-top: 112px;
         }
       }
 
@@ -2493,7 +2495,7 @@
     </div>
 
     <!-- The menu: a modal that grows out of whatever opened it, holding a
-         stack of screens (menu, then works or about). A project's details
+         stack of screens (menu, then works, about or contact). A project's details
          open as a deeper screen inside it, growing out of its card. The
          bar's breadcrumb steps back through them. See gameMenu.js. -->
     <div class="menu-modal" hidden>
@@ -2532,12 +2534,18 @@
               <li>
                 <button type="button" class="game-menu-item" data-open="about">
                   <span class="game-menu-index">02</span>
-                  <span class="game-menu-label">about + contact</span>
+                  <span class="game-menu-label">about</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="game-menu-item" data-open="contact">
+                  <span class="game-menu-index">03</span>
+                  <span class="game-menu-label">contact</span>
                 </button>
               </li>
               <li>
                 <button type="button" class="game-menu-item" data-open="top">
-                  <span class="game-menu-index">03</span>
+                  <span class="game-menu-index">04</span>
                   <span class="game-menu-label">back to start</span>
                 </button>
               </li>
@@ -2745,16 +2753,22 @@
                 </ul>
               </div>
             </div>
+          </section>
+        </div>
 
-            <div id="contact" class="contact">
-              <p class="section-eyebrow">Contact</p>
-              <ul class="contact-links">
-                <li><a href="mailto:iamsamproctor@gmail.com">Email</a></li>
-                <li><a href="#">LinkedIn</a></li>
-                <li><a href="#">GitHub</a></li>
-                <li><a href="#">R&eacute;sum&eacute;</a></li>
-              </ul>
-            </div>
+        <div class="menu-screen" data-screen="contact" hidden>
+          <section id="contact" class="page-section contact">
+            <p class="section-eyebrow">Contact</p>
+            <h2 class="contact-heading">
+              Say hello,<br />
+              <span>about work, collaborations, or anything else.</span>
+            </h2>
+            <ul class="contact-links">
+              <li><a href="mailto:iamsamproctor@gmail.com">Email</a></li>
+              <li><a href="#">LinkedIn</a></li>
+              <li><a href="#">GitHub</a></li>
+              <li><a href="#">R&eacute;sum&eacute;</a></li>
+            </ul>
 
             <footer class="site-footer">&copy; 2026 Sam Proctor</footer>
           </section>

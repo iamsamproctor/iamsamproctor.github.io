@@ -997,8 +997,5 @@ if (workIntro) {
 }
 
 document.querySelector(".contact-button")?.addEventListener("click", () => {
-  gameMenu.open("about", {
-    from: document.querySelector(".contact-button"),
-    scrollTo: "contact",
-  });
+  gameMenu.open("contact", { from: document.querySelector(".contact-button") });
 });
