@@ -472,7 +472,7 @@ const waveIntensity = dyno.dynoFloat(2);
 const cursorLocalPos = dyno.dynoVec3(new THREE.Vector3());
 const cursorInfluence = dyno.dynoFloat(0);
 const cursorRadius = dyno.dynoFloat(0.9);
-const scaleAmplitude = dyno.dynoFloat(0.3);
+const scaleAmplitude = dyno.dynoFloat(0.6);
 const scaleSpeed = dyno.dynoFloat(2.0);
 environmentSplat.objectModifier = dyno.dynoBlock(
   { gsplat: dyno.Gsplat },
@@ -486,8 +486,6 @@ environmentSplat.objectModifier = dyno.dynoBlock(
         cursor: "vec3",
         cursorInfluence: "float",
         cursorRadius: "float",
-        scaleAmplitude: "float",
-        scaleSpeed: "float",
       },
       outTypes: { gsplat: dyno.Gsplat },
       globals: () => [
@@ -516,10 +514,6 @@ environmentSplat.objectModifier = dyno.dynoBlock(
         pos *= (1. + effect.x * .05 * amount);
         pos.y -= 1.;
         ${outputs.gsplat}.center = pos;
-
-        float scalePhase = dot(localPos, vec3(1.3, 0.7, 1.9));
-        float scalePulse = 1. + ${inputs.scaleAmplitude} * sin(${inputs.t} * ${inputs.scaleSpeed} + scalePhase);
-        ${outputs.gsplat}.scales = ${inputs.gsplat}.scales * scalePulse;
       `),
     });
 
@@ -530,13 +524,53 @@ environmentSplat.objectModifier = dyno.dynoBlock(
       cursor: cursorLocalPos,
       cursorInfluence,
       cursorRadius,
-      scaleAmplitude,
-      scaleSpeed,
     }).gsplat;
     return { gsplat };
   },
 );
 environmentSplat.updateGenerator();
+
+// The idle breathing: splats swell and shrink in waves. It's a world-modifier
+// stage that runs just after the sparkle, so it scales whatever size the
+// splats are at, and the stars breathe too instead of holding a fixed size.
+const breathing = new dyno.Dyno({
+  inTypes: {
+    gsplat: dyno.Gsplat,
+    t: "float",
+    scaleAmplitude: "float",
+    scaleSpeed: "float",
+  },
+  outTypes: { gsplat: dyno.Gsplat },
+  globals: () => [
+    dyno.unindent(/* glsl */ `
+      // In roughly -1..1. A single travelling sine reads as parallel bands
+      // rolling through, so this crosses three at odd angles and speeds,
+      // bends their fronts with a slow warp, and nudges each splat's phase a
+      // little so no line stays clean.
+      float idlePulse(vec3 p, float t) {
+        vec3 q = p + vec3(
+          sin(p.z * 0.9 + t * 0.21),
+          0.,
+          sin(p.x * 0.8 - t * 0.17)
+        ) * 0.9;
+        float jitter = fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+        float a = sin(t + dot(q, vec3(1.3, 0.7, 1.9)));
+        float b = sin(t * 0.73 + dot(q, vec3(-1.9, 0.4, 1.0)) + 1.7);
+        float c = sin(t * 1.31 + dot(q, vec3(0.5, -1.1, -2.3)) + 4.1);
+        return (a * 0.45 + b * 0.35 + c * 0.2) * (0.8 + 0.4 * jitter)
+          + (jitter - 0.5) * 0.25;
+      }
+    `),
+  ],
+  statements: ({ inputs, outputs }) => dyno.unindentLines(/* glsl */ `
+    ${outputs.gsplat} = ${inputs.gsplat};
+    float scalePulse = 1. + ${inputs.scaleAmplitude} * idlePulse(${inputs.gsplat}.center, ${inputs.t} * ${inputs.scaleSpeed});
+    // Large amplitudes would otherwise flip a splat inside out at the trough.
+    ${outputs.gsplat}.scales = ${inputs.gsplat}.scales * max(scalePulse, 0.05);
+  `),
+});
+const breathe = (gsplat) =>
+  breathing.apply({ gsplat, t: waveTime, scaleAmplitude, scaleSpeed }).gsplat;
 
 // Home point sits on the desert floor at the center of the opening orbit.
 // Set dustDevilEnabled to false to switch the effect off; it still runs its
@@ -555,7 +589,7 @@ ripples.setGround(desertFloorY);
 const sparkle = createSplatSparkle();
 const dustDevil = addDustDevil(environmentSplat, {
   home: new THREE.Vector3(0, desertFloorY, 0),
-  stages: [sparkle.apply, splatCharge.apply, ripples.apply, shockwave.apply],
+  stages: [sparkle.apply, breathe, splatCharge.apply, ripples.apply, shockwave.apply],
 });
 dustDevil.setStrength(dustDevilEnabled ? 1 : 0);
 
