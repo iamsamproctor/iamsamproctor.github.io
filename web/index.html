@@ -1647,9 +1647,9 @@
       }
 
       .work-modal-body {
-        max-width: 1120px;
+        max-width: 1800px;
         margin: 0 auto;
-        padding: 40px 56px 120px;
+        padding: 40px clamp(24px, 4vw, 72px) 120px;
       }
 
       .work-modal-header {
@@ -1869,6 +1869,15 @@
 
         .work-callout:nth-child(even) .work-callout-media {
           order: 0;
+        }
+      }
+
+      /* On phones a 16:9 hero is a thin strip; a square one shows more of
+         the video, cropping its sides (object-fit: cover). The open/close
+         morph measures the hero, so it follows the new shape. */
+      @media (max-width: 600px) {
+        .work-modal-hero {
+          aspect-ratio: 1 / 1;
         }
       }
 
