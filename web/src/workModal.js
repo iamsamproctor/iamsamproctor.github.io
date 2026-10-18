@@ -61,6 +61,8 @@ export function createWorkModal({
   const roleEl = root.querySelector(".work-modal-role");
   const summaryEl = root.querySelector(".work-modal-summary");
   const calloutsEl = root.querySelector(".work-modal-callouts");
+  const toolsEl = root.querySelector(".work-modal-tools");
+  const toolsListEl = root.querySelector(".work-modal-tools-list");
 
   const progress = { value: 0 };
   let rects = null;
@@ -94,6 +96,17 @@ export function createWorkModal({
     roleEl.textContent = work.role ?? "";
     roleItemEl.hidden = !work.role;
     summaryEl.textContent = work.summary;
+    // Tools are optional too: a name, or { name, use } to say what for.
+    const tools = work.tools ?? [];
+    toolsEl.hidden = tools.length === 0;
+    toolsListEl.innerHTML = tools
+      .map((tool) => {
+        const { name, use } = typeof tool === "string" ? { name: tool } : tool;
+        return `<li>${escapeHtml(name)}${
+          use ? ` <span class="work-modal-tools-use">&middot; ${escapeHtml(use)}</span>` : ""
+        }</li>`;
+      })
+      .join("");
     posterEl.src = cell.querySelector("img")?.src ?? "";
 
     calloutsEl.innerHTML = work.callouts

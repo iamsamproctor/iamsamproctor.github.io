@@ -1,6 +1,7 @@
 // Content for the work modal, keyed by each card's `data-work` attribute.
 // Leave `company` null for independent projects — the modal shows
 // "Independent" in its place. `role` is optional and only shown when set.
+// `tools` is optional: names, or { name, use } to note what a tool was for.
 // All copy and callout images are placeholders.
 
 const placeholderBody =
@@ -12,18 +13,26 @@ const placeholderSummary =
 export const works = {
   "Journey to the Sambaverse": {
     title: "Journey to the Sambaverse",
-    year: "2024",
+    year: "2025",
     company: null,
     summary:
       "An experiment in augmented reality, interactive storytelling, and game design. \"Journey to the SambaVerse\" began as a one-week creative challenge: to tell a whimsical story through AR. Created for a themed teepee experience at an annual group camping trip, it brought together outer space and samba into a five-minute AR minigame performed for live audiences.",
+    tools: [
+      "Unity",
+      "C#",
+      "AR Foundation",
+      { name: "Logic Pro", use: "audio" },
+      { name: "Blender", use: "3D assets" },
+    ],
     callouts: [
       {
         title: "The Experience",
         body: [
-          "Presented through mobile AR, Journey to the SambaVerse invited audiences to peer into a miniature alien world projected onto a tabletop. The story follows a small alien on a mission to restore happiness to Samba-Land by collecting musical crystals to magically repair DJ equipment \u2014 a nod to the camping community's shared love of music and DJing.",
+          "Presented through mobile AR, Journey to the SambaVerse invited audiences to peer into a miniature alien world projected onto a tabletop. The story followed a small alien on a mission to restore happiness to Samba-Land by collecting musical crystals to magically repair DJ equipment \u2014 a nod to the camping community's shared love of music and DJing.",
           "After a brief dialogue-driven introduction, the experience transitioned into a survival dodging game in AR, in which an alien must dodge incoming asteroids while trying to collect floating energy crystals. It was presented as a live, interactive storybook: I guided the character while narrating the adventure to an audience gathered around the screen and cheering me on as I played my own game.",
         ],
         image: "/assets/images/Thumbnail_JourneyToTheSambaVerse.jpg",
+        video: "/assets/videos/Sambaverse_TextBubble.mp4",
       },
       {
         title: "Designing for Spatial Perception",
@@ -59,13 +68,14 @@ export const works = {
       {
         title: "Exploring AR as a Storytelling Medium",
         body: "Despite its limited scope and short timeline, Journey to the SambaVerse offered a glimpse into the possibilities of AR as a storytelling medium. It was very enriching watching an audience react with excitement and curiosity to the miniature world I created. I was especially proud to showcase how the structure of the physical world became part of the gameplay itself.",
-        image: "/assets/images/Thumbnail_HandheldGuy.jpg",
+        image: "/assets/images/Thumbnail_JourneyToTheSambaVerse.jpg",
+        video: "/assets/videos/Sambaverse_Showing.mp4",
       },
       {
         title: "The Alien Dance Party",
         body: "And of course, I needed an alien dance party as a reward for winning.",
         image: "/assets/images/Thumbnail_JourneyToTheSambaVerse.jpg",
-        video: "/assets/videos/trees.mp4",
+        video: "/assets/videos/Sambaverse_DanceParty.mp4",
       },
     ],
   },
