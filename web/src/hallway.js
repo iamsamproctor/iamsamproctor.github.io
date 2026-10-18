@@ -16,6 +16,9 @@ import { createPlacard } from "./placard.js";
 
 const PORTRAIT_HEIGHT = 2.01;
 const EYE_HEIGHT = 1.6;
+// Hallway progress over which the pointer look moves from the splat camera
+// to the hallway's (see update).
+export const LOOK_HANDOFF = 0.15;
 const PORTRAIT_FRAME_BORDER = 0.16; // total extra width/height of its frame
 // The top of the portrait's frame, for lettering the quote above it
 // (hallwayQuote.js).
@@ -484,14 +487,16 @@ export function createHallway({ renderer, works = [] }) {
   }
 
   // progress: 0 = portrait fills the screen, 1 = the resting view at the end.
-  // yaw/pitch: the same pointer look offsets the splat camera uses, eased in
-  // as the camera pulls back so the frame stays locked at the seam.
+  // yaw/pitch: the pointer look, which moves from the splat camera to this
+  // one as the camera pulls back (main.js fades it out of the splat camera
+  // over the same stretch), so in the hallway the pointer looks around the
+  // hall while the scene in the frame holds still.
   function update(progress, yaw, pitch) {
     const travel = THREE.MathUtils.smootherstep(progress, 0, 0.92);
     const distance = THREE.MathUtils.lerp(startDistance, END_DISTANCE, travel);
     camera.position.set(0, EYE_HEIGHT, distance);
 
-    const look = THREE.MathUtils.smoothstep(progress, 0, 0.15);
+    const look = THREE.MathUtils.smoothstep(progress, 0, LOOK_HANDOFF);
     camera.rotation.set(pitch * 0.25 * look, yaw * 0.25 * look, 0);
 
     // How much of the screen height the portrait covers, for resolution.

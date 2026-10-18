@@ -101,16 +101,42 @@ export function createWorkModal({
         (callout, index) => `
           <article class="work-callout">
             <div class="work-callout-media" data-reveal>
-              <img src="${escapeHtml(callout.image)}" alt="" loading="lazy" />
+              ${
+                callout.video
+                  ? `<video src="${escapeHtml(callout.video)}" poster="${escapeHtml(callout.image)}" muted loop playsinline autoplay preload="metadata"></video>`
+                  : `<img src="${escapeHtml(callout.image)}" alt="" loading="lazy" />`
+              }
             </div>
             <div class="work-callout-text" data-reveal>
               <span class="work-callout-index">${String(index + 1).padStart(2, "0")}</span>
               <h3 class="work-callout-title">${escapeHtml(callout.title)}</h3>
-              <p class="work-callout-body">${escapeHtml(callout.body)}</p>
+              ${[callout.body]
+                .flat()
+                .map((para) => `<p class="work-callout-body">${escapeHtml(para)}</p>`)
+                .join("")}
+              ${callout.more ? renderMore(callout.more) : ""}
             </div>
           </article>`,
       )
       .join("");
+  }
+
+  // Optional reading tucked under a section: a native <details> the reader
+  // can open for the technical deep dive.
+  function renderMore(more) {
+    return `
+      <details class="work-callout-more">
+        <summary>
+          <span class="work-callout-more-icon" aria-hidden="true"></span>
+          ${escapeHtml(more.label ?? "Learn more")}
+        </summary>
+        <div class="work-callout-more-body">
+          ${[more.body]
+            .flat()
+            .map((para) => `<p class="work-callout-body">${escapeHtml(para)}</p>`)
+            .join("")}
+        </div>
+      </details>`;
   }
 
   // Where it grows out of and shrinks back into: the card, or the rect

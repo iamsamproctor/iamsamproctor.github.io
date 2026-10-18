@@ -160,11 +160,24 @@
         display: block;
       }
 
-      .contact-button:hover {
+      /* Hover only where there's a pointer to hover with: phones keep a
+         tapped button :hover until the next tap elsewhere, so it would stay
+         lit. A press lights it on any device. Likewise the sound toggle and
+         menu button. */
+      .contact-button:active {
         background: #ffffff;
         border-color: #ffffff;
         color: #000000;
         transform: scale(1.08);
+      }
+
+      @media (hover: hover) {
+        .contact-button:hover {
+          background: #ffffff;
+          border-color: #ffffff;
+          color: #000000;
+          transform: scale(1.08);
+        }
       }
 
       /* Sound toggle: a scrolling sine wave while sound is on, easing flat
@@ -197,11 +210,20 @@
           opacity 0.8s ease;
       }
 
-      .audio-toggle:hover {
+      .audio-toggle:active {
         background: #ffffff;
         border-color: #ffffff;
         color: #000000;
         transform: scale(1.04);
+      }
+
+      @media (hover: hover) {
+        .audio-toggle:hover {
+          background: #ffffff;
+          border-color: #ffffff;
+          color: #000000;
+          transform: scale(1.04);
+        }
       }
 
       .audio-toggle:focus-visible {
@@ -703,13 +725,22 @@
           opacity 0.8s ease;
       }
 
-      .menu-button:hover,
+      .menu-button:active,
       .menu-button:focus-visible {
         background: #ffffff;
         border-color: #ffffff;
         color: #000000;
         transform: scale(1.04);
         outline: none;
+      }
+
+      @media (hover: hover) {
+        .menu-button:hover {
+          background: #ffffff;
+          border-color: #ffffff;
+          color: #000000;
+          transform: scale(1.04);
+        }
       }
 
       @media (max-width: 640px) {
@@ -1692,7 +1723,8 @@
         background: #1c1c1c;
       }
 
-      .work-callout-media img {
+      .work-callout-media img,
+      .work-callout-media video {
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -1720,6 +1752,86 @@
         font-size: 15px;
         line-height: 1.7;
         color: rgba(255, 255, 255, 0.7);
+      }
+
+      .work-callout-body + .work-callout-body {
+        margin-top: 1em;
+      }
+
+      .work-callout-more {
+        margin-top: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        transition: background 0.2s ease, border-color 0.2s ease;
+      }
+
+      .work-callout-more:hover,
+      .work-callout-more[open] {
+        border-color: rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .work-callout-more summary {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        cursor: pointer;
+        list-style: none;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .work-callout-more summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .work-callout-more summary:focus-visible {
+        outline: 1px solid rgba(255, 255, 255, 0.5);
+        outline-offset: 2px;
+        border-radius: 10px;
+      }
+
+      /* A plus that turns into a minus when open. */
+      .work-callout-more-icon {
+        position: relative;
+        width: 10px;
+        height: 10px;
+        flex: none;
+      }
+
+      .work-callout-more-icon::before,
+      .work-callout-more-icon::after {
+        content: "";
+        position: absolute;
+        inset: 4.5px 0 auto;
+        height: 1px;
+        background: currentColor;
+        transition: transform 0.25s ease;
+      }
+
+      .work-callout-more-icon::after {
+        transform: rotate(90deg);
+      }
+
+      .work-callout-more[open] .work-callout-more-icon::after {
+        transform: rotate(0deg);
+      }
+
+      .work-callout-more-body {
+        padding: 0 18px 18px;
+        animation: work-callout-more-in 0.3s ease;
+      }
+
+      @keyframes work-callout-more-in {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
       }
 
       @media (max-width: 900px) {
@@ -2349,8 +2461,11 @@
           right: 16px;
         }
 
-        .section-nav .section-nav-label {
-          display: none;
+        /* Shown only while scrolling, fading out a couple of seconds after
+           (main.js sets is-awake), or while a key has focused a notch. */
+        .section-nav:not(.is-awake):not(:has(:focus-visible)) {
+          opacity: 0;
+          pointer-events: none;
         }
 
         .loader-mark {
@@ -2437,7 +2552,7 @@
 
     <div class="hero-heading">
       <h2>creative developer</h2>
-      <p>XR | Games | Gaussian Splats | Music</p>
+      <p>XR | Games | Volumetric&nbsp;Capture | Music</p>
     </div>
 
     <!-- The mission, shown once the camera has pulled out to the sky point
@@ -2446,8 +2561,8 @@
       <p class="mission-eyebrow">Mission</p>
       <h2>i make worlds you can step into.</h2>
       <p class="mission-sub">
-        exploring the human experience through immersive worlds, and
-        discovering new ways to see our own.
+        exploring the human experience through immersive worlds, and imagining
+        new ways to see our own.
       </p>
     </div>
 
@@ -2564,7 +2679,11 @@
                 </button>
               </li>
               <li>
-                <button type="button" class="game-menu-item" data-open="contact">
+                <button
+                  type="button"
+                  class="game-menu-item"
+                  data-open="contact"
+                >
                   <span class="game-menu-index">03</span>
                   <span class="game-menu-label">contact</span>
                 </button>
@@ -2609,7 +2728,7 @@
                     alt="Journey to the Sambaverse"
                   />
                   <video
-                    src="/assets/videos/trees.mp4"
+                    src="/assets/videos/WorkPreview_Sambaverse.mp4"
                     muted
                     loop
                     playsinline
@@ -2751,7 +2870,8 @@
                 <h2 class="about-heading">
                   Sam Proctor,<br />
                   <span
-                    >creative technologist in XR, games, and 3D capture.</span
+                    >creative technologist in XR, games, and volumetric
+                    capture.</span
                   >
                 </h2>
                 <p class="about-bio">

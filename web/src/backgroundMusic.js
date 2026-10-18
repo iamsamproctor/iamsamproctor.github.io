@@ -17,9 +17,18 @@ export function createBackgroundMusic({
   let on = false;
   let pauseTimer = null;
 
+  // The element pauses along with the context. Left playing into a
+  // suspended context, it piles up audio that plays back fast, and so
+  // sharp, once the context resumes.
   function onVisibility() {
-    if (document.hidden) ctx.suspend();
-    else if (on) ctx.resume();
+    if (document.hidden) {
+      audio.pause();
+      ctx.suspend();
+    } else if (on) {
+      ctx.resume().then(() => {
+        if (on && !document.hidden) audio.play().catch(() => {});
+      });
+    }
   }
 
   function rampTo(value, seconds) {
@@ -41,9 +50,18 @@ export function createBackgroundMusic({
         gain.gain.value = 0;
         ctx.createMediaElementSource(audio).connect(gain).connect(ctx.destination);
         document.addEventListener("visibilitychange", onVisibility);
+        // The first play has to happen inside the click (iOS), so it can't
+        // wait for the context; it starts silent anyway.
+        ctx.resume();
+        audio.play().catch(() => {});
+        return;
       }
-      ctx.resume();
-      audio.play().catch(() => {});
+      // Turned back on after stop(): wait for the context before playing,
+      // as in onVisibility. The element has played before, so it may play
+      // outside the click.
+      ctx.resume().then(() => {
+        if (on) audio.play().catch(() => {});
+      });
     },
 
     fadeIn(seconds = 4) {

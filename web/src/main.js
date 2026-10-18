@@ -16,7 +16,7 @@ import {
   startChargeSound,
   stopChargeSound,
 } from "./impactSound.js";
-import { createHallway } from "./hallway.js";
+import { createHallway, LOOK_HANDOFF } from "./hallway.js";
 import { createMuseumVisitor } from "./museumVisitor.js";
 import { createAboutPortrait } from "./aboutPortrait.js";
 import { createHallwayQuote } from "./hallwayQuote.js";
@@ -33,6 +33,10 @@ import quotes from "./quotes.json";
 const revealBurn = createRevealBurn();
 const windScroll = createWindScroll();
 const backgroundMusic = createBackgroundMusic();
+
+// iOS Safari only applies :active (the buttons' press state on touch
+// screens, where hover is off) when something listens for touches.
+document.addEventListener("touchstart", () => {}, { passive: true });
 
 const heroHeadingTitleEl = document.querySelector(".hero-heading h2");
 const heroHeadingSubEl = document.querySelector(".hero-heading p");
@@ -252,6 +256,19 @@ for (const button of navButtons) {
   });
 }
 
+// On phones the notches keep out of the scene's way: scrolling (or touching
+// one) wakes them, and they fade back out a while after it stops. The CSS
+// only hides them on narrow screens; elsewhere is-awake does nothing.
+const navAwakeDelay = 2000; // ms after the last scroll or touch
+let navSleepTimer = null;
+function wakeNav() {
+  if (!sectionNavEl) return;
+  sectionNavEl.classList.add("is-awake");
+  clearTimeout(navSleepTimer);
+  navSleepTimer = setTimeout(() => sectionNavEl.classList.remove("is-awake"), navAwakeDelay);
+}
+sectionNavEl?.addEventListener("pointerdown", wakeNav);
+
 // Scroll events on mobile can fire much more frequently than animation
 // frames. The listener itself just records the raw value (cheap); the actual
 // DOM writes below happen once per rendered frame in the animation loop, so
@@ -266,6 +283,7 @@ let scrollIdleTimer = null;
 const scrollIdleDelay = 150; // ms of no scroll events before orbit resumes
 function handleScroll() {
   latestScrollY = window.scrollY;
+  wakeNav();
   isScrolling = true;
   clearTimeout(scrollIdleTimer);
   scrollIdleTimer = setTimeout(() => {
@@ -926,15 +944,21 @@ renderer.setAnimationLoop(() => {
     );
     camera.lookAt(activeCenter);
 
-    const smoothing = 1 - Math.exp(-cameraSmoothing * deltaTime);
-    currentYaw = THREE.MathUtils.lerp(currentYaw, targetYaw, smoothing);
-    currentPitch = THREE.MathUtils.lerp(currentPitch, targetPitch, smoothing);
-    camera.rotation.y += currentYaw;
-    camera.rotation.x += currentPitch;
-
     const hallwaySmoothing = 1 - Math.exp(-hallwayBlendSmoothing * deltaTime);
     hallwayBlend = THREE.MathUtils.lerp(hallwayBlend, hallwayProgress, hallwaySmoothing);
     if (Math.abs(hallwayBlend - hallwayProgress) < 0.0005) hallwayBlend = hallwayProgress;
+
+    // The pointer look hands off to the hallway camera as it pulls back
+    // from the portrait (hallway.update), so in the hallway it looks around
+    // the hall and the scene in the frame settles centered and still. It
+    // hands back on the way into the portrait.
+    const smoothing = 1 - Math.exp(-cameraSmoothing * deltaTime);
+    currentYaw = THREE.MathUtils.lerp(currentYaw, targetYaw, smoothing);
+    currentPitch = THREE.MathUtils.lerp(currentPitch, targetPitch, smoothing);
+    const lookWeight = 1 - THREE.MathUtils.smoothstep(hallwayBlend, 0, LOOK_HANDOFF);
+    camera.rotation.y += currentYaw * lookWeight;
+    camera.rotation.x += currentPitch * lookWeight;
+
     const exploring = galleryExplore.isActive();
     gameMenu.setCtaVisible(!exploring && hallwayBlend >= hallwayMenuShowAt);
 
