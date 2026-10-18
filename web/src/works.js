@@ -2,7 +2,8 @@
 // Leave `company` null for independent projects — the modal shows
 // "Independent" in its place. `role` is optional and only shown when set.
 // `tools` is optional: names, or { name, use } to note what a tool was for.
-// All copy and callout images are placeholders.
+// A callout shows its `video` (looping, with `image` as the poster), else
+// its `image`, else a plain grey box standing in until there's media.
 
 const placeholderBody =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.";
@@ -37,12 +38,10 @@ export const works = {
       {
         title: "Designing for Spatial Perception",
         body: "Built in Unity over the course of a week, the project meant adapting conventional game mechanics to AR. One early discovery was how difficult it is to judge vertical distances through a mobile AR camera. Movement along the horizontal plane was intuitive, but a character's position relative to objects above or below it was much harder to read. To accommodate this, I constrained asteroid movement to the horizontal X and Z axes, making obstacles easier to anticipate and avoid.",
-        image: "/assets/images/Thumbnail_Panic.jpg",
       },
       {
         title: "Environment & Physics",
         body: "The experience used a physical tabletop as its ground plane, with an additional vertical surface serving as the backdrop for the virtual environment. Crucially, I had to make sure that my surface and backdrop were textured in some meaningful way in order for ARKit to properly anchor the game.",
-        image: "/assets/images/Thumbnail_HandheldGuy.jpg",
       },
       {
         title: "Making Use of Vertical Planes",
@@ -54,7 +53,6 @@ export const works = {
           body:
             "Using the dot product, I compared each asteroid's travel direction against the wall's surface normal. Based on their alignment, I selectively disabled collisions between individual asteroids and tagged vertical planes using Unity's Physics.IgnoreCollision, restoring them after a short delay. Asteroids could enter the playable space without immediately hitting the backdrop, while the boundary still read as solid once they had passed through.",
         },
-        image: "/assets/images/Thumbnail_JaduFight.jpg",
       },
       {
         title: "Designing for an Unfamiliar Medium",
@@ -63,7 +61,6 @@ export const works = {
           "Having spent years developing and interacting with AR experiences, I'd taken for granted how intuitive these controls had become to me, overlooking the learning curve that comes with experiencing this medium for the first time.",
           "Ultimately, the project worked best as a narrated performance, with me guiding the gameplay much like turning the pages of an interactive picture book.",
         ],
-        image: "/assets/images/Thumbnail_Panic.jpg",
       },
       {
         title: "Exploring AR as a Storytelling Medium",
@@ -89,17 +86,14 @@ export const works = {
       {
         title: "Combat systems",
         body: placeholderBody,
-        image: "/assets/images/Thumbnail_JaduFight.jpg",
       },
       {
         title: "Avatar pipeline",
         body: placeholderBody,
-        image: "/assets/images/Thumbnail_JourneyToTheSambaVerse.jpg",
       },
       {
         title: "Networked multiplayer",
         body: placeholderBody,
-        image: "/assets/images/Thumbnail_Panic.jpg",
       },
     ],
   },
@@ -113,12 +107,10 @@ export const works = {
       {
         title: "Character design",
         body: placeholderBody,
-        image: "/assets/images/Thumbnail_HandheldGuy.jpg",
       },
       {
         title: "Hardware prototyping",
         body: placeholderBody,
-        image: "/assets/images/Thumbnail_JaduFight.jpg",
       },
     ],
   },
@@ -132,12 +124,10 @@ export const works = {
       {
         title: "Motion design",
         body: placeholderBody,
-        image: "/assets/images/Thumbnail_Panic.jpg",
       },
       {
         title: "Turnaround under pressure",
         body: placeholderBody,
-        image: "/assets/images/Thumbnail_HandheldGuy.jpg",
       },
     ],
   },
@@ -153,12 +143,10 @@ export const works = {
       {
         title: "Augmented reality storytelling",
         body: placeholderBody,
-        image: "/assets/images/cocposter.jpeg",
       },
       {
         title: "Volumetric performances",
         body: placeholderBody,
-        image: "/assets/images/cocposter.jpeg",
       },
     ],
   },

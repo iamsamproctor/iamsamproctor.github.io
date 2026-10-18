@@ -1569,6 +1569,8 @@
       }
 
       .work-modal-scroll {
+        /* The sections measure their full-bleed width against this. */
+        container-type: inline-size;
         height: 100%;
         overflow-y: auto;
         overscroll-behavior: contain;
@@ -1647,9 +1649,10 @@
       }
 
       .work-modal-body {
+        --gutter: clamp(24px, 4vw, 72px);
         max-width: 1800px;
         margin: 0 auto;
-        padding: 40px clamp(24px, 4vw, 72px) 120px;
+        padding: 40px var(--gutter) 120px;
       }
 
       .work-modal-header {
@@ -1739,18 +1742,25 @@
         color: rgba(255, 255, 255, 0.45);
       }
 
+      /* Full bleed: the sections break out of the body's column to span
+         the whole panel, so each image runs to the panel's edge. */
       .work-modal-callouts {
         display: flex;
         flex-direction: column;
-        gap: 96px;
-        margin-top: 104px;
+        gap: clamp(48px, 7cqw, 120px);
+        width: 100cqw;
+        margin: 104px 0 0 calc(50% - 50cqw);
       }
 
+      /* Each section is a band: the image on one side, flush with the
+         panel edge, fading toward the text on the other. Sides alternate. */
       .work-callout {
         display: grid;
-        grid-template-columns: 1.4fr 1fr;
-        align-items: center;
-        gap: 56px;
+        grid-template-columns: 1.3fr 1fr;
+      }
+
+      .work-callout:nth-child(even) {
+        grid-template-columns: 1fr 1.3fr;
       }
 
       .work-callout:nth-child(even) .work-callout-media {
@@ -1758,18 +1768,36 @@
       }
 
       .work-callout-media {
-        aspect-ratio: 16 / 10;
+        --fade: to right;
+        position: relative;
+        min-height: clamp(320px, 34cqw, 640px);
         overflow: hidden;
-        border-radius: 10px;
-        background: #1c1c1c;
+        background: #262626;
+        -webkit-mask-image: linear-gradient(var(--fade), #000 68%, transparent);
+        mask-image: linear-gradient(var(--fade), #000 68%, transparent);
+      }
+
+      .work-callout:nth-child(even) .work-callout-media {
+        --fade: to left;
       }
 
       .work-callout-media img,
       .work-callout-media video {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
+      }
+
+      .work-callout-text {
+        align-self: center;
+        padding: 72px var(--gutter) 72px 24px;
+      }
+
+      .work-callout:nth-child(even) .work-callout-text {
+        padding: 72px 24px 72px var(--gutter);
       }
 
       .work-callout-index {
@@ -1889,7 +1917,8 @@
         }
 
         .work-modal-body {
-          padding: 28px 20px 72px;
+          --gutter: 20px;
+          padding: 28px var(--gutter) 72px;
         }
 
         .work-modal-header {
@@ -1899,17 +1928,31 @@
         }
 
         .work-modal-callouts {
-          gap: 56px;
+          gap: 40px;
           margin-top: 64px;
         }
 
-        .work-callout {
+        /* Stacked: the image spans the panel on top and fades down into
+           the text below it. */
+        .work-callout,
+        .work-callout:nth-child(even) {
           grid-template-columns: 1fr;
-          gap: 20px;
         }
 
         .work-callout:nth-child(even) .work-callout-media {
           order: 0;
+        }
+
+        .work-callout-media,
+        .work-callout:nth-child(even) .work-callout-media {
+          --fade: to bottom;
+          min-height: 0;
+          aspect-ratio: 16 / 10;
+        }
+
+        .work-callout-text,
+        .work-callout:nth-child(even) .work-callout-text {
+          padding: 8px var(--gutter) 48px;
         }
       }
 

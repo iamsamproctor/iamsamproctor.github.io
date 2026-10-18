@@ -113,13 +113,7 @@ export function createWorkModal({
       .map(
         (callout, index) => `
           <article class="work-callout">
-            <div class="work-callout-media" data-reveal>
-              ${
-                callout.video
-                  ? `<video src="${escapeHtml(callout.video)}" poster="${escapeHtml(callout.image)}" muted loop playsinline autoplay preload="metadata"></video>`
-                  : `<img src="${escapeHtml(callout.image)}" alt="" loading="lazy" />`
-              }
-            </div>
+            <div class="work-callout-media" data-reveal>${renderMedia(callout)}</div>
             <div class="work-callout-text" data-reveal>
               <span class="work-callout-index">${String(index + 1).padStart(2, "0")}</span>
               <h3 class="work-callout-title">${escapeHtml(callout.title)}</h3>
@@ -132,6 +126,17 @@ export function createWorkModal({
           </article>`,
       )
       .join("");
+  }
+
+  // A section's video, else its image, else nothing: the media box's grey
+  // background stands in as a placeholder.
+  function renderMedia({ video, image }) {
+    if (video) {
+      const poster = image ? ` poster="${escapeHtml(image)}"` : "";
+      return `<video src="${escapeHtml(video)}"${poster} muted loop playsinline autoplay preload="metadata"></video>`;
+    }
+    if (image) return `<img src="${escapeHtml(image)}" alt="" loading="lazy" />`;
+    return "";
   }
 
   // Optional reading tucked under a section: a native <details> the reader
