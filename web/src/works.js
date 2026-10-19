@@ -38,10 +38,12 @@ export const works = {
       {
         title: "Designing for Spatial Perception",
         body: "Built in Unity over the course of a week, the project meant adapting conventional game mechanics to AR. One early discovery was how difficult it is to judge vertical distances through a mobile AR camera. Movement along the horizontal plane was intuitive, but a character's position relative to objects above or below it was much harder to read. To accommodate this, I constrained asteroid movement to the horizontal X and Z axes, making obstacles easier to anticipate and avoid.",
+        video: "/assets/videos/Sambaverse_2DDodger.mp4",
       },
       {
-        title: "Environment & Physics",
+        title: "Gameplay Environment",
         body: "The experience used a physical tabletop as its ground plane, with an additional vertical surface serving as the backdrop for the virtual environment. Crucially, I had to make sure that my surface and backdrop were textured in some meaningful way in order for ARKit to properly anchor the game.",
+        video: "/assets/videos/Sambaverse_Placement.mp4",
       },
       {
         title: "Making Use of Vertical Planes",
@@ -53,6 +55,7 @@ export const works = {
           body:
             "Using the dot product, I compared each asteroid's travel direction against the wall's surface normal. Based on their alignment, I selectively disabled collisions between individual asteroids and tagged vertical planes using Unity's Physics.IgnoreCollision, restoring them after a short delay. Asteroids could enter the playable space without immediately hitting the backdrop, while the boundary still read as solid once they had passed through.",
         },
+        video: "/assets/videos/Sambaverse_BouncingRocks.mp4",
       },
       {
         title: "Designing for an Unfamiliar Medium",
@@ -61,6 +64,7 @@ export const works = {
           "Having spent years developing and interacting with AR experiences, I'd taken for granted how intuitive these controls had become to me, overlooking the learning curve that comes with experiencing this medium for the first time.",
           "Ultimately, the project worked best as a narrated performance, with me guiding the gameplay much like turning the pages of an interactive picture book.",
         ],
+        video: "/assets/videos/Sambaverse_CharacterControl.mp4",
       },
       {
         title: "Exploring AR as a Storytelling Medium",

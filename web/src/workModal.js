@@ -88,6 +88,35 @@ export function createWorkModal({
 
   const revealEls = () => Array.from(root.querySelectorAll("[data-reveal]"));
 
+  // Section videos load only as they scroll near (about half a screen
+  // ahead) and pause once they're well out of view, so opening a work
+  // doesn't start downloading every clip at once.
+  const sectionVideoObserver = new IntersectionObserver(
+    (entries) => {
+      for (const { target: video, isIntersecting } of entries) {
+        if (isIntersecting) {
+          if (!video.src) video.src = video.dataset.src;
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      }
+    },
+    { root: scrollEl, rootMargin: "50% 0px" },
+  );
+
+  const sectionVideos = () => Array.from(calloutsEl.querySelectorAll("video"));
+
+  // Stops the section videos and drops what they've loaded.
+  function unloadSectionVideos() {
+    sectionVideoObserver.disconnect();
+    for (const video of sectionVideos()) {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    }
+  }
+
   function populate(work, cell) {
     titleEl.textContent = work.title;
     yearEl.textContent = work.year;
@@ -133,7 +162,7 @@ export function createWorkModal({
   function renderMedia({ video, image }) {
     if (video) {
       const poster = image ? ` poster="${escapeHtml(image)}"` : "";
-      return `<video src="${escapeHtml(video)}"${poster} muted loop playsinline autoplay preload="metadata"></video>`;
+      return `<video data-src="${escapeHtml(video)}"${poster} muted loop playsinline preload="none"></video>`;
     }
     if (image) return `<img src="${escapeHtml(image)}" alt="" loading="lazy" />`;
     return "";
@@ -229,6 +258,7 @@ export function createWorkModal({
     };
 
     populate(work, cell);
+    sectionVideos().forEach((el) => sectionVideoObserver.observe(el));
     onOpen(work);
     lockScroll();
     root.hidden = false;
@@ -315,6 +345,7 @@ export function createWorkModal({
     root.classList.remove("is-animating");
     clearMorph();
     unlockScroll();
+    unloadSectionVideos();
     calloutsEl.innerHTML = "";
     state = null;
 
