@@ -1474,15 +1474,21 @@
         opacity: 1;
       }
 
+      /* Two rows: the title with the call to action across from it, and
+         the blurb on a full-width row of its own beneath, which opens as
+         the card widens (so it isn't squeezed in beside the title). */
       .work-cell-bar {
         position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: auto 0fr;
         align-items: baseline;
-        gap: 24px;
+        column-gap: 24px;
         padding: 40px 20px 18px;
+        transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
         background: linear-gradient(
           to top,
           rgba(0, 0, 0, 0.8),
@@ -1490,8 +1496,13 @@
         );
       }
 
+      .work-cell:hover .work-cell-bar,
+      .work-cell:focus-visible .work-cell-bar {
+        grid-template-rows: auto 1fr;
+      }
+
       .work-cell-title {
-        flex: 0 0 auto;
+        grid-area: 1 / 1;
         margin: 0;
         font-size: 15px;
         font-weight: 400;
@@ -1499,35 +1510,43 @@
         white-space: nowrap;
       }
 
+      /* Its children sit in the bar's grid directly. */
       .work-cell-meta {
-        flex: 1 1 auto;
-        min-width: 0;
-        display: flex;
-        align-items: baseline;
-        gap: 24px;
-        white-space: nowrap;
+        display: contents;
+      }
+
+      .work-cell-blurb,
+      .work-cell-cta {
         opacity: 0;
         transition: opacity 0.3s ease;
       }
 
-      .work-cell:hover .work-cell-meta,
-      .work-cell:focus-visible .work-cell-meta {
+      .work-cell:hover :is(.work-cell-blurb, .work-cell-cta),
+      .work-cell:focus-visible :is(.work-cell-blurb, .work-cell-cta) {
         opacity: 1;
         transition-delay: 0.15s;
       }
 
+      /* Stretched to its row with nothing to hold it open, so the row's
+         0fr really closes it. */
       .work-cell-blurb {
-        flex: 1 1 auto;
-        min-width: 0;
+        grid-area: 2 / 1 / 3 / -1;
+        align-self: stretch;
+        min-height: 0;
         overflow: hidden;
-        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
         margin: 0;
         font-size: 13px;
+        line-height: 1.6;
         color: rgba(255, 255, 255, 0.7);
       }
 
       .work-cell-cta {
-        flex: 0 0 auto;
+        grid-area: 1 / 2;
+        white-space: nowrap;
         font-size: 11px;
         letter-spacing: 0.12em;
         text-transform: uppercase;
@@ -2364,18 +2383,14 @@
           aspect-ratio: 16 / 10;
         }
 
-        .work-cell-bar {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 10px;
-        }
-
-        .work-cell-meta {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 6px;
-          white-space: normal;
-          opacity: 1;
+        /* Stacked and always open: title, blurb, then the call to
+           action. */
+        .work-cell-bar,
+        .work-cell:hover .work-cell-bar,
+        .work-cell:focus-visible .work-cell-bar {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-rows: auto auto auto;
+          row-gap: 6px;
         }
 
         .work-cell-title {
@@ -2383,7 +2398,17 @@
         }
 
         .work-cell-blurb {
-          white-space: normal;
+          grid-area: 2 / 1;
+        }
+
+        .work-cell-cta {
+          grid-area: 3 / 1;
+          margin-top: 4px;
+        }
+
+        .work-cell-blurb,
+        .work-cell-cta {
+          opacity: 1;
         }
       }
 
@@ -2832,7 +2857,7 @@
                   <span class="work-cell-title">Journey to the Sambaverse</span>
                   <span class="work-cell-meta">
                     <span class="work-cell-blurb"
-                      >An interactive music video you move through.</span
+                      >A tabletop AR story, played live for an audience.</span
                     >
                     <span class="work-cell-cta">Click to explore &rarr;</span>
                   </span>
