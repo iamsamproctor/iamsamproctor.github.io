@@ -1090,9 +1090,11 @@
         pointer-events: auto;
       }
 
+      /* One line: a long current page (e.g. a work's full title) is cut
+         short with an ellipsis rather than wrapping under the others. */
       .menu-modal-crumbs {
         display: flex;
-        flex-wrap: wrap;
+        min-width: 0;
         align-items: center;
         gap: 4px 10px;
         font-family:
@@ -1126,7 +1128,17 @@
         text-underline-offset: 6px;
       }
 
+      .menu-crumb,
+      .menu-crumb-sep {
+        flex: 0 0 auto;
+      }
+
       .menu-crumb[aria-current] {
+        flex-shrink: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         color: #ffffff;
         cursor: default;
       }
@@ -1729,10 +1741,16 @@
         margin: 0;
       }
 
+      /* The number sits above its label, so numbers line up even when
+         one label wraps further than the others. */
       .work-modal-stats-list > div {
         display: flex;
-        flex-direction: column-reverse;
+        flex-direction: column;
         gap: 10px;
+      }
+
+      .work-modal-stats-list dd {
+        order: -1;
       }
 
       .work-modal-stats-list > div + div {
@@ -1761,6 +1779,35 @@
         font-size: 13px;
         letter-spacing: 0.02em;
         color: rgba(255, 255, 255, 0.45);
+      }
+
+      .work-modal-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 28px;
+        padding: 10px 18px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        color: #ffffff;
+        text-decoration: none;
+        transition:
+          background-color 0.2s ease,
+          border-color 0.2s ease,
+          color 0.2s ease;
+      }
+
+      .work-modal-link[hidden] {
+        display: none;
+      }
+
+      .work-modal-link:hover,
+      .work-modal-link:focus-visible {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #161616;
       }
 
       .work-modal-summary {
@@ -1995,6 +2042,20 @@
           flex-direction: column;
           align-items: flex-start;
           gap: 24px;
+        }
+
+        .work-modal-stats-list {
+          grid-auto-columns: minmax(0, 1fr);
+          gap: 14px;
+        }
+
+        .work-modal-stats-list > div + div {
+          padding-left: 14px;
+        }
+
+        .work-modal-stats-list dt {
+          font-size: 10px;
+          letter-spacing: 0.12em;
         }
 
         .work-modal-callouts {
@@ -3138,6 +3199,14 @@
                   <dl class="work-modal-stats-list"></dl>
                   <p class="work-modal-stats-note"></p>
                 </div>
+                <a
+                  class="work-modal-link"
+                  data-reveal
+                  target="_blank"
+                  rel="noopener"
+                  ><span class="work-modal-link-label"></span
+                  ><span aria-hidden="true">&nearr;</span></a
+                >
                 <p class="work-modal-summary" data-reveal></p>
                 <div class="work-modal-tools" data-reveal>
                   <span class="work-modal-tools-label">Built with</span>

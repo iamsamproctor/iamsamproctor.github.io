@@ -4,6 +4,8 @@
 // `tools` is optional: names, or { name, use } to note what a tool was for.
 // `stats` is optional too: { value, label } pairs shown large above the
 // summary, with `statsNote` as a small line under them (e.g. "as of" when).
+// `link` is an optional { label, url }, shown as a button that opens in a
+// new tab.
 // A callout shows its `video` (looping, with `image` as the poster), else
 // its `image`, else a plain grey box standing in until there's media.
 
@@ -96,6 +98,7 @@ export const works = {
       { value: "10K", label: "Active players" },
     ],
     statsNote: "As of October 2026, with no updates since 2024.",
+    link: { label: "View on the App Store", url: "https://apps.apple.com/us/app/jadu/id6443662349" },
     tools: ["Unity", "C#", "AR Foundation", { name: "Normcore", use: "multiplayer" }],
     // Every section is a grey box until footage is in; the comment above
     // each one says what it's waiting for.

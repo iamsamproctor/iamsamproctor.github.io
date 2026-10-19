@@ -64,6 +64,8 @@ export function createWorkModal({
   const statsEl = root.querySelector(".work-modal-stats");
   const statsListEl = root.querySelector(".work-modal-stats-list");
   const statsNoteEl = root.querySelector(".work-modal-stats-note");
+  const linkEl = root.querySelector(".work-modal-link");
+  const linkLabelEl = root.querySelector(".work-modal-link-label");
   const toolsEl = root.querySelector(".work-modal-tools");
   const toolsListEl = root.querySelector(".work-modal-tools-list");
 
@@ -135,6 +137,10 @@ export function createWorkModal({
       .join("");
     statsNoteEl.textContent = work.statsNote ?? "";
     statsNoteEl.hidden = !work.statsNote;
+    // An optional outside link, e.g. where to get the game.
+    linkEl.hidden = !work.link;
+    linkEl.href = work.link?.url ?? "";
+    linkLabelEl.textContent = work.link?.label ?? "";
     summaryEl.textContent = work.summary;
     // Tools are optional too: a name, or { name, use } to say what for.
     const tools = work.tools ?? [];
