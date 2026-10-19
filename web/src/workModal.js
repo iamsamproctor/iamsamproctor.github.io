@@ -61,6 +61,9 @@ export function createWorkModal({
   const roleEl = root.querySelector(".work-modal-role");
   const summaryEl = root.querySelector(".work-modal-summary");
   const calloutsEl = root.querySelector(".work-modal-callouts");
+  const statsEl = root.querySelector(".work-modal-stats");
+  const statsListEl = root.querySelector(".work-modal-stats-list");
+  const statsNoteEl = root.querySelector(".work-modal-stats-note");
   const toolsEl = root.querySelector(".work-modal-tools");
   const toolsListEl = root.querySelector(".work-modal-tools-list");
 
@@ -124,6 +127,14 @@ export function createWorkModal({
     // Role is optional; the whole Role column hides when a work has none.
     roleEl.textContent = work.role ?? "";
     roleItemEl.hidden = !work.role;
+    // Stats are optional: big numbers between the title bar and the summary.
+    const stats = work.stats ?? [];
+    statsEl.hidden = stats.length === 0;
+    statsListEl.innerHTML = stats
+      .map(({ value, label }) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`)
+      .join("");
+    statsNoteEl.textContent = work.statsNote ?? "";
+    statsNoteEl.hidden = !work.statsNote;
     summaryEl.textContent = work.summary;
     // Tools are optional too: a name, or { name, use } to say what for.
     const tools = work.tools ?? [];

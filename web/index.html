@@ -1712,6 +1712,57 @@
         letter-spacing: 0.02em;
       }
 
+      /* Headline numbers, between the title bar and the summary. */
+      .work-modal-stats {
+        margin-top: 32px;
+      }
+
+      .work-modal-stats[hidden] {
+        display: none;
+      }
+
+      .work-modal-stats-list {
+        display: grid;
+        grid-auto-columns: minmax(0, max-content);
+        grid-auto-flow: column;
+        gap: clamp(20px, 4vw, 64px);
+        margin: 0;
+      }
+
+      .work-modal-stats-list > div {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 10px;
+      }
+
+      .work-modal-stats-list > div + div {
+        padding-left: clamp(20px, 4vw, 64px);
+        border-left: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .work-modal-stats-list dd {
+        margin: 0;
+        font-size: clamp(32px, 4.5vw, 64px);
+        font-weight: 300;
+        line-height: 1;
+        letter-spacing: -0.015em;
+      }
+
+      .work-modal-stats-list dt {
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        line-height: 1.5;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.45);
+      }
+
+      .work-modal-stats-note {
+        margin: 20px 0 0;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        color: rgba(255, 255, 255, 0.45);
+      }
+
       .work-modal-summary {
         max-width: 62ch;
         margin: 32px 0 0;
@@ -2868,7 +2919,7 @@
                 <span class="work-cell-media">
                   <img
                     src="/assets/images/Thumbnail_JaduFight.jpg"
-                    alt="Jadu Fight"
+                    alt="JADU: Fight comes to your Room"
                   />
                   <video
                     src="/assets/videos/trees.mp4"
@@ -2879,10 +2930,10 @@
                   ></video>
                 </span>
                 <span class="work-cell-bar">
-                  <span class="work-cell-title">Jadu Fight</span>
+                  <span class="work-cell-title">JADU: Fight comes to your Room</span>
                   <span class="work-cell-meta">
                     <span class="work-cell-blurb"
-                      >Real-time avatar combat built for the browser.</span
+                      >A multiplayer AR fighting game, played wherever you are.</span
                     >
                     <span class="work-cell-cta">Click to explore &rarr;</span>
                   </span>
@@ -3083,6 +3134,10 @@
                     </div>
                   </dl>
                 </header>
+                <div class="work-modal-stats" data-reveal>
+                  <dl class="work-modal-stats-list"></dl>
+                  <p class="work-modal-stats-note"></p>
+                </div>
                 <p class="work-modal-summary" data-reveal></p>
                 <div class="work-modal-tools" data-reveal>
                   <span class="work-modal-tools-label">Built with</span>

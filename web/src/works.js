@@ -2,6 +2,8 @@
 // Leave `company` null for independent projects — the modal shows
 // "Independent" in its place. `role` is optional and only shown when set.
 // `tools` is optional: names, or { name, use } to note what a tool was for.
+// `stats` is optional too: { value, label } pairs shown large above the
+// summary, with `statsNote` as a small line under them (e.g. "as of" when).
 // A callout shows its `video` (looping, with `image` as the poster), else
 // its `image`, else a plain grey box standing in until there's media.
 
@@ -82,22 +84,112 @@ export const works = {
   },
 
   "Jadu Fight": {
-    title: "Jadu Fight",
+    title: "JADU: Fight comes to your Room",
     year: "2023",
     company: "Jadu",
-    summary: placeholderSummary,
+    role: "Gameplay Engineer",
+    summary:
+      "JADU: Fight comes to your Room began with a simple challenge: make a 3D character walk around in augmented reality. Over time, that experiment grew into a multiplayer fighting game, with character customization, elaborate combat animations, AI opponents, and an expanding set of gameplay systems.",
+    stats: [
+      { value: "4.8", label: "Stars on the App Store" },
+      { value: "1M+", label: "Multiplayer AR fights" },
+      { value: "10K", label: "Active players" },
+    ],
+    statsNote: "As of October 2026, with no updates since 2024.",
+    tools: ["Unity", "C#", "AR Foundation", { name: "Normcore", use: "multiplayer" }],
+    // Every section is a grey box until footage is in; the comment above
+    // each one says what it's waiting for.
     callouts: [
+      // Finished AR combat, ideally cutting between different real-world places.
       {
-        title: "Combat systems",
-        body: placeholderBody,
+        title: "Bringing a Fighting Game into the Real World",
+        body: [
+          "I worked as a gameplay engineer on the team, focusing primarily on character movement, animation, combat implementation, NPC behavior, and multiplayer animation integration. As the project evolved, so did my responsibilities — from getting a character moving with a virtual joystick to helping build and refine the systems that made combat feel responsive and expressive.",
+          "The defining challenge was that we couldn't predict where anyone would play. A player might launch the game in an open field or a cluttered bedroom. We had to create gameplay that could adapt to both.",
+        ],
       },
+      // The early joystick prototype, detected planes, a fallback-plane before/after.
       {
-        title: "Avatar pipeline",
-        body: placeholderBody,
+        title: "A Character Controller for an Unpredictable World",
+        body: [
+          "My first task was to get a character walking in AR. I started by combining existing Unity character-controller resources with mobile joystick input, then learned to retarget humanoid animations onto the supplied character model. I integrated that work with our AR placement system so players could place a character into their surroundings and move it across detected surfaces.",
+          "That first prototype quickly revealed how different AR was from a conventional game environment. AR Foundation relied on the device's understanding of the world, and that understanding was incomplete. Ground planes might end unexpectedly, walls could be misidentified, and overlapping surfaces could trap the character's collider.",
+          "We explored safeguards such as a fallback plane beneath detected ground surfaces to keep characters from disappearing when tracking failed to extend far enough. But every solution involved a tradeoff: preventing a character from falling into empty space might also prevent it from falling off a real balcony. The challenge wasn't to reproduce physical reality perfectly. It was to make the experience dependable and enjoyable despite imperfect environmental data.",
+        ],
       },
+      // Walking into a jetpack, the hoverboard at different scales, both at once.
       {
-        title: "Networked multiplayer",
-        body: placeholderBody,
+        title: "Jetpacks and Hoverboards",
+        body: [
+          "Free roaming soon expanded beyond walking. We introduced jetpacks and hoverboards, and I added movement states to the existing character controller to support them. Unlike our initial animation-driven movement, these modes relied on code to control character motion.",
+          "Jetpacks introduced continuous thrust, vertical movement, and a new set of tuning problems: acceleration, gravity, floating, turning, and altitude limits. In AR, the player isn't following the character with a traditional game camera; the view is anchored to their phone. That made unrestricted flight impractical, so the movement had to be designed around the viewing experience.",
+          "I also collaborated with a lead engineer on hoverboard behavior, helping tune its physics and handling across different object scales. We even experimented with using jetpacks and hoverboards simultaneously. As the movement systems grew, I contributed to the team's shift toward more controlled, kinematic character movement and collision handling.",
+        ],
+      },
+      // An avatar lineup, a retargeting comparison, combat characters' moves.
+      {
+        title: "One Game, Thousands of Avatars",
+        body: [
+          "JADU supported numerous third-party avatar collections in free roam, representing thousands of unique characters, alongside proprietary characters designed for combat. Integrating them wasn't simply a matter of importing models: each needed to behave correctly with the movement and animation systems.",
+          "I worked with technical artists to validate humanoid skeletons, skinning, scale, and materials, and to ensure animations retargeted properly. Third-party avatars generally shared a standard animation setup, sometimes with custom idles or emotes, while combat characters required more specialized animation support. I didn't build the character customization itself; my part was making the characters work with the gameplay and animation systems around them.",
+        ],
+      },
+      // Free-roam movement against combat strafing, locking on and letting go.
+      {
+        title: "From Free Roam to Fighting Game",
+        body: [
+          "Turning a free-roaming AR experience into a fighting game required us to rethink how characters moved. Unrestricted, omnidirectional movement felt natural for exploration, but it didn't always feel right when two fighters faced each other.",
+          "I prototyped opponent-facing movement and strafing behavior, using animation states to control when a character's rotation should remain locked toward an opponent and when it should be released. During certain attacks, for example, that lock needed to disengage so the movement and dodging interactions could play out naturally, then return afterward.",
+          "This was one of many places where the correct technical behavior wasn't necessarily the best gameplay behavior. We had to test, adjust, and develop a feel for what made the combat readable and satisfying.",
+        ],
+      },
+      // A punch into a kick, a charged attack, a cropped look at the Animator graph.
+      {
+        title: "Building the Combat Animation System",
+        body: [
+          "My work sat at the intersection of combat logic and character animation. Together with other gameplay engineers, I contributed to a shared combat architecture; I took particular ownership of movement, animation behavior, and implementing new attacks with the animation team.",
+          "One of my most involved contributions was a combo system that could chain attacks through intermediate animation segments. A standalone punch might move from idle to the punch's apex and back to idle. A punch-kick combo could instead transition from the punch apex directly into the kick apex before returning to idle. The system supported longer chains and required input to arrive during the appropriate window of the current move.",
+          "The goal was more than making animations play correctly. It was making combat feel immediate, fluid, and intentional.",
+        ],
+        more: {
+          label: "Inside the state machine",
+          body: "I built and maintained a large Animator state machine, roughly a hundred states, covering different attacks, transitions, charged moves, and reactions. Much of the challenge was managing responsiveness: deciding which animations could be interrupted, clearing stale triggers, and preventing buffered inputs from causing unintended moves after an action had finished.",
+        },
+      },
+      // Contrasting NPC personalities, the same fighter on easy and hard.
+      {
+        title: "NPCs With Personality",
+        body: [
+          "I owned substantial portions of our NPC behavior implementation. Rather than using machine learning or a formal behavior-tree framework, I built rule-based behaviors in C#, coordinating movement, attack selection, and defensive reactions.",
+          "Making the AI functional was only the beginning. I spent extensive time playtesting with the team, adjusting reaction delays, attack frequency, defense timing, randomness, and move variety. Too little aggression made an opponent trivial; too much made it feel unfair. Instant shielding could make an NPC seem superhuman rather than skilled.",
+          "Eventually, we separated personality from difficulty, allowing the same fighting style to appear at easier or harder settings. This work taught me that good game AI isn't about making the strongest possible opponent. It's about creating an encounter that players want to engage with.",
+        ],
+        more: {
+          label: "How the behaviors work",
+          body: "NPC profiles let us define different fighting tendencies. Some opponents preferred to close the distance; others kept their range or favored projectiles. Weighted attack selection influenced whether they leaned toward punches, kicks, or ranged moves. Combat priorities also mattered: taking damage could cancel an attack and force a reaction state, during which the NPC couldn't simply continue attacking.",
+        },
+      },
+      // Both devices' recordings of one match side by side, a coordinated move up close.
+      {
+        title: "Bringing Combat Online",
+        body: [
+          "Multiplayer introduced another layer of complexity: two devices had to present the same fight convincingly. The team integrated Normcore, with each client generally controlling its own avatar state while receiving the opponent's state and combat events.",
+          "My primary responsibility was integrating avatar and animation behavior into that networked experience. I worked to ensure animation parameters and combat information produced the correct moves and reactions on both devices, across different supported avatar collections.",
+          "Certain interactions were particularly sensitive. A punch followed by a delayed damage reaction looked wrong even when the underlying gameplay event had registered. Coordinated moves sometimes required temporary control over an opponent's position, followed by resynchronization. I worked within that system and occasionally adjusted the relevant ownership code in collaboration with the engineer who designed it.",
+        ],
+        more: {
+          label: "How we debugged it",
+          body: "Debugging was painstaking and practical: recording both devices, running multiple editor instances, comparing Animator states, and repeatedly isolating individual moves or triggers. Those tests helped us identify where the two clients' visual experiences diverged.",
+        },
+      },
+      // A short montage from the first walking prototype to finished multiplayer combat.
+      {
+        title: "What JADU Taught Me",
+        body: [
+          "I joined this work early in my game-development career. At first, my focus was straightforward: learn the tools, solve the assigned problem, and get the feature working. As the game grew, I began taking ownership of larger systems and collaborating more closely across gameplay engineering, animation, and technical art.",
+          "My technical understanding deepened, but the most meaningful change was in my judgment. I developed a stronger sense of how movement should feel, when an animation wasn't responsive enough, and why an opponent could be challenging without being fun. I became more confident offering feedback and helping shape the experience — not just implementing what had already been decided.",
+          "JADU taught me that engineering and creative judgment aren't separate disciplines. The most rewarding problems often live where they meet.",
+        ],
       },
     ],
   },
