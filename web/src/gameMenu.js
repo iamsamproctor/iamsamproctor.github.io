@@ -50,9 +50,10 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
   );
   const items = Array.from(root.querySelectorAll(".game-menu-item"));
 
-  // Menu labels scramble in each time the menu screen is shown, like the
-  // hero title. Widths aren't locked: the screen is hidden when this runs,
-  // so there's nothing to measure, and the font is monospaced anyway.
+  // Menu labels scramble in as the modal opens onto the menu, like the hero
+  // title; coming back to the menu from a screen leaves them settled.
+  // Widths aren't locked: the screen is hidden when this runs, so there's
+  // nothing to measure, and the font is monospaced anyway.
   const itemReveals = items.map((item) =>
     createTextReveal(item.querySelector(".game-menu-label"), { lockWidths: false }),
   );
@@ -126,15 +127,16 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
 
   // --- Screens ------------------------------------------------------------
 
-  // name: "menu", "work", "about" or "contact".
-  function showScreen(name) {
+  // name: "menu", "work", "about" or "contact". reveal: scramble the menu
+  // labels in, only as the modal opens.
+  function showScreen(name, { reveal = false } = {}) {
     if (detail.isOpen()) detail.closeImmediately();
     const changed = name !== screen;
     screen = name;
     for (const [key, el] of Object.entries(screens)) el.hidden = key !== name;
     if (changed) screens[name].scrollTop = 0;
 
-    if (name === "menu" && changed) {
+    if (name === "menu" && reveal) {
       itemReveals.forEach((reveal, i) => gsap.delayedCall(i * ITEM_STAGGER, () => reveal.play()));
     }
 
@@ -257,7 +259,7 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     isOpen = true;
     syncCta();
     root.hidden = false;
-    showScreen(screenName);
+    showScreen(screenName, { reveal: wasClosed });
 
     if (!wasClosed) {
       // Reopened mid-close: run the same morph forward from where it is.
