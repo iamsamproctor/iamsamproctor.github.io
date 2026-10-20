@@ -75,6 +75,19 @@
         display: block;
       }
 
+      /* Holding on the scene charges a blast, so a long press there (or on
+         the headings floating over it) mustn't start a text selection or
+         bring up iOS's callout. */
+      .scene-window,
+      .title-block,
+      .hero-heading,
+      .mission-heading,
+      .hallway-quote {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+
       /* A vignette over the whole scene, deepest along the bottom where the
          headings sit, so text reads over bright or busy parts of it. */
       .scene-window::after {

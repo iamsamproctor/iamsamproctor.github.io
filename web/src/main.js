@@ -826,6 +826,10 @@ renderer.domElement.addEventListener("pointerdown", (event) => {
   chargeStart = performance.now() / 1000;
   startChargeSound(CHARGE_SECONDS);
 });
+// A long press is a charge, not a request for the context menu.
+renderer.domElement.addEventListener("contextmenu", (event) =>
+  event.preventDefault(),
+);
 window.addEventListener("pointerup", releaseCharge);
 // e.g. a touch that turns into a scroll: no blast.
 window.addEventListener("pointercancel", endCharge);
