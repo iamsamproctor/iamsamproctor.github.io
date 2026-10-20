@@ -169,8 +169,12 @@ export function createWorkModal({
     calloutsEl.innerHTML = work.callouts
       .map(
         (callout, index) => `
-          <article class="work-callout${index % 2 ? " is-flipped" : ""}">
-            <div class="work-callout-media" data-reveal>${renderMedia(callout)}</div>
+          <article class="work-callout${index % 2 ? " is-flipped" : ""}${callout.fullFrame ? " is-full-frame" : ""}${
+            callout.aspect < 1 ? " is-portrait" : ""
+          }${callout.letterbox ? " is-letterboxed" : ""}">
+            <div class="work-callout-media" style="--count: ${[callout.video ?? []].flat().length || 1}${
+              callout.letterbox ? `; background: ${escapeHtml(callout.letterbox)}` : ""
+            }" data-reveal>${renderMedia(callout)}</div>
             <div class="work-callout-text" data-reveal>
               <span class="work-callout-index">${String(index + 1).padStart(2, "0")}</span>
               <h3 class="work-callout-title">${escapeHtml(callout.title)}</h3>
@@ -187,13 +191,20 @@ export function createWorkModal({
   }
 
   // A section's video, else its image, else nothing: the media box's grey
-  // background stands in as a placeholder.
-  function renderMedia({ video, image }) {
+  // background stands in as a placeholder. aspect (width / height) sizes
+  // the frame before the video has loaded; under 1, it's shown whole
+  // instead of cropped to the band. video can be a list of clips with the
+  // same aspect, shown side by side.
+  function renderMedia({ video, image, aspect }) {
+    const style = aspect ? ` style="--aspect: ${Number(aspect)}; aspect-ratio: ${Number(aspect)}"` : "";
     if (video) {
       const poster = image ? ` poster="${escapeHtml(image)}"` : "";
-      return `<video data-src="${escapeHtml(video)}"${poster} muted loop playsinline preload="none"></video>`;
+      return [video]
+        .flat()
+        .map((src) => `<video data-src="${escapeHtml(src)}"${poster}${style} muted loop playsinline preload="none"></video>`)
+        .join("");
     }
-    if (image) return `<img src="${escapeHtml(image)}" alt="" loading="lazy" />`;
+    if (image) return `<img src="${escapeHtml(image)}" alt=""${style} loading="lazy" />`;
     return "";
   }
 

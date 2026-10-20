@@ -100,12 +100,14 @@ export const works = {
     statsNote: "As of October 2026, with no updates since 2024.",
     link: { label: "View on the App Store", url: "https://apps.apple.com/us/app/jadu/id6443662349" },
     tools: ["Unity", "C#", "AR Foundation", { name: "Normcore", use: "multiplayer" }],
-    // Every section is a grey box until footage is in; the comment above
-    // each one says what it's waiting for.
+    // A section is a grey box until its footage is in; the comment above
+    // each one still waiting says what it's waiting for.
     callouts: [
-      // Finished AR combat, ideally cutting between different real-world places.
       {
         title: "Bringing a Fighting Game into the Real World",
+        video: "/assets/videos/JaduFight_OfficeMatch.mp4",
+        // The phone's view is composited down the right side.
+        fullFrame: true,
         body: [
           "I worked as a gameplay engineer on the team, focusing primarily on character control, animation, combat implementation, NPC behavior, and multiplayer systems. As the project evolved, so did my responsibilities, from getting a character moving with a virtual joystick to helping build and refine the systems that made combat feel responsive and expressive.",
           "The defining challenge was that we couldn't predict where anyone would play. A player might launch the game in an open field or a cluttered bedroom. We had to create gameplay that could adapt to both.",
@@ -113,9 +115,10 @@ export const works = {
         quote:
           "The defining challenge was that we couldn't predict where anyone would play. A player might launch the game in an open field or a cluttered bedroom. We had to create gameplay that could adapt to both.",
       },
-      // The early joystick prototype, detected planes, a fallback-plane before/after.
       {
         title: "A Character Controller for an Unpredictable World",
+        video: "/assets/videos/JaduFight_MeebitStairs.mp4",
+        aspect: 768 / 1600,
         body: [
           "My first task was to get a character walking in AR. I started by combining existing Unity character-controller resources with mobile joystick input, retargeting stock-humanoid animations onto the supplied character model, a [Meebit](https://meebits.com/collection).",
           "Combined with our existing AR placement system, a player could place a character into their surroundings, and now, move it across detected surfaces.",
@@ -124,9 +127,10 @@ export const works = {
           "Ultimately, our goal was to make the experience dependable and enjoyable despite imperfect environmental data.",
         ],
       },
-      // Walking into a jetpack, the hoverboard at different scales, both at once.
       {
         title: "Jetpacks and Hoverboards",
+        video: ["/assets/videos/JaduFight_Jetpack.mp4", "/assets/videos/JaduFight_Hoverboard.mp4"],
+        aspect: 768 / 1600,
         body: [
           "Free roaming soon expanded beyond walking. We introduced jetpacks and hoverboards, and I added movement states to the existing character controller to support them.",
           "Jetpacks introduced continuous thrust, vertical movement, and a new set of tuning problems: acceleration, gravity, floating, turning, and altitude limits. In AR, the player isn't following the character with a traditional game camera; the view is anchored to their phone. That made unrestricted flight impractical, so the movement had to be designed around the viewing experience.",
@@ -134,9 +138,12 @@ export const works = {
           "As the movement systems grew over time, I contributed to the team's shift toward more controlled, kinematic character movement and collision handling.",
         ],
       },
-      // An avatar lineup, a retargeting comparison, combat characters' moves.
       {
         title: "One Game, Thousands of Avatars",
+        image: "/assets/images/JaduFight_AvatarScaleChart.jpg",
+        // A chart: shown whole, on its own black, and barely faded.
+        letterbox: "#000",
+        fullFrame: true,
         body: [
           "JADU supported numerous third-party avatar collections in free roam, representing thousands of unique characters, alongside proprietary characters designed for combat.",
           "Every model had to work with the movement and animation systems, and the avatars varied enormously. Body types ranged widely, skeleton structures differed, and each collection had its own needs. To handle that, I created a comprehensive document for our partners that set out the requirements for supporting their avatar collections. I then worked directly with those partners to onboard their models into our ecosystem.",
