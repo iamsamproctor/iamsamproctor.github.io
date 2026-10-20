@@ -1876,11 +1876,11 @@
         grid-template-columns: 1.3fr 1fr;
       }
 
-      .work-callout:nth-child(even) {
+      .work-callout.is-flipped {
         grid-template-columns: 1fr 1.3fr;
       }
 
-      .work-callout:nth-child(even) .work-callout-media {
+      .work-callout.is-flipped .work-callout-media {
         order: 2;
       }
 
@@ -1894,7 +1894,7 @@
         mask-image: linear-gradient(var(--fade), #000 68%, transparent);
       }
 
-      .work-callout:nth-child(even) .work-callout-media {
+      .work-callout.is-flipped .work-callout-media {
         --fade: to left;
       }
 
@@ -1913,7 +1913,7 @@
         padding: 72px var(--gutter) 72px 24px;
       }
 
-      .work-callout:nth-child(even) .work-callout-text {
+      .work-callout.is-flipped .work-callout-text {
         padding: 72px 24px 72px var(--gutter);
       }
 
@@ -1942,6 +1942,52 @@
 
       .work-callout-body + .work-callout-body {
         margin-top: 1em;
+      }
+
+      .work-callout-body a {
+        color: #ffffff;
+        text-decoration: underline;
+        text-decoration-color: rgba(255, 255, 255, 0.35);
+        text-underline-offset: 3px;
+        transition: text-decoration-color 0.2s ease;
+      }
+
+      .work-callout-body a:hover,
+      .work-callout-body a:focus-visible {
+        text-decoration-color: #ffffff;
+      }
+
+      /* A pull quote between sections: large, light, and centered in the
+         panel's column, ruled above and below like a magazine spread. */
+      .work-quote {
+        margin: 0;
+        padding: clamp(32px, 4cqw, 56px) var(--gutter);
+        text-align: center;
+      }
+
+      /* The measure sits on the quote's own text, so ch counts at its size. */
+      .work-quote p {
+        max-width: 40ch;
+        margin: 0 auto;
+        font-size: clamp(22px, 2.8vw, 36px);
+        font-weight: 300;
+        line-height: 1.35;
+        letter-spacing: 0.005em;
+        color: #ffffff;
+      }
+
+      .work-quote p::before,
+      .work-quote p::after {
+        content: "";
+        display: block;
+        width: 48px;
+        height: 1px;
+        margin: 0 auto 28px;
+        background: rgba(255, 255, 255, 0.35);
+      }
+
+      .work-quote p::after {
+        margin: 28px auto 0;
       }
 
       .work-callout-more {
@@ -2066,23 +2112,23 @@
         /* Stacked: the image spans the panel on top and fades down into
            the text below it. */
         .work-callout,
-        .work-callout:nth-child(even) {
+        .work-callout.is-flipped {
           grid-template-columns: 1fr;
         }
 
-        .work-callout:nth-child(even) .work-callout-media {
+        .work-callout.is-flipped .work-callout-media {
           order: 0;
         }
 
         .work-callout-media,
-        .work-callout:nth-child(even) .work-callout-media {
+        .work-callout.is-flipped .work-callout-media {
           --fade: to bottom;
           min-height: 0;
           aspect-ratio: 16 / 10;
         }
 
         .work-callout-text,
-        .work-callout:nth-child(even) .work-callout-text {
+        .work-callout.is-flipped .work-callout-text {
           padding: 8px var(--gutter) 48px;
         }
       }

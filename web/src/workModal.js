@@ -23,6 +23,14 @@ function escapeHtml(value) {
   );
 }
 
+// Body copy is plain text, except [label](https://...) becomes an outside link.
+function renderInline(value) {
+  return escapeHtml(value).replace(
+    /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener">$1</a>',
+  );
+}
+
 // The modal grows out of the clicked card in two layers, both driven by one
 // 0 -> 1 progress value:
 //  - the panel is clip-path inset down to the card's rect, then unclipped
@@ -155,21 +163,24 @@ export function createWorkModal({
       .join("");
     posterEl.src = cell.querySelector("img")?.src ?? "";
 
+    // Sides alternate by section, counted in JS so a pull quote between
+    // sections doesn't throw the alternation off.
     calloutsEl.innerHTML = work.callouts
       .map(
         (callout, index) => `
-          <article class="work-callout">
+          <article class="work-callout${index % 2 ? " is-flipped" : ""}">
             <div class="work-callout-media" data-reveal>${renderMedia(callout)}</div>
             <div class="work-callout-text" data-reveal>
               <span class="work-callout-index">${String(index + 1).padStart(2, "0")}</span>
               <h3 class="work-callout-title">${escapeHtml(callout.title)}</h3>
               ${[callout.body]
                 .flat()
-                .map((para) => `<p class="work-callout-body">${escapeHtml(para)}</p>`)
+                .map((para) => `<p class="work-callout-body">${renderInline(para)}</p>`)
                 .join("")}
               ${callout.more ? renderMore(callout.more) : ""}
             </div>
-          </article>`,
+          </article>
+          ${callout.quote ? renderQuote(callout.quote) : ""}`,
       )
       .join("");
   }
@@ -197,10 +208,19 @@ export function createWorkModal({
         <div class="work-callout-more-body">
           ${[more.body]
             .flat()
-            .map((para) => `<p class="work-callout-body">${escapeHtml(para)}</p>`)
+            .map((para) => `<p class="work-callout-body">${renderInline(para)}</p>`)
             .join("")}
         </div>
       </details>`;
+  }
+
+  // An optional pull quote after a section, set as its own full-width band
+  // the way a magazine lifts a line out of the article.
+  function renderQuote(quote) {
+    return `
+      <blockquote class="work-quote" data-reveal>
+        <p>${renderInline(quote)}</p>
+      </blockquote>`;
   }
 
   // Where it grows out of and shrinks back into: the card, or the rect
