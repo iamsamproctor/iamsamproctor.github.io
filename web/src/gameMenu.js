@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { createTextReveal } from "./textReveal.js";
+import { playSwitchSound, playOpenSound, playCloseSound } from "./uiSound.js";
 
 // The menu: one modal panel over the end of the hallway, holding a stack of
 // screens like a game's pause menu.
@@ -260,6 +261,8 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     syncCta();
     root.hidden = false;
     showScreen(screenName, { reveal: wasClosed });
+    // Plays with the morph in, including when reopened mid-close.
+    playOpenSound();
 
     if (!wasClosed) {
       // Reopened mid-close: run the same morph forward from where it is.
@@ -290,6 +293,7 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     }
     tween?.kill();
     isOpen = false;
+    playCloseSound();
     // Shrink back into the menu button if it's on screen, otherwise fade.
     const target = menuButtonShown() ? menuButtonEl : null;
     rects = measure(target);
@@ -322,6 +326,14 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     syncCta();
   }
 
+  // Moves the selection to an item with a tick, as the pointer or arrow keys
+  // do. Focus set by opening a screen stays silent.
+  function select(item) {
+    if (document.activeElement === item) return;
+    item.focus({ preventScroll: true });
+    playSwitchSound();
+  }
+
   // --- Wiring -------------------------------------------------------------
 
   menuButtonEl.addEventListener("click", () => open("menu", { from: menuButtonEl }));
@@ -338,7 +350,7 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
     });
     // Hovering an item selects it, as in a game menu, so the keyboard picks
     // up from wherever the pointer left off. The highlight follows focus.
-    item.addEventListener("pointerenter", () => item.focus({ preventScroll: true }));
+    item.addEventListener("pointerenter", () => select(item));
     item.addEventListener("focus", () => item.classList.add("is-selected"));
     item.addEventListener("blur", () => item.classList.remove("is-selected"));
   }
@@ -373,7 +385,7 @@ export function createGameMenu({ detail, onChange = () => {}, onBackToStart = ()
       const current = items.indexOf(document.activeElement);
       const step = event.key === "ArrowDown" ? 1 : -1;
       const next = current === -1 ? 0 : (current + step + items.length) % items.length;
-      items[next].focus({ preventScroll: true });
+      select(items[next]);
       return;
     }
 

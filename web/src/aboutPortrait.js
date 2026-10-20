@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import gsap from "gsap";
 import { SparkRenderer, SplatMesh, dyno } from "@sparkjsdev/spark";
+import { playCloseSound } from "./uiSound.js";
 
 // A Gaussian splat of a person shown inside the About photo frame. Moving the
 // cursor across the screen turns the figure from one side to the other, and
@@ -286,6 +287,7 @@ export function createAboutPortrait(containerEl, { url, viewerEl }) {
       if (!viewer || viewer.closing) return;
       viewer.closing = true;
       viewer.dragging = false;
+      playCloseSound();
 
       // Hand the spin back to the cursor turn by its nearest equivalent
       // angle, so it unwinds the short way rather than spinning back round.

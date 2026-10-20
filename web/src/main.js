@@ -16,6 +16,12 @@ import {
   startChargeSound,
   stopChargeSound,
 } from "./impactSound.js";
+import {
+  setUiSoundEnabled,
+  playSwitchSound,
+  playSelectSound,
+  playClickSound,
+} from "./uiSound.js";
 import { createHallway, LOOK_HANDOFF } from "./hallway.js";
 import { createMuseumVisitor } from "./museumVisitor.js";
 import { createAboutPortrait } from "./aboutPortrait.js";
@@ -49,16 +55,23 @@ const heroHeadingReveal = heroHeadingTitleEl
 
 const audioToggleEl = document.querySelector(".audio-toggle");
 
+// Debug: ?nomusic keeps the music off while leaving the sound effects on;
+// Shift+M flips it at runtime.
+let musicOn = !new URLSearchParams(window.location.search).has("nomusic");
+
 // Both start/enable calls must happen inside a click or key press, which is
 // why this is only ever called from the Enter button, the toggle, or M.
 function setAudio(on, { fadeSeconds = 1.5 } = {}) {
   audioToggleEl?.setAttribute("aria-pressed", String(on));
   setRevealSoundEnabled(on);
   setImpactSoundEnabled(on);
+  setUiSoundEnabled(on);
   if (on) {
     windScroll.enable();
-    backgroundMusic.start();
-    if (fadeSeconds) backgroundMusic.fadeIn(fadeSeconds);
+    if (musicOn) {
+      backgroundMusic.start();
+      if (fadeSeconds) backgroundMusic.fadeIn(fadeSeconds);
+    }
   } else {
     windScroll.disable();
     backgroundMusic.stop();
@@ -69,6 +82,16 @@ audioToggleEl?.addEventListener("click", () => {
   setAudio(audioToggleEl.getAttribute("aria-pressed") !== "true");
 });
 
+// Every button clicks, except the project cards, which play the selection
+// sound instead. Listening on the document, after the buttons' own handlers,
+// catches ones made later (the breadcrumb), and means turning the sound on
+// clicks while turning it off doesn't.
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button || button.matches(".work-cell")) return;
+  playClickSound();
+});
+
 // M toggles the sound from anywhere past the loader, as in a video player,
 // e.g. while walking the gallery with the mouse captured.
 window.addEventListener("keydown", (event) => {
@@ -76,7 +99,19 @@ window.addEventListener("keydown", (event) => {
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (document.body.classList.contains("is-loading")) return;
   if (event.target.closest?.("input, textarea, [contenteditable]")) return;
-  setAudio(audioToggleEl?.getAttribute("aria-pressed") !== "true");
+  const soundOn = audioToggleEl?.getAttribute("aria-pressed") === "true";
+  if (event.shiftKey) {
+    musicOn = !musicOn;
+    if (!soundOn) return;
+    if (musicOn) {
+      backgroundMusic.start();
+      backgroundMusic.fadeIn(1.5);
+    } else {
+      backgroundMusic.stop();
+    }
+    return;
+  }
+  setAudio(!soundOn);
 });
 
 const loadingScreen = createLoadingScreen({
@@ -983,6 +1018,10 @@ renderer.setAnimationLoop(() => {
 });
 
 
+// The card the selection tick last played for, so hovering a card and then
+// clicking it (which focuses it too) only ticks once.
+let tickedCell = null;
+
 document.querySelectorAll('.work-cell').forEach((cell) => {
   const video = cell.querySelector('video');
 
@@ -997,13 +1036,30 @@ document.querySelectorAll('.work-cell').forEach((cell) => {
   const deactivate = () => {
     if (workModal.isOpenFor(cell)) return;
     video.pause();
+    if (tickedCell === cell) tickedCell = null;
   };
 
-  cell.addEventListener('pointerenter', activate);
-  cell.addEventListener('focus', activate);
+  const tick = () => {
+    if (tickedCell === cell || workModal.isOpenFor(cell)) return;
+    tickedCell = cell;
+    playSwitchSound();
+  };
+
+  cell.addEventListener('pointerenter', () => {
+    activate();
+    tick();
+  });
+  cell.addEventListener('focus', () => {
+    activate();
+    // Keyboard focus only: a click's focus already ticked on hover.
+    if (cell.matches(':focus-visible')) tick();
+  });
   cell.addEventListener('pointerleave', deactivate);
   cell.addEventListener('blur', deactivate);
-  cell.addEventListener('click', () => workModal.open(cell));
+  cell.addEventListener('click', () => {
+    if (!workModal.isOpenFor(cell)) playSelectSound();
+    workModal.open(cell);
+  });
 });
 
 const aboutPhotoEl = document.querySelector(".about-photo");

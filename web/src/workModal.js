@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { works } from "./works.js";
+import { playCloseSound } from "./uiSound.js";
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const OPEN_DURATION = reduceMotion ? 0.01 : 0.9;
@@ -342,6 +343,7 @@ export function createWorkModal({
     if (!state || state.closing) return;
     state.closing = true;
     onClose();
+    playCloseSound();
 
     revealCall?.kill();
     revealObserver.disconnect();
