@@ -376,8 +376,10 @@
         display: block;
       }
 
-      .hero-heading p {
+      .hero-heading ul {
         margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
         font-size: clamp(13px, 1.4vw, 16px);
         font-weight: 400;
         letter-spacing: 0.08em;
@@ -390,9 +392,23 @@
           transform 0.6s ease-out;
       }
 
-      .hero-heading p.is-visible {
+      .hero-heading ul.is-visible {
         opacity: 1;
         transform: translateY(0);
+      }
+
+      /* A dim dot after each item but the last. It stays on the line with
+         the word before it, so a wrapped line never starts with one; its
+         margins even out the gaps on either side of it. */
+      .hero-heading li {
+        display: inline;
+        white-space: nowrap;
+      }
+
+      .hero-heading li:not(:last-child)::after {
+        content: "\00b7";
+        margin: 0 0.35em 0 0.7em;
+        color: rgba(255, 255, 255, 0.25);
       }
 
       /* The mission statement, in the hero title's corner once the camera has
@@ -2899,7 +2915,12 @@
 
     <div class="hero-heading">
       <h2>creative developer</h2>
-      <p>XR | Games | Volumetrics | Music</p>
+      <ul role="list">
+        <li>XR</li>
+        <li>Games</li>
+        <li>Volumetrics</li>
+        <li>Music</li>
+      </ul>
     </div>
 
     <!-- The mission, shown once the camera has pulled out to the sky point

@@ -45,7 +45,7 @@ const backgroundMusic = createBackgroundMusic();
 document.addEventListener("touchstart", () => {}, { passive: true });
 
 const heroHeadingTitleEl = document.querySelector(".hero-heading h2");
-const heroHeadingSubEl = document.querySelector(".hero-heading p");
+const heroHeadingSubEl = document.querySelector(".hero-heading ul");
 const missionHeadingEl = document.querySelector(".mission-heading");
 const missionTitleEl = missionHeadingEl?.querySelector("h2");
 const missionReveal = missionTitleEl ? createTextReveal(missionTitleEl, { lockWidths: true }) : null;
