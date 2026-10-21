@@ -235,6 +235,12 @@ export const works = {
     role: "Gameplay Engineer",
     summary:
       "PANIC: AR Shooter brings a fast-paced, miniature shooter into the player's physical environment. Enemies swarm from every direction, projectiles fly across the room, and larger-than-life bosses turn familiar spaces into arenas.",
+    // Public App Store figures; player numbers would have to come from Jadu.
+    stats: [
+      { value: "4.9", label: "Stars on the App Store" },
+      { value: "379", label: "App Store ratings" },
+    ],
+    statsNote: "As of October 2026, with no updates since July 2025.",
     link: { label: "View on the App Store", url: "https://apps.apple.com/us/app/panic-ar-shooter/id6742031888" },
     tools: [
       "Unity",
