@@ -40,18 +40,27 @@ export function setImpactSoundEnabled(on) {
 const NEAR_DISTANCE = 4; // world units
 const ROLLOFF = 0.1;
 
+// A low-pass filter darkens weaker blasts: a plain tap is muffled, and the
+// cutoff opens up exponentially with charge until a full one is unfiltered.
+const LOWPASS_FROM = 600; // Hz for a plain tap
+const LOWPASS_TO = 20000; // Hz at full charge
+
 // power: 0 for a plain tap up to 1 for a fully charged blast, which is
-// louder and lower. distance: world units from the camera to the blast.
+// louder, lower, and brighter. distance: world units from the camera to the
+// blast.
 export function playImpactSound(power = 0, distance = 0) {
   if (!enabled || !buffer) return;
   const source = ctx.createBufferSource();
   source.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = LOWPASS_FROM * Math.pow(LOWPASS_TO / LOWPASS_FROM, power);
   const gain = ctx.createGain();
   const beyond = Math.max(distance - NEAR_DISTANCE, 0);
   const falloff = NEAR_DISTANCE / (NEAR_DISTANCE + ROLLOFF * beyond);
   gain.gain.value = VOLUME * (1 + power * 2.2) * falloff;
   source.playbackRate.value = 1 - power * 0.35;
-  source.connect(gain).connect(master);
+  source.connect(filter).connect(gain).connect(master);
   source.start();
 }
 
