@@ -229,18 +229,129 @@ export const works = {
   },
 
   Panic: {
-    title: "Panic",
-    year: "2021",
-    company: null,
-    summary: placeholderSummary,
+    title: "PANIC: AR Shooter",
+    year: "2025",
+    company: "Jadu",
+    role: "Gameplay Engineer",
+    summary:
+      "PANIC: AR Shooter brings a fast-paced, miniature shooter into the player's physical environment. Enemies swarm from every direction, projectiles fly across the room, and larger-than-life bosses turn familiar spaces into arenas.",
+    link: { label: "View on the App Store", url: "https://apps.apple.com/us/app/panic-ar-shooter/id6742031888" },
+    tools: [
+      "Unity",
+      "C#",
+      "AR Foundation",
+      { name: "DOTS / Entities", use: "ECS" },
+      { name: "Mecanim", use: "animation" },
+      { name: "Unity Behavior", use: "boss encounters" },
+      "Final IK",
+    ],
+    // A section is a grey box until its footage is in; the comment above
+    // each one still waiting says what it's waiting for.
     callouts: [
+      // Full-bleed gameplay: placing the game in a real room, a swarm closing in, a boss.
       {
-        title: "Motion design",
-        body: placeholderBody,
+        title: "A Battlefield in Your Living Room",
+        body: "As a gameplay engineer at Jadu, I worked across character animation, combat systems, audio integration, and boss encounters. My role often sat at the intersection of engineering and game design: developing mechanics, shaping how they felt to play, and collaborating with artists, designers, and other engineers to bring them to life.",
       },
+      // Early prototypes, from defending a base to the swarm shooter it became.
       {
-        title: "Turnaround under pressure",
-        body: placeholderBody,
+        title: "Designing for an Unfamiliar Kind of Space",
+        body: [
+          "Early in development, we explored how a shooter could make meaningful use of augmented reality. One direction involved defending a base against approaching enemies. As the game evolved, we moved toward a more mobile, action-oriented experience, with enemies approaching the player from multiple directions.",
+          "AR added an unusual dimension to familiar game-design questions. A tabletop, couch, or kitchen counter could become part of the play space. The scale of the characters, the way enemies approached, and the player's ability to move around the scene all influenced how the game felt.",
+        ],
+      },
+      // A swarm, maybe beside an editor capture of the entities behind it.
+      {
+        title: "Learning to Think in Data",
+        body: [
+          "To support large numbers of enemies and projectiles on mobile, the project used Unity's Data-Oriented Technology Stack (DOTS) and Entity Component System (ECS). It was a significant shift from the GameObject-based Unity workflows I knew best, and much of the team was learning alongside me.",
+          "ECS encouraged us to organize behavior around data and systems rather than individual objects. It changed how I approached everything from collisions and movement to animation and audio. Some seemingly simple features required a new way of thinking, especially when they needed to communicate with Unity tools that still lived outside ECS.",
+        ],
+      },
+      // Strafing, turning in place, shooting, reloading, swapping weapons.
+      {
+        title: "Making a Miniature Character Feel Responsive",
+        body: [
+          "A large part of my work centered on the player character's animation. I implemented and refined movement, strafing, turning in place, shooting, reloading, weapon swaps, jumping, and double jumping, working closely with the animation and gameplay teams.",
+          "The character needed to feel responsive while performing several actions at once. I used blend trees for directional movement and layered animation so the upper body could handle weapons and aiming while the lower body continued moving. I also added subtle stepping animations when the character rotated in place, helping their feet feel grounded instead of sliding across the floor.",
+        ],
+      },
+      // A jump in slow motion: input, anticipation, the animation event, then takeoff.
+      {
+        title: "Connecting Animation to Gameplay",
+        body: [
+          "One of my favorite challenges was synchronizing the jump animation with the character's actual movement. If the physics impulse happened as soon as the input was received, the character could rise before the animation visually communicated a jump.",
+          "I used an animation event to signal the ECS gameplay system at the moment of takeoff. That let the character anticipate the movement before the physical jump began, bringing the animation and simulation into closer alignment. The same principle was useful elsewhere, including timing enemy melee damage to the moment an attack connected visually.",
+        ],
+        more: {
+          label: "Animation in an ECS game",
+          body: [
+            "Our gameplay simulation ran in ECS, while character animation relied on Unity's conventional Mecanim Animator. Integrating the two meant keeping animation parameters, events, and character state in sync across different parts of the engine.",
+            "I worked within and extended this shared architecture to make animation-driven gameplay possible. It was a recurring lesson in practical engineering: the best solution often involved understanding where different systems met and designing a reliable connection between them.",
+          ],
+        },
+      },
+      // Gameplay with the sound up: weapons, enemies, pickups, a boss.
+      {
+        title: "Giving the Action Sound and Feedback",
+        body: [
+          "Sound was another important part of making PANIC's world feel alive. Working with our sound designer and fellow engineers, I integrated audio across weapons, enemies, pickups, environmental interactions, and boss encounters.",
+          "The game's central ECS audio architecture was developed by another engineer. I extended and used that system to connect gameplay events with the appropriate sounds, while also working on details such as spatial distance, volume controls, and how overlapping voice lines should behave.",
+        ],
+      },
+      // A tower charging up, interrupted by stepping away, then completed.
+      {
+        title: "Feedback That Follows the Player's Actions",
+        body: [
+          "One small interaction illustrates the kind of iteration I enjoyed. Players could activate a tower by remaining close to it while a charge-up completed. Initially, the charging sound behaved like a one-shot: it could continue even after the player moved away and interrupted the action.",
+          "I changed the interaction so the sound responded to the same gameplay state that controlled the charge timer. Leaving the activation area stopped the sound; returning started the sequence again. I also worked on haptic feedback that increased in intensity as the interaction progressed.",
+          "It was a modest feature, but it reinforced an important principle: audio, haptics, animation, and gameplay should communicate the same thing to the player.",
+        ],
+        quote: "Audio, haptics, animation, and gameplay should communicate the same thing to the player.",
+      },
+      // The bosses' reveal: TukTuk and Absynthe.
+      {
+        title: "From an Open-Ended Brief to a Playable Fight",
+        body: [
+          "When our team decided to introduce boss fights, I was given an open-ended assignment to prototype an encounter. I researched boss battles, drew on my own experience playing games, and began exploring how phases, attack patterns, recovery windows, and enemy swarms could create a satisfying rhythm.",
+          "I developed and presented an initial multi-phase prototype, then helped turn those ideas into the encounters with TukTuk and Absynthe. This became one of the most rewarding parts of the project because I could contribute directly to the design of the experience while also building the systems that made it work.",
+        ],
+      },
+      // A cropped behavior graph beside a fight changing phase and recovering.
+      {
+        title: "Designing a Rhythm of Pressure and Release",
+        body: [
+          "The encounters progressed through three attack phases, separated by recovery moments. Bosses could use melee attacks, launch projectiles, trigger ground-pound shockwaves, and bring additional enemies into the fight. Their behavior changed as the player advanced, creating a rhythm of pressure, opportunity, and escalation.",
+          "I assembled the encounters using Unity Behavior graphs, coordinating animations, attacks, shields, enemy spawns, visual effects, music, and transitions between phases. I collaborated with engineers who extended the behavior framework, artists who created effects and assets, and designers who helped tune the fights.",
+        ],
+      },
+      // The ground pound, and a top-down diagram of the damage ring moving out
+      // with it (check its labels against the footage or source first).
+      {
+        title: "A Shockwave That Behaves Like a Ring",
+        body: [
+          "One attack presented a particularly interesting collision problem. The boss would slam the ground, sending an expanding shockwave outward. The damaging area needed to follow the moving edge of the wave rather than fill the entire circle behind it.",
+          "I implemented a ring-shaped damage region using concentric collision volumes. The outer volume defined the wave's reach, while the inner volume excluded the area the shockwave had already passed. By detecting when the player was inside the outer boundary but outside the inner one, I could make damage correspond to the advancing wave.",
+          "This was a satisfying example of solving a gameplay problem with simple geometry and ECS collision logic, while keeping the result aligned with the visual effect.",
+        ],
+      },
+      // A boss reel: head tracking, homing shots, the health bar, minions, a defeat.
+      {
+        title: "Bringing the Encounters Together",
+        body: [
+          "Beyond the core attack patterns, I worked on supporting features including homing projectiles, boss head-tracking, world-space health bars, minion spawning behavior, animation and audio integration, and encounter tuning. Each piece helped make the bosses feel more like characters occupying the player's room.",
+          "Building these encounters meant moving constantly between design decisions and technical implementation: imagining what the player should experience, finding a way to express it in the available systems, and refining the result through playtesting and feedback.",
+        ],
+      },
+      // A closing shot: a character or boss in an everyday room.
+      {
+        title: "Learning Across Disciplines",
+        body: [
+          "Working on PANIC made me a more well-rounded developer and game designer. Learning ECS challenged me to think about programming from a different perspective, with a greater appreciation for memory layout, data organization, and how software interacts with the hardware running it.",
+          "Just as importantly, the experience reinforced the value of collaboration and humility. Some of my greatest opportunities to learn came from working with people whose expertise differed from my own, being open to feedback, and recognizing when someone else had a better approach. I became more comfortable working across disciplines, translating between technical and creative perspectives to help bring ideas to life.",
+          "And perhaps most importantly, PANIC reminded me why I find augmented reality so exciting. There's something remarkable about creating characters and experiences that inhabit the same physical spaces we do. It's a medium that continues to change how I think about games, interaction, and the world around me.",
+        ],
       },
     ],
   },
