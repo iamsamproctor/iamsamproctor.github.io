@@ -15,6 +15,7 @@ export function createBackgroundMusic({
   let ctx = null;
   let gain = null;
   let on = false;
+  let ducked = false;
   let pauseTimer = null;
 
   // The element pauses along with the context. Left playing into a
@@ -65,8 +66,17 @@ export function createBackgroundMusic({
     },
 
     fadeIn(seconds = 4) {
-      if (!on) return;
+      if (!on || ducked) return;
       rampTo(volume, seconds);
+    },
+
+    // Dips the track out of the way while something else plays with sound,
+    // e.g. a work's audio example, then brings it back. It keeps playing
+    // underneath, so it picks up in step.
+    duck(down, seconds = 0.6) {
+      ducked = down;
+      if (!on) return;
+      rampTo(down ? 0 : volume, seconds);
     },
 
     // Fades out, then pauses so the track picks up where it left off.

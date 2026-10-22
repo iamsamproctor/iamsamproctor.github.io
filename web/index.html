@@ -1981,6 +1981,174 @@
         background: #262626;
       }
 
+      /* "Listen to an example": the section's call to action, a solid pill
+         under its text with an arrow pointing across at the clip (up at it
+         once the sections stack), nudging that way until it's pressed.
+         While the clip plays with sound, the arrow gives way to the sound
+         toggle's wave, the pill turns outlined and fills left to right with
+         how far through it is, and the volume slider fades in beside it. */
+      @property --progress {
+        syntax: "<number>";
+        inherits: true;
+        initial-value: 0;
+      }
+
+      .work-callout-listen {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px 20px;
+        margin-top: 32px;
+        transition: --progress 0.3s linear;
+      }
+
+      .work-callout-listen-button {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 28px 16px 22px;
+        border: 1px solid #ffffff;
+        border-radius: 999px;
+        background: #ffffff;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        color: #000000;
+        cursor: pointer;
+        transition:
+          background-color 0.25s ease,
+          color 0.25s ease,
+          transform 0.25s ease;
+      }
+
+      .work-callout.is-flipped .work-callout-listen-button {
+        padding: 16px 22px 16px 28px;
+      }
+
+      .work-callout-listen-button:active {
+        transform: scale(1.04);
+      }
+
+      @media (hover: hover) {
+        .work-callout-listen-button:hover {
+          transform: scale(1.04);
+        }
+      }
+
+      .work-callout-listen-button:focus-visible {
+        outline: 1px solid rgba(255, 255, 255, 0.6);
+        outline-offset: 3px;
+      }
+
+      .work-callout-listen.is-listening .work-callout-listen-button {
+        background: linear-gradient(
+          to right,
+          rgba(255, 255, 255, 0.24) calc(var(--progress) * 100%),
+          rgba(255, 255, 255, 0.04) 0
+        );
+        color: #ffffff;
+      }
+
+      /* Drawn pointing left, at a clip on the left; flipped sections have
+         theirs on the right. */
+      .work-callout-listen-arrow {
+        width: 18px;
+        height: 18px;
+        flex: none;
+        animation: work-callout-listen-nudge 1.6s ease-in-out infinite;
+      }
+
+      .work-callout.is-flipped .work-callout-listen-arrow {
+        order: 1;
+        rotate: 180deg;
+      }
+
+      .work-callout-listen.is-listening .work-callout-listen-arrow {
+        display: none;
+      }
+
+      /* transform rather than translate, so it moves in the arrow's own
+         frame: always the way it's pointing, however it's rotated. */
+      @keyframes work-callout-listen-nudge {
+        50% {
+          transform: translateX(-4px);
+        }
+      }
+
+      .work-callout-listen-wave-box {
+        width: 32px;
+        height: 16px;
+        flex: none;
+        overflow: hidden;
+        -webkit-mask-image: linear-gradient(to right, transparent, #000 25%, #000 75%, transparent);
+        mask-image: linear-gradient(to right, transparent, #000 25%, #000 75%, transparent);
+      }
+
+      .work-callout-listen-amplitude {
+        transform-box: view-box;
+        transform-origin: 50% 50%;
+        transform: scaleY(0.04);
+        transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .work-callout-listen-wave {
+        animation: audio-wave-scroll 1.4s linear infinite;
+        animation-play-state: paused;
+      }
+
+      .work-callout-listen.is-listening .work-callout-listen-amplitude {
+        transform: scaleY(1);
+      }
+
+      .work-callout-listen.is-listening .work-callout-listen-wave {
+        animation-play-state: running;
+      }
+
+      .work-callout-listen.is-listening .work-callout-listen-start,
+      .work-callout-listen:not(.is-listening) :is(.work-callout-listen-stop, .work-callout-listen-wave-box) {
+        display: none;
+      }
+
+      .work-callout-volume {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: rgba(255, 255, 255, 0.7);
+        opacity: 0;
+        visibility: hidden;
+        transition:
+          opacity 0.3s ease,
+          visibility 0s 0.3s;
+      }
+
+      .work-callout-listen.is-listening .work-callout-volume {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.3s ease;
+      }
+
+      .work-callout-volume svg {
+        width: 18px;
+        height: 18px;
+        flex: none;
+      }
+
+      .work-callout-volume input {
+        width: 110px;
+        margin: 0;
+        accent-color: #ffffff;
+        cursor: pointer;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .work-callout-listen-arrow,
+        .work-callout-listen-wave {
+          animation: none;
+        }
+      }
+
       .work-callout-media img,
       .work-callout-media video {
         position: absolute;
@@ -2213,6 +2381,18 @@
         .work-callout.is-framed .work-callout-media {
           --frame-height: min(560px, 70svh);
           aspect-ratio: auto;
+        }
+
+        /* The clip is above the text now, so the arrow points up at it. */
+        .work-callout-listen-arrow,
+        .work-callout.is-flipped .work-callout-listen-arrow {
+          order: 0;
+          rotate: 90deg;
+        }
+
+        .work-callout-listen-button,
+        .work-callout.is-flipped .work-callout-listen-button {
+          padding: 16px 28px 16px 22px;
         }
 
         .work-callout-text,

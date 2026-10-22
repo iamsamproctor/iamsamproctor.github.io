@@ -51,10 +51,15 @@ function renderInline(value) {
 // It normally grows out of the card that was clicked, but open() can be
 // given another rect to grow out of and shrink back into, e.g. a work's
 // picture on the gallery wall (see galleryExplore.js).
+//
+// onListen(true) is called when a section's clip starts playing with its
+// sound, and onListen(false) when it stops, e.g. to get the background
+// music out of the way.
 export function createWorkModal({
   onOpen = () => {},
   onClose = () => {},
   onClosed = () => {},
+  onListen = () => {},
 } = {}) {
   const root = document.querySelector(".work-modal");
   const backdropEl = root.querySelector(".work-modal-backdrop");
@@ -112,6 +117,7 @@ export function createWorkModal({
           if (!video.src) video.src = video.dataset.src;
           video.play().catch(() => {});
         } else {
+          if (listening?.video === video) stopListening();
           video.pause();
         }
       }
@@ -121,8 +127,85 @@ export function createWorkModal({
 
   const sectionVideos = () => Array.from(calloutsEl.querySelectorAll("video"));
 
+  // A section with listen set has a button beside its clip that restarts it
+  // with sound and plays it through once. After that, or when the button is
+  // pressed again or the clip scrolls well away, it goes back to looping
+  // silently. Browsers only allow sound after a click, hence the button.
+  // While it plays, a volume slider shows next to it; the level carries over
+  // to the next listen.
+  let listening = null; // { video, control }
+  let listenVolume = 0.6;
+
+  // iOS Safari won't let a page set a video's volume (it reads back as 1),
+  // so there the slider stays hidden and the phone's own buttons do it.
+  const canSetVolume = (() => {
+    const probe = document.createElement("video");
+    probe.volume = 0.5;
+    return probe.volume === 0.5;
+  })();
+
+  function startListening(control) {
+    stopListening();
+    const video = control.closest(".work-callout").querySelector("video");
+    if (!video.src) video.src = video.dataset.src;
+    video.volume = listenVolume;
+    video.muted = false;
+    video.loop = false;
+    video.currentTime = 0;
+    video.play().catch(stopListening);
+    listening = { video, control };
+    control.classList.add("is-listening");
+    control.style.setProperty("--progress", 0);
+    onListen(true);
+  }
+
+  function stopListening() {
+    if (!listening) return;
+    const { video, control } = listening;
+    listening = null;
+    video.muted = true;
+    video.loop = true;
+    control.classList.remove("is-listening");
+    control.style.setProperty("--progress", 0);
+    onListen(false);
+  }
+
+  calloutsEl.addEventListener("click", (event) => {
+    const button = event.target.closest(".work-callout-listen-button");
+    if (!button) return;
+    const control = button.parentNode;
+    if (listening?.control === control) stopListening();
+    else startListening(control);
+  });
+
+  calloutsEl.addEventListener("input", ({ target }) => {
+    if (!target.matches(".work-callout-volume input")) return;
+    listenVolume = Number(target.value);
+    if (listening) listening.video.volume = listenVolume;
+  });
+
+  // Media events don't bubble, so these listen in the capture phase.
+  calloutsEl.addEventListener(
+    "timeupdate",
+    ({ target }) => {
+      if (listening?.video !== target || !target.duration) return;
+      listening.control.style.setProperty("--progress", target.currentTime / target.duration);
+    },
+    true,
+  );
+  calloutsEl.addEventListener(
+    "ended",
+    ({ target }) => {
+      if (listening?.video !== target) return;
+      stopListening();
+      target.play().catch(() => {});
+    },
+    true,
+  );
+
   // Stops the section videos and drops what they've loaded.
   function unloadSectionVideos() {
+    stopListening();
     sectionVideoObserver.disconnect();
     for (const video of sectionVideos()) {
       video.pause();
@@ -182,6 +265,7 @@ export function createWorkModal({
                 .flat()
                 .map((para) => `<p class="work-callout-body">${renderInline(para)}</p>`)
                 .join("")}
+              ${callout.listen ? renderListen() : ""}
               ${callout.more ? renderMore(callout.more) : ""}
             </div>
           </article>
@@ -206,6 +290,45 @@ export function createWorkModal({
     }
     if (image) return `<img src="${escapeHtml(image)}" alt=""${style} loading="lazy" />`;
     return "";
+  }
+
+  // The button to hear a section's clip, set under its text with an arrow
+  // pointing across at the clip, and the volume slider that shows while it
+  // plays. The wave stands in for the arrow while it plays.
+  function renderListen() {
+    return `
+      <div class="work-callout-listen">
+        <button type="button" class="work-callout-listen-button">
+          <svg class="work-callout-listen-arrow" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M14 8H2m5-5L2 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <svg class="work-callout-listen-wave-box" viewBox="0 0 32 16" fill="none" aria-hidden="true">
+            <g class="work-callout-listen-amplitude">
+              <path
+                class="work-callout-listen-wave"
+                d="M0 8q4-12 8 0t8 0t8 0t8 0t8 0t8 0"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                vector-effect="non-scaling-stroke"
+              />
+            </g>
+          </svg>
+          <span class="work-callout-listen-start">Listen to an example</span>
+          <span class="work-callout-listen-stop">Stop listening</span>
+        </button>
+        ${
+          canSetVolume
+            ? `<label class="work-callout-volume">
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M2 6h2.5L8 3v10L4.5 10H2z" fill="currentColor" />
+                  <path d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6.5 6.5 0 0 1 0 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                </svg>
+                <input type="range" min="0" max="1" step="0.05" value="${listenVolume}" aria-label="Volume" />
+              </label>`
+            : ""
+        }
+      </div>`;
   }
 
   // Optional reading tucked under a section: a native <details> the reader
@@ -427,6 +550,7 @@ export function createWorkModal({
     open,
     close,
     closeImmediately,
+    stopListening,
     isOpen: () => state !== null,
     isOpenFor: (cell) => state?.cell === cell,
   };

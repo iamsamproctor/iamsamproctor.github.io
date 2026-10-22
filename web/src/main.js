@@ -75,6 +75,7 @@ function setAudio(on, { fadeSeconds = 1.5 } = {}) {
   } else {
     windScroll.disable();
     backgroundMusic.stop();
+    workModal.stopListening();
   }
 }
 
@@ -274,6 +275,7 @@ const workModal = createWorkModal({
   onOpen: (work) => gameMenu.setDetail(work.title),
   onClose: () => gameMenu.setDetail(null),
   onClosed: () => gameMenu.detailClosed(),
+  onListen: (on) => backgroundMusic.duck(on),
 });
 const gameMenu = createGameMenu({
   detail: workModal,

@@ -298,9 +298,12 @@ export const works = {
           ],
         },
       },
-      // Gameplay with the sound up: weapons, enemies, pickups, a boss.
       {
         title: "Giving the Action Sound and Feedback",
+        video: "/assets/videos/Panic_SoundExample.mp4",
+        aspect: 610 / 1200,
+        // Its own sound is the point, so it offers a button to hear it.
+        listen: true,
         body: [
           "Sound was another important part of making PANIC's world feel alive. Working with our sound designer and fellow engineers, I integrated audio across weapons, enemies, pickups, environmental interactions, and boss encounters.",
           "The game's central ECS audio architecture was developed by another engineer. I extended and used that system to connect gameplay events with the appropriate sounds, while also working on details such as spatial distance, volume controls, and how overlapping voice lines should behave.",
