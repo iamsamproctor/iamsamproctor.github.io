@@ -1951,11 +1951,12 @@
         object-position: center;
       }
 
-      /* Tall footage, e.g. a phone recording: shown whole as a rounded
-         frame centered in the media column, rather than cropped to the
-         band and faded. Several share the column side by side, each up to
-         --frame-height tall and narrowing together when the column is. */
-      .work-callout.is-portrait .work-callout-media {
+      /* Footage that can't lose its edges, e.g. a phone recording or a
+         split-screen capture: shown whole as a rounded frame centered in the
+         media column, rather than cropped to the band and faded. Several
+         share the column side by side, each up to --frame-height tall and
+         narrowing together when the column is. */
+      .work-callout.is-framed .work-callout-media {
         --frame-height: min(clamp(440px, 44cqw, 760px), 80svh);
         --frame-gap: 16px;
         display: flex;
@@ -1969,7 +1970,7 @@
         mask-image: none;
       }
 
-      .work-callout.is-portrait .work-callout-media :is(img, video) {
+      .work-callout.is-framed .work-callout-media :is(img, video) {
         position: static;
         width: min(
           calc((100% - (var(--count) - 1) * var(--frame-gap)) / var(--count)),
@@ -2209,7 +2210,7 @@
           aspect-ratio: 16 / 10;
         }
 
-        .work-callout.is-portrait .work-callout-media {
+        .work-callout.is-framed .work-callout-media {
           --frame-height: min(560px, 70svh);
           aspect-ratio: auto;
         }
@@ -3143,7 +3144,7 @@
                     alt="JADU: Fight comes to your Room"
                   />
                   <video
-                    src="/assets/videos/trees.mp4"
+                    src="/assets/videos/WorkPreview_JaduFight.mp4"
                     muted
                     loop
                     playsinline

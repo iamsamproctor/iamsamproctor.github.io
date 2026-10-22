@@ -170,7 +170,7 @@ export function createWorkModal({
       .map(
         (callout, index) => `
           <article class="work-callout${index % 2 ? " is-flipped" : ""}${callout.fullFrame ? " is-full-frame" : ""}${
-            callout.aspect < 1 ? " is-portrait" : ""
+            callout.aspect ? " is-framed" : ""
           }${callout.letterbox ? " is-letterboxed" : ""}">
             <div class="work-callout-media" style="--count: ${[callout.video ?? []].flat().length || 1}${
               callout.letterbox ? `; background: ${escapeHtml(callout.letterbox)}` : ""
@@ -192,9 +192,9 @@ export function createWorkModal({
 
   // A section's video, else its image, else nothing: the media box's grey
   // background stands in as a placeholder. aspect (width / height) sizes
-  // the frame before the video has loaded; under 1, it's shown whole
-  // instead of cropped to the band. video can be a list of clips with the
-  // same aspect, shown side by side.
+  // the frame before the video has loaded, and shows it whole as a rounded
+  // frame instead of cropped to the band. video can be a list of clips with
+  // the same aspect, shown side by side.
   function renderMedia({ video, image, aspect }) {
     const style = aspect ? ` style="--aspect: ${Number(aspect)}; aspect-ratio: ${Number(aspect)}"` : "";
     if (video) {

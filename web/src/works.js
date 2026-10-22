@@ -150,9 +150,11 @@ export const works = {
           "From there, I worked with 3D and technical artists to validate humanoid skeletons, skinning, scale, and materials, and to ensure animations retargeted properly. Third-party avatars generally shared a standard animation setup, sometimes with custom idles or emotes, while combat characters required more specialized animation support.",
         ],
       },
-      // Free-roam movement against combat strafing, locking on and letting go.
       {
         title: "From Free Roam to Fighting Game",
+        video: "/assets/videos/JaduFight_Strafing.mp4",
+        // The fighters circle out toward the text side.
+        fullFrame: true,
         body: [
           "Turning a free-roaming AR experience into a fighting game meant rethinking how characters moved. Unrestricted, omnidirectional movement felt natural for exploration, but not for combat.",
           "I researched games like Street Fighter and Tekken and realized that movement in them is generally restricted to a single axis (forward and backward), so opponents spend most of the time facing each other.",
@@ -160,9 +162,10 @@ export const works = {
           "After experimenting with variables like rotation lock, speed modulation, and cooldown timing, and working closely with our animation team, we gradually shaped the movement into the system in the product today.",
         ],
       },
-      // A punch into a kick, a charged attack, a cropped look at the Animator graph.
       {
         title: "Building the Combat Animation System",
+        video: "/assets/videos/JaduFight_ComboMoves.mp4",
+        aspect: 694 / 1080,
         body: [
           "Much of my work sat at the intersection of combat logic and character animation. Together with other gameplay engineers, I contributed to a shared combat architecture; I took particular ownership of movement, animation behavior, and implementing new attacks with the animation team.",
           "One of my most involved contributions was a combo system that could chain attacks through intermediate animation segments. A standalone punch might move from idle to the punch's apex and back to idle. A punch-kick combo could instead transition from the punch apex directly into the kick apex before returning to idle. The system supported longer chains and required input to arrive during the appropriate window of the current move.",
@@ -173,9 +176,10 @@ export const works = {
           body: "I built and maintained a large Animator state machine, roughly a hundred states, covering different attacks, transitions, charged moves, and reactions. Much of the challenge was managing responsiveness: deciding which animations could be interrupted, clearing stale triggers, and preventing buffered inputs from causing unintended moves after an action had finished.",
         },
       },
-      // Contrasting NPC personalities, the same fighter on easy and hard.
       {
         title: "NPCs With Personality",
+        video: "/assets/videos/JaduFight_NPCs.mp4",
+        aspect: 1136 / 910,
         body: [
           "I owned substantial portions of our NPC behavior implementation. Rather than using machine learning or a formal behavior-tree framework, I built rule-based behaviors in C#, coordinating movement, attack selection, and defensive reactions.",
           "Making the AI functional was only the beginning. I spent extensive time playtesting with the team, adjusting reaction delays, attack frequency, defense timing, randomness, and move variety. Too little aggression made an opponent trivial; too much made it feel unfair. Behaviors like instant shielding could make an NPC seem superhuman rather than skilled.",
