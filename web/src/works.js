@@ -306,16 +306,9 @@ export const works = {
         listen: true,
         body: [
           "Sound was another important part of making PANIC's world feel alive. Working with our sound designer and fellow engineers, I integrated audio across weapons, enemies, pickups, environmental interactions, and boss encounters.",
-          "The game's central ECS audio architecture was developed by another engineer. I extended and used that system to connect gameplay events with the appropriate sounds, while also working on details such as spatial distance, volume controls, and how overlapping voice lines should behave.",
-        ],
-      },
-      // A tower charging up, interrupted by stepping away, then completed.
-      {
-        title: "Feedback That Follows the Player's Actions",
-        body: [
-          "One small interaction illustrates the kind of iteration I enjoyed. Players could activate a tower by remaining close to it while a charge-up completed. Initially, the charging sound behaved like a one-shot: it could continue even after the player moved away and interrupted the action.",
-          "I changed the interaction so the sound responded to the same gameplay state that controlled the charge timer. Leaving the activation area stopped the sound; returning started the sequence again. I also worked on haptic feedback that increased in intensity as the interaction progressed.",
-          "It was a modest feature, but it reinforced an important principle: audio, haptics, animation, and gameplay should communicate the same thing to the player.",
+          "I worked closely with our principal engineer to develop and extend the game's central ECS audio architecture based on gameplay and sound design needs. I used that system to connect gameplay events with the appropriate sounds, while also working on details such as spatial distance, volume controls, and how overlapping voice lines should behave.",
+          "Many sounds needed to follow what was happening in the game rather than simply play once. Unlocking a chest, for example, takes a moment to charge, and its charging sound responds to the same gameplay state that drives the unlock, so what the player hears matches what they see.",
+          "Details like these reinforced an important principle: audio, haptics, animation, and gameplay should communicate the same thing to the player.",
         ],
         quote: "Audio, haptics, animation, and gameplay should communicate the same thing to the player.",
       },
