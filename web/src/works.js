@@ -284,8 +284,10 @@ export const works = {
       },
       {
         title: "Connecting Animation to Gameplay",
-        video: "/assets/videos/Panic_PlayerJumpEditor.mp4",
-        aspect: 1920 / 1080,
+        // The jump in play, beside the editor showing what drives it.
+        video: ["/assets/videos/Panic_ChairHopping.mp4", "/assets/videos/Panic_PlayerJumpEditor.mp4"],
+        aspect: [610 / 1200, 1920 / 1080],
+        captions: ["In game", "In the editor"],
         body: [
           "One of my favorite challenges was synchronizing the jump animation with the character's actual movement. If the physics impulse happened as soon as the input was received, the character could rise before the animation visually communicated a jump.",
           "I used an animation event to signal the ECS gameplay system at the moment of takeoff. That let the character anticipate the movement before the physical jump began, bringing the animation and simulation into closer alignment. The same principle was useful elsewhere, including timing enemy melee damage to the moment an attack connected visually.",

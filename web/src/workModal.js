@@ -278,10 +278,12 @@ export function createWorkModal({
         (callout, index) => `
           <article class="work-callout${index % 2 ? " is-flipped" : ""}${callout.fullFrame ? " is-full-frame" : ""}${
             callout.aspect ? " is-framed" : ""
-          }${callout.letterbox ? " is-letterboxed" : ""}">
-            <div class="work-callout-media" style="--count: ${[callout.video ?? []].flat().length || 1}${
-              callout.letterbox ? `; background: ${escapeHtml(callout.letterbox)}` : ""
-            }" data-reveal>${renderMedia(callout)}</div>
+          }${new Set([callout.aspect].flat()).size > 1 ? " is-mixed" : ""}${
+            callout.letterbox ? " is-letterboxed" : ""
+          }">
+            <div class="work-callout-media"${
+              callout.letterbox ? ` style="background: ${escapeHtml(callout.letterbox)}"` : ""
+            } data-reveal>${renderMedia(callout)}</div>
             <div class="work-callout-text" data-reveal>
               <span class="work-callout-index">${String(index + 1).padStart(2, "0")}</span>
               <h3 class="work-callout-title">${escapeHtml(callout.title)}</h3>
@@ -301,18 +303,30 @@ export function createWorkModal({
   // A section's video, else its image, else nothing: the media box's grey
   // background stands in as a placeholder. aspect (width / height) sizes
   // the frame before the video has loaded, and shows it whole as a rounded
-  // frame instead of cropped to the band. video can be a list of clips with
-  // the same aspect, shown side by side.
-  function renderMedia({ video, image, aspect }) {
-    const style = aspect ? ` style="--aspect: ${Number(aspect)}; aspect-ratio: ${Number(aspect)}"` : "";
+  // frame instead of cropped to the band. video can be a list of clips,
+  // shown side by side at one height; aspect can then be a list too, one
+  // per clip, or a single one they share. captions, a list matching the
+  // clips, labels each one underneath.
+  function renderMedia({ video, image, aspect, captions }) {
+    const aspects = [aspect].flat();
+    const aspectAt = (index) => aspects[index] ?? aspects[0];
+    const style = (index) =>
+      aspectAt(index) ? ` style="--aspect: ${Number(aspectAt(index))}; aspect-ratio: ${Number(aspectAt(index))}"` : "";
     if (video) {
       const poster = image ? ` poster="${escapeHtml(image)}"` : "";
       return [video]
         .flat()
-        .map((src) => `<video data-src="${escapeHtml(src)}"${poster}${style} muted loop playsinline preload="none"></video>`)
+        .map((src, index) => {
+          const clip = `<video data-src="${escapeHtml(src)}"${poster}${style(index)} muted loop playsinline preload="none"></video>`;
+          if (!captions?.[index]) return clip;
+          return `<figure class="work-callout-clip" style="--aspect: ${Number(aspectAt(index))}">
+            ${clip}
+            <figcaption>${escapeHtml(captions[index])}</figcaption>
+          </figure>`;
+        })
         .join("");
     }
-    if (image) return `<img src="${escapeHtml(image)}" alt=""${style} loading="lazy" />`;
+    if (image) return `<img src="${escapeHtml(image)}" alt=""${style(0)} loading="lazy" />`;
     return "";
   }
 

@@ -1954,8 +1954,9 @@
       /* Footage that can't lose its edges, e.g. a phone recording or a
          split-screen capture: shown whole as a rounded frame centered in the
          media column, rather than cropped to the band and faded. Several
-         share the column side by side, each up to --frame-height tall and
-         narrowing together when the column is. */
+         share the column side by side at one height, up to --frame-height,
+         even when their shapes differ: each grows in proportion to its
+         aspect, so the widths split the way a shared height needs. */
       .work-callout.is-framed .work-callout-media {
         --frame-height: min(clamp(440px, 44cqw, 760px), 80svh);
         --frame-gap: 16px;
@@ -1972,13 +1973,39 @@
 
       .work-callout.is-framed .work-callout-media :is(img, video) {
         position: static;
-        width: min(
-          calc((100% - (var(--count) - 1) * var(--frame-gap)) / var(--count)),
-          calc(var(--frame-height) * var(--aspect))
-        );
+        flex: var(--aspect) 1 0;
+        min-width: 0;
+        max-width: calc(var(--frame-height) * var(--aspect));
         height: auto;
         border-radius: 14px;
         background: #262626;
+      }
+
+      /* A captioned clip: the figure takes the clip's place in the row and
+         the clip fills it, with its label underneath in the section
+         number's style. */
+      .work-callout.is-framed .work-callout-clip {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        flex: var(--aspect) 1 0;
+        min-width: 0;
+        max-width: calc(var(--frame-height) * var(--aspect));
+        margin: 0;
+      }
+
+      .work-callout.is-framed .work-callout-clip video {
+        flex: none;
+        width: 100%;
+        max-width: none;
+      }
+
+      .work-callout-clip figcaption {
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.45);
       }
 
       /* "Listen to an example": the section's call to action, a solid pill
@@ -2381,6 +2408,17 @@
         .work-callout.is-framed .work-callout-media {
           --frame-height: min(560px, 70svh);
           aspect-ratio: auto;
+        }
+
+        /* Clips of different shapes get too small side by side at one
+           height here, so they stack, each as wide as the column allows. */
+        .work-callout.is-mixed .work-callout-media {
+          flex-direction: column;
+        }
+
+        .work-callout.is-mixed .work-callout-media > :is(img, video, .work-callout-clip) {
+          flex: none;
+          width: 100%;
         }
 
         /* The clip is above the text now, so the listen control moves up to
