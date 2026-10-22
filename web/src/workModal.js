@@ -272,13 +272,17 @@ export function createWorkModal({
     posterEl.src = cell.querySelector("img")?.src ?? "";
 
     // Sides alternate by section, counted in JS so a pull quote between
-    // sections doesn't throw the alternation off.
+    // sections doesn't throw the alternation off. A wide section has no
+    // side, so the ones either side of it still alternate.
+    let sides = 0;
     calloutsEl.innerHTML = work.callouts
       .map(
         (callout, index) => `
-          <article class="work-callout${index % 2 ? " is-flipped" : ""}${callout.fullFrame ? " is-full-frame" : ""}${
+          <article class="work-callout${!callout.wide && sides++ % 2 ? " is-flipped" : ""}${
+            callout.fullFrame ? " is-full-frame" : ""
+          }${
             callout.aspect ? " is-framed" : ""
-          }${new Set([callout.aspect].flat()).size > 1 ? " is-mixed" : ""}${
+          }${new Set([callout.aspect].flat()).size > 1 ? " is-mixed" : ""}${callout.wide ? " is-wide" : ""}${
             callout.letterbox ? " is-letterboxed" : ""
           }">
             <div class="work-callout-media"${

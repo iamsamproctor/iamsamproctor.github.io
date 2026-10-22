@@ -2195,6 +2195,24 @@
         padding: 72px 24px 72px var(--gutter);
       }
 
+      /* A wide section takes a row of its own: its media spans the panel and
+         the text follows underneath, kept to a readable measure, as when the
+         sections stack on narrow screens. */
+      @media (min-width: 901px) {
+        .work-callout.is-wide {
+          grid-template-columns: 1fr;
+        }
+
+        .work-callout.is-wide .work-callout-media {
+          order: 0;
+        }
+
+        .work-callout.is-wide .work-callout-text {
+          max-width: calc(68ch + 2 * var(--gutter));
+          padding: 24px var(--gutter) 0;
+        }
+      }
+
       .work-callout-index {
         display: block;
         margin-bottom: 16px;
