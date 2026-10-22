@@ -264,9 +264,10 @@ export const works = {
         aspect: 498 / 980,
         body: "As a gameplay engineer at Jadu, I worked across character animation, combat systems, audio integration, and boss encounters. My role often sat at the intersection of engineering and game design: developing mechanics, shaping how they felt to play, and collaborating with artists, designers, and other engineers to bring them to life.",
       },
-      // A swarm, maybe beside an editor capture of the entities behind it.
       {
         title: "Learning to Think in Data",
+        video: "/assets/videos/Panic_Flamethrower.mp4",
+        aspect: 1,
         body: [
           "To support large numbers of enemies and projectiles on mobile, the project used Unity's Data-Oriented Technology Stack (DOTS) and Entity Component System (ECS). It was a significant shift from the GameObject-based Unity workflows I knew best, and much of the team was learning alongside me.",
           "ECS encouraged us to organize behavior around data and systems rather than individual objects. It changed how I approached everything from collisions and movement to animation and audio. Some seemingly simple features required a new way of thinking, especially when they needed to communicate with Unity tools that still lived outside ECS.",
