@@ -2383,7 +2383,20 @@
           aspect-ratio: auto;
         }
 
-        /* The clip is above the text now, so the arrow points up at it. */
+        /* The clip is above the text now, so the listen control moves up to
+           sit just under it, ahead of the title, and points up at it. The
+           text's pieces only have one-sided margins, so as a flex column
+           their spacing stays the same. */
+        .work-callout-text {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .work-callout-listen {
+          order: -1;
+          margin: 0 0 32px;
+        }
+
         .work-callout-listen-arrow,
         .work-callout.is-flipped .work-callout-listen-arrow {
           order: 0;

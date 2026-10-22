@@ -77,6 +77,14 @@ export function createBackgroundMusic({
       ducked = down;
       if (!on) return;
       rampTo(down ? 0 : volume, seconds);
+      if (down) return;
+      // iOS lets one element play sound at a time, so the other one starting
+      // pauses this track, and can interrupt the context too: bring both
+      // back, as in onVisibility. It has played before, so it may play
+      // outside a click.
+      ctx.resume().then(() => {
+        if (on && !ducked && !document.hidden) audio.play().catch(() => {});
+      });
     },
 
     // Fades out, then pauses so the track picks up where it left off.

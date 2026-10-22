@@ -136,19 +136,36 @@ export function createWorkModal({
   let listening = null; // { video, control }
   let listenVolume = 0.6;
 
-  // iOS Safari won't let a page set a video's volume (it reads back as 1),
-  // so there the slider stays hidden and the phone's own buttons do it.
-  const canSetVolume = (() => {
-    const probe = document.createElement("video");
-    probe.volume = 0.5;
-    return probe.volume === 0.5;
-  })();
+  // The volume goes through a Web Audio gain node, one per clip, because
+  // iOS Safari ignores a video's own volume. The context is made inside the
+  // first listen click, as browsers require.
+  let audioCtx = null;
+  const listenGains = new Map(); // video -> GainNode
+
+  // iOS treats Web Audio as ambient sound, which the silent switch mutes;
+  // while a clip plays with sound it's playback, as a plain video would be.
+  function setAudioSession(type) {
+    if (navigator.audioSession) navigator.audioSession.type = type;
+  }
+
+  function listenGain(video) {
+    audioCtx ??= new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+    let gain = listenGains.get(video);
+    if (!gain) {
+      gain = audioCtx.createGain();
+      audioCtx.createMediaElementSource(video).connect(gain).connect(audioCtx.destination);
+      listenGains.set(video, gain);
+    }
+    return gain;
+  }
 
   function startListening(control) {
     stopListening();
     const video = control.closest(".work-callout").querySelector("video");
     if (!video.src) video.src = video.dataset.src;
-    video.volume = listenVolume;
+    setAudioSession("playback");
+    listenGain(video).gain.value = listenVolume;
     video.muted = false;
     video.loop = false;
     video.currentTime = 0;
@@ -163,8 +180,12 @@ export function createWorkModal({
     if (!listening) return;
     const { video, control } = listening;
     listening = null;
+    // Silenced at the gain first: on iOS, muting the video alone lets the
+    // audio it has already buffered play on for a second.
+    listenGains.get(video).gain.value = 0;
     video.muted = true;
     video.loop = true;
+    setAudioSession("auto");
     control.classList.remove("is-listening");
     control.style.setProperty("--progress", 0);
     onListen(false);
@@ -181,7 +202,7 @@ export function createWorkModal({
   calloutsEl.addEventListener("input", ({ target }) => {
     if (!target.matches(".work-callout-volume input")) return;
     listenVolume = Number(target.value);
-    if (listening) listening.video.volume = listenVolume;
+    if (listening) listenGains.get(listening.video).gain.value = listenVolume;
   });
 
   // Media events don't bubble, so these listen in the capture phase.
@@ -206,6 +227,9 @@ export function createWorkModal({
   // Stops the section videos and drops what they've loaded.
   function unloadSectionVideos() {
     stopListening();
+    // Lets the clips' audio nodes go along with the clips.
+    listenGains.forEach((gain) => gain.disconnect());
+    listenGains.clear();
     sectionVideoObserver.disconnect();
     for (const video of sectionVideos()) {
       video.pause();
@@ -317,17 +341,13 @@ export function createWorkModal({
           <span class="work-callout-listen-start">Listen to an example</span>
           <span class="work-callout-listen-stop">Stop listening</span>
         </button>
-        ${
-          canSetVolume
-            ? `<label class="work-callout-volume">
-                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M2 6h2.5L8 3v10L4.5 10H2z" fill="currentColor" />
-                  <path d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6.5 6.5 0 0 1 0 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
-                </svg>
-                <input type="range" min="0" max="1" step="0.05" value="${listenVolume}" aria-label="Volume" />
-              </label>`
-            : ""
-        }
+        <label class="work-callout-volume">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M2 6h2.5L8 3v10L4.5 10H2z" fill="currentColor" />
+            <path d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6.5 6.5 0 0 1 0 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          </svg>
+          <input type="range" min="0" max="1" step="0.05" value="${listenVolume}" aria-label="Volume" />
+        </label>
       </div>`;
   }
 
