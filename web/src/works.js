@@ -258,18 +258,11 @@ export const works = {
     // A section is a grey box until its footage is in; the comment above
     // each one still waiting says what it's waiting for.
     callouts: [
-      // Full-bleed gameplay: placing the game in a real room, a swarm closing in, a boss.
       {
         title: "A Battlefield in Your Living Room",
+        video: "/assets/videos/Panic_ShootingAliens.mp4",
+        aspect: 498 / 980,
         body: "As a gameplay engineer at Jadu, I worked across character animation, combat systems, audio integration, and boss encounters. My role often sat at the intersection of engineering and game design: developing mechanics, shaping how they felt to play, and collaborating with artists, designers, and other engineers to bring them to life.",
-      },
-      // Early prototypes, from defending a base to the swarm shooter it became.
-      {
-        title: "Designing for an Unfamiliar Kind of Space",
-        body: [
-          "Early in development, we explored how a shooter could make meaningful use of augmented reality. One direction involved defending a base against approaching enemies. As the game evolved, we moved toward a more mobile, action-oriented experience, with enemies approaching the player from multiple directions.",
-          "AR added an unusual dimension to familiar game-design questions. A tabletop, couch, or kitchen counter could become part of the play space. The scale of the characters, the way enemies approached, and the player's ability to move around the scene all influenced how the game felt.",
-        ],
       },
       // A swarm, maybe beside an editor capture of the entities behind it.
       {
@@ -279,17 +272,19 @@ export const works = {
           "ECS encouraged us to organize behavior around data and systems rather than individual objects. It changed how I approached everything from collisions and movement to animation and audio. Some seemingly simple features required a new way of thinking, especially when they needed to communicate with Unity tools that still lived outside ECS.",
         ],
       },
-      // Strafing, turning in place, shooting, reloading, swapping weapons.
       {
         title: "Making a Miniature Character Feel Responsive",
+        video: "/assets/videos/Panic_SwapAndShoot.mp4",
+        aspect: 1416 / 998,
         body: [
           "A large part of my work centered on the player character's animation. I implemented and refined movement, strafing, turning in place, shooting, reloading, weapon swaps, jumping, and double jumping, working closely with the animation and gameplay teams.",
           "The character needed to feel responsive while performing several actions at once. I used blend trees for directional movement and layered animation so the upper body could handle weapons and aiming while the lower body continued moving. I also added subtle stepping animations when the character rotated in place, helping their feet feel grounded instead of sliding across the floor.",
         ],
       },
-      // A jump in slow motion: input, anticipation, the animation event, then takeoff.
       {
         title: "Connecting Animation to Gameplay",
+        video: "/assets/videos/Panic_PlayerJumpEditor.mp4",
+        aspect: 1920 / 1080,
         body: [
           "One of my favorite challenges was synchronizing the jump animation with the character's actual movement. If the physics impulse happened as soon as the input was received, the character could rise before the animation visually communicated a jump.",
           "I used an animation event to signal the ECS gameplay system at the moment of takeoff. That let the character anticipate the movement before the physical jump began, bringing the animation and simulation into closer alignment. The same principle was useful elsewhere, including timing enemy melee damage to the moment an attack connected visually.",
