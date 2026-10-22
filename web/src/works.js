@@ -322,9 +322,12 @@ export const works = {
           "I developed and presented an initial multi-phase prototype, then helped turn those ideas into the encounters with TukTuk and Absynthe. This became one of the most rewarding parts of the project because I could contribute directly to the design of the experience while also building the systems that made it work.",
         ],
       },
-      // A cropped behavior graph beside a fight changing phase and recovering.
       {
         title: "Designing a Rhythm of Pressure and Release",
+        image: "/assets/images/TukTukBossFightBehavior.png",
+        // A graph: shown whole, on its own canvas color, and barely faded.
+        letterbox: "#202020",
+        fullFrame: true,
         body: [
           "The encounters progressed through three attack phases, separated by recovery moments. Bosses could use melee attacks, launch projectiles, trigger ground-pound shockwaves, and bring additional enemies into the fight. Their behavior changed as the player advanced, creating a rhythm of pressure, opportunity, and escalation.",
           "I assembled the encounters using Unity Behavior graphs, coordinating animations, attacks, shields, enemy spawns, visual effects, music, and transitions between phases. I collaborated with engineers who extended the behavior framework, artists who created effects and assets, and designers who helped tune the fights.",
