@@ -112,8 +112,6 @@ export const works = {
           "I worked as a gameplay engineer on the team, focusing primarily on character control, animation, combat implementation, NPC behavior, and multiplayer systems. As the project evolved, so did my responsibilities, from getting a character moving with a virtual joystick to helping build and refine the systems that made combat feel responsive and expressive.",
           "The defining challenge was that we couldn't predict where anyone would play. A player might launch the game in an open field or a cluttered bedroom. We had to create gameplay that could adapt to both.",
         ],
-        quote:
-          "The defining challenge was that we couldn't predict where anyone would play. A player might launch the game in an open field or a cluttered bedroom. We had to create gameplay that could adapt to both.",
       },
       {
         title: "A Character Controller for an Unpredictable World",
@@ -448,8 +446,6 @@ export const works = {
           "Some challenges meant carefully animating objects to follow a performer. Others involved physics, particle systems, masking, or manipulating the visibility of meshes. Each introduced a new set of tools and concepts, gradually expanding my understanding of what was possible in Unity.",
           "I also began to understand something that still shapes my approach to development: compelling interactive experiences often come down to finding inventive ways to combine relatively simple technical systems.",
         ],
-        quote:
-          "A convincing illusion doesn't always require an elaborate solution. Sometimes it takes an invisible collider, a carefully positioned pivot, and a little creative problem-solving.",
       },
       // Fans watching the experience, or the band's imagery in a real space.
       {
