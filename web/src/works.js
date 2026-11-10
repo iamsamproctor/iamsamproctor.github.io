@@ -288,19 +288,13 @@ export const works = {
         video: ["/assets/videos/Panic_ChairHopping.mp4", "/assets/videos/Panic_PlayerJumpEditor.mp4"],
         aspect: [610 / 1200, 1920 / 1080],
         captions: ["In game", "In the editor"],
-        // Side by side, they need the panel's full width to read.
+        // Side by side, they need the panel's full width to read, so they
+        // take a row of their own under the text.
         wide: true,
         body: [
           "One of my favorite challenges was synchronizing the jump animation with the character's actual movement. If the physics impulse happened as soon as the input was received, the character could rise before the animation visually communicated a jump.",
           "I used an animation event to signal the ECS gameplay system at the moment of takeoff. That let the character anticipate the movement before the physical jump began, bringing the animation and simulation into closer alignment. The same principle was useful elsewhere, including timing enemy melee damage to the moment an attack connected visually.",
         ],
-        more: {
-          label: "Animation in an ECS game",
-          body: [
-            "Our gameplay simulation ran in ECS, while character animation relied on Unity's conventional Mecanim Animator. Integrating the two meant keeping animation parameters, events, and character state in sync across different parts of the engine.",
-            "I worked within and extended this shared architecture to make animation-driven gameplay possible. It was a recurring lesson in practical engineering: the best solution often involved understanding where different systems met and designing a reliable connection between them.",
-          ],
-        },
       },
       {
         title: "Giving the Action Sound and Feedback",
@@ -312,9 +306,8 @@ export const works = {
           "Sound was another important part of making PANIC's world feel alive. Working with our sound designer and fellow engineers, I integrated audio across weapons, enemies, pickups, environmental interactions, and boss encounters.",
           "I worked closely with our principal engineer to develop and extend the game's central ECS audio architecture based on gameplay and sound design needs. I used that system to connect gameplay events with the appropriate sounds, while also working on details such as spatial distance, volume controls, and how overlapping voice lines should behave.",
           "Many sounds needed to follow what was happening in the game rather than simply play once. Unlocking a chest, for example, takes a moment to charge, and its charging sound responds to the same gameplay state that drives the unlock, so what the player hears matches what they see.",
-          "Details like these reinforced an important principle: audio, haptics, animation, and gameplay should communicate the same thing to the player.",
+          "It's one of the parts of game development I enjoy most: bringing sound, haptics, animation, and gameplay together until they read as one thing the player clearly feels.",
         ],
-        quote: "Audio, haptics, animation, and gameplay should communicate the same thing to the player.",
       },
       // The bosses' reveal: TukTuk and Absynthe.
       {
@@ -341,8 +334,7 @@ export const works = {
         title: "A Shockwave That Behaves Like a Ring",
         body: [
           "One attack presented a particularly interesting collision problem. The boss would slam the ground, sending an expanding shockwave outward. The damaging area needed to follow the moving edge of the wave rather than fill the entire circle behind it.",
-          "I implemented a ring-shaped damage region using concentric collision volumes. The outer volume defined the wave's reach, while the inner volume excluded the area the shockwave had already passed. By detecting when the player was inside the outer boundary but outside the inner one, I could make damage correspond to the advancing wave.",
-          "This was a satisfying example of solving a gameplay problem with simple geometry and ECS collision logic, while keeping the result aligned with the visual effect.",
+          "What the mechanic really called for was a torus-shaped collider, but Unity doesn't have one built in. So I made my own from two concentric cylinder colliders. The outer cylinder defined the wave's reach, while the inner one excluded the area the shockwave had already passed. By detecting when the player was inside the outer boundary but outside the inner one, I could make damage correspond to the advancing wave.",
         ],
       },
       // A boss reel: head tracking, homing shots, the health bar, minions, a defeat.

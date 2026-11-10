@@ -136,6 +136,17 @@ export function createWorkModal({
   let listening = null; // { video, control }
   let listenVolume = 0.6;
 
+  // The sound stops as soon as its clip is scrolled fully out of view,
+  // sooner than the clip itself pauses.
+  const listenObserver = new IntersectionObserver(
+    (entries) => {
+      for (const { target, isIntersecting } of entries) {
+        if (!isIntersecting && listening?.video === target) stopListening();
+      }
+    },
+    { root: scrollEl },
+  );
+
   // The volume goes through a Web Audio gain node, one per clip, because
   // iOS Safari ignores a video's own volume. The context is made inside the
   // first listen click, as browsers require.
@@ -171,6 +182,7 @@ export function createWorkModal({
     video.currentTime = 0;
     video.play().catch(stopListening);
     listening = { video, control };
+    listenObserver.observe(video);
     control.classList.add("is-listening");
     control.style.setProperty("--progress", 0);
     onListen(true);
@@ -180,6 +192,7 @@ export function createWorkModal({
     if (!listening) return;
     const { video, control } = listening;
     listening = null;
+    listenObserver.unobserve(video);
     // Silenced at the gain first: on iOS, muting the video alone lets the
     // audio it has already buffered play on for a second.
     listenGains.get(video).gain.value = 0;
