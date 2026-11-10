@@ -213,6 +213,9 @@ export const works = {
     ],
   },
 
+  // Off the Selected Works menu for now, so it isn't shown anywhere. To bring
+  // it back, put its card back in the menu in index.html (data-work="Handheld
+  // Guy", thumbnail Thumbnail_HandheldGuy.jpg, preview trees.mp4).
   "Handheld Guy": {
     title: "Handheld Guy",
     year: "2022",

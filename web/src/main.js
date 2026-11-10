@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { SparkRenderer, SplatMesh, dyno } from "@sparkjsdev/spark";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
-import { createTextReveal, revealOnEnter } from "./textReveal.js";
+import { createTextReveal } from "./textReveal.js";
 import { createLoadingScreen } from "./loadingScreen.js";
 import { createRevealBurn } from "./revealBurn.js";
 import { createWorkModal } from "./workModal.js";
@@ -1075,11 +1075,6 @@ if (aboutPhotoEl) {
     url: "/assets/splats/mom.spz",
     viewerEl: document.querySelector(".portrait-viewer"),
   });
-}
-
-const workIntro = document.querySelector(".work-intro");
-if (workIntro) {
-  revealOnEnter(workIntro, { lockWidths: false });
 }
 
 document.querySelector(".contact-button")?.addEventListener("click", () => {
