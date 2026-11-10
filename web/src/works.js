@@ -361,17 +361,112 @@ export const works = {
     title: "Curse of Calypso",
     year: "2021",
     company: "Jadu",
-    role: "Unity Developer",
+    role: "Junior Unity Developer",
     summary:
-      "An augmented reality experience from Palaye Royale, built at Jadu.",
+      "Curse of Calypso was an approximately ten-minute augmented reality music experience created by Jadu in collaboration with rock band Palaye Royale. Combining volumetric captures of the band with interactive 3D environments, animation, and visual effects, it brought the band's music into the physical world. Rather than watching a music video on a screen, audiences could move around holographic performances and watch surreal scenes unfold in their own surroundings.",
+    stats: [
+      { value: "Webby", label: "Award nominee" },
+      { value: "~10 min", label: "Interactive AR music experience" },
+    ],
+    tools: [
+      "Unity",
+      "C#",
+      { name: "Volumetric video", use: "the band's performances" },
+      { name: "Physics & raycasting", use: "interactions" },
+      { name: "Particle systems", use: "VFX" },
+    ],
+    // A section is a grey box until its footage is in; the comment above
+    // each one still waiting says what it's waiting for.
     callouts: [
+      // The band performing as holograms in a real room.
       {
-        title: "Augmented reality storytelling",
-        body: placeholderBody,
+        title: "My First Professional Project",
+        body: [
+          "This was an early chapter in Jadu's history, before the company shifted toward AR games. At the time, we were exploring the creative possibilities of volumetric video, and how augmented reality could transform music, performance, and storytelling.",
+          "It was also my first professional project as a developer. Having recently studied digital culture at Arizona State University, I was eager to work at the intersection of technology and the arts. With a background in music and a growing interest in Unity and augmented reality, Curse of Calypso was an ideal introduction to the industry.",
+          "I joined the team as a junior developer, contributing animation, physics interactions, and visual effects that helped bring the band's holographic performances to life.",
+        ],
+      },
+      // A hologram beside the invisible colliders keyframed to follow it.
+      {
+        title: "Making Holograms Interact With the World",
+        body: [
+          "One of the central technical challenges was creating believable interactions between volumetric video and traditional 3D geometry. Unlike a conventional animated character, our volumetric captures had no underlying skeleton, rig, or colliders. The band's performances were captured in three dimensions, but we couldn't simply attach objects to hand bones or use standard character animation to drive interactions. Each one had to be built around the prerecorded performance.",
+          "Our lead developer had created a custom Unity tool for keyframing animations in sync with hologram playback. With it, I animated invisible colliders and 3D objects to follow the performers' movements, creating the illusion that the captured musicians were physically interacting with the virtual environment.",
+          "Working with this system introduced me to many foundational Unity concepts: animation, coordinate systems, pivot points, collision detection, raycasting, masking, and particle effects. It also gave me some of my first experience debugging production code, including investigating and resolving issues in the hologram playback tooling. Each interaction presented a slightly different problem to solve.",
+        ],
       },
       {
-        title: "Volumetric performances",
-        body: placeholderBody,
+        title: "Spray Painting the Walls",
+        video: "/assets/videos/CoC_Spraypaint.mp4",
+        aspect: 1200 / 2500,
+        body: [
+          "In one sequence, a holographic band member spray-paints a surface in the environment. To make the effect believable, I positioned a virtual 3D spray can over the one visible in the volumetric capture, then animated it by hand to follow the performer's hand.",
+          "Using raycasting and masking, I created an effect that progressively revealed painted imagery on the user's wall, in sync with the movement of the spray can. The challenge was making an entirely prerecorded performance appear to leave a physical mark on the room around it.",
+        ],
+      },
+      // A close-up of the fire, ideally with the hologram moving.
+      {
+        title: "Fire From Remington's Eyes",
+        body: [
+          "One of the more surreal moments features Remington with flames pouring from his eyes. I animated invisible objects to track his eyes throughout the volumetric performance, and used them as attachment points for the fire effects, so the flames stayed aligned with his face as he moved.",
+          "It was another case of using hand-animated reference points to make up for the absence of a skeletal rig.",
+        ],
+      },
+      // The full feather-pen sequence, then a closer view of the writing.
+      {
+        title: "The Feather Pen",
+        body: [
+          "In another sequence, a band member writes on a sheet of paper with a feather pen. With no hand bones to attach the pen to, I keyframed a 3D feather pen to follow the performer's hand, frame by frame. Getting the movement to feel natural took careful attention to position and rotation: I moved the pen's pivot to where the performer's fingers held it, so it rotated convincingly as the hand moved.",
+          "I then added an invisible collider near the tip of the pen. Where it touched the paper, a masking effect progressively revealed text, as if the hologram were writing directly onto the page.",
+          "The result layered manual animation, pivot manipulation, collision detection, and masking into a single interaction. It was one of my first discoveries of how relatively simple systems could combine into a convincing illusion.",
+        ],
+      },
+      // Sebastian playing wide, then a close-up of the keys moving.
+      {
+        title: "The Piano",
+        body: [
+          "Of all the interactions I contributed, the piano sequence remains one of my favorites. Sebastian appears seated at a piano, playing along with the music. During the volumetric recording, though, he wasn't playing a working virtual instrument; his performance was captured with a physical stand-in. My task was to make the keys of a 3D piano respond convincingly to his performance.",
+          "I created a set of invisible sphere colliders and animated them to press individual keys. Drawing on my musical background, I identified the song's key as D minor and worked out its chord progression, then choreographed the colliders around the music: octaves in the left hand, the corresponding chords in the right. As the colliders moved down, they physically pressed the right keys in time with the recording, so audiences could walk around the piano and watch the keys move with the song.",
+          "What made it so rewarding was the chance to combine my musical knowledge with my growing technical skills. Rather than animating arbitrary key presses, I could use an understanding of harmony and performance to make something that felt musically authentic. It was a small detail in a larger experience, but one I took particular pride in.",
+        ],
+      },
+      // Remington knocking the books off the piano, and the physics that follows.
+      {
+        title: "Books Falling From the Piano",
+        body: [
+          "The piano sequence also includes a moment where Remington stands on top of the instrument, moving around and knocking books onto the floor. I arranged the books in the scene, choosing and positioning 3D assets for a believable composition.",
+          "To connect his prerecorded movements to the physics simulation, I animated invisible colliders to follow his feet. As his feet appeared to strike the books, the colliders set off physical interactions, sending the books tumbling from the piano onto the user's floor.",
+          "Unlike the carefully choreographed piano keys, the falling books relied on physics for a more dynamic result: another way of making the holographic performers feel as though they shared the audience's physical space.",
+        ],
+      },
+      // Behind the scenes: the keyframing tool, colliders, or masks in the editor.
+      {
+        title: "Learning Through Experimentation",
+        body: [
+          "Looking back, what stands out about Curse of Calypso is how much I learned by building these individual interactions. I wasn't responsible for the project's overall architecture or creative direction. As a junior developer, I was working within an established vision, alongside more experienced engineers and artists. But I was given opportunities to solve practical problems, make implementation decisions, and exercise creative judgment in the details.",
+          "Some challenges meant carefully animating objects to follow a performer. Others involved physics, particle systems, masking, or manipulating the visibility of meshes. Each introduced a new set of tools and concepts, gradually expanding my understanding of what was possible in Unity.",
+          "I also began to understand something that still shapes my approach to development: compelling interactive experiences often come down to finding inventive ways to combine relatively simple technical systems.",
+        ],
+        quote:
+          "A convincing illusion doesn't always require an elaborate solution. Sometimes it takes an invisible collider, a carefully positioned pivot, and a little creative problem-solving.",
+      },
+      // Fans watching the experience, or the band's imagery in a real space.
+      {
+        title: "Extending the Band's World",
+        body: [
+          "Curse of Calypso offered Palaye Royale fans an unusual way to experience the band's music and visual identity. By bringing their performances into augmented reality, it extended their artistic world beyond music videos and live shows, letting audiences experience its imagery within their own surroundings. The experience became part of the band's larger creative universe and received a Webby Award nomination.",
+          "For Jadu, the project was an exploration of volumetric performance and immersive entertainment during the company's early years. For me, it marked the beginning of my professional journey in interactive media.",
+        ],
+      },
+      // A closing shot: a holographic performer in an everyday room.
+      {
+        title: "Engineering as Artistic Expression",
+        body: [
+          "I still look back on Curse of Calypso as one of my favorite projects from my time at Jadu. Part of that is sentimental: it was my first professional development experience, and it brought together so many of my interests, from music and animation to visual art and emerging technology.",
+          "But the project also introduced me to a way of thinking about interactive media that has stayed with me. We were taking performances that had already been recorded and making them appear responsive, physical, and present in the viewer's environment. Through animation, physics, and carefully constructed visual effects, we could blur the line between a prerecorded performance and something seemingly happening right in front of you.",
+          "It showed me that engineering could be more than implementing functionality. It could also be a form of artistic expression: a way of constructing illusions and exploring new relationships between the digital and physical worlds. At the very start of my career, that was a pretty exciting thing to discover.",
+        ],
       },
     ],
   },
