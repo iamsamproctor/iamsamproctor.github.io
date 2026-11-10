@@ -440,7 +440,7 @@ export const works = {
       {
         title: "Extending the Band's World",
         body: [
-          "Curse of Calypso offered Palaye Royale fans an unusual way to experience the band's music and visual identity. By bringing their performances into augmented reality, it extended their artistic world beyond music videos and live shows, letting audiences experience its imagery within their own surroundings. The experience became part of the band's larger creative universe and received a Webby Award nomination.",
+          "Curse of Calypso arrived in early 2021, in the middle of the COVID-19 pandemic, when tours were on hold and fans couldn't gather to see the bands they loved. It offered Palaye Royale and their fans a new way to come together. By bringing the band's performances into augmented reality, it extended their artistic world beyond music videos and live shows, letting audiences experience it in their own homes. The experience became part of the band's larger creative universe and received a Webby Award nomination.",
           "For Jadu, the project was an exploration of volumetric performance and immersive entertainment during the company's early years. For me, it marked the beginning of my professional journey in interactive media, and it showed me that engineering can be a powerful form of artistic expression; in this case, one that could bring a rock band into my living room.",
         ],
       },
