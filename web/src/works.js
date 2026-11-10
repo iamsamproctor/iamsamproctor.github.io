@@ -364,14 +364,11 @@ export const works = {
       "Curse of Calypso was an approximately ten-minute augmented reality music experience created by Jadu in collaboration with rock band Palaye Royale. Combining volumetric captures of the band with interactive 3D environments, animation, and visual effects, it brought the band's music into the physical world. Rather than watching a music video on a screen, audiences could move around holographic performances and watch surreal scenes unfold in their own surroundings.",
     stats: [
       { value: "Webby", label: "Award nominee" },
-      { value: "~10 min", label: "Interactive AR music experience" },
     ],
     tools: [
       "Unity",
       "C#",
       { name: "Volumetric video", use: "the band's performances" },
-      { name: "Physics & raycasting", use: "interactions" },
-      { name: "Particle systems", use: "VFX" },
     ],
     // A section is a grey box until its footage is in; the comment above
     // each one still waiting says what it's waiting for.
@@ -381,7 +378,7 @@ export const works = {
         title: "My First Professional Project",
         body: [
           "This was an early chapter in Jadu's history, before the company shifted toward AR games. At the time, we were exploring the creative possibilities of volumetric video, and how augmented reality could transform music, performance, and storytelling.",
-          "It was also my first professional project as a developer. Having recently studied digital culture at Arizona State University, I was eager to work at the intersection of technology and the arts. With a background in music and a growing interest in Unity and augmented reality, Curse of Calypso was an ideal introduction to the industry.",
+          "It was also my first professional project as a developer. Having recently studied media arts at Arizona State University, I was eager to work at the intersection of technology and the arts. With a background in music and a growing interest in Unity and augmented reality, Curse of Calypso was an ideal introduction to the industry.",
           "I joined the team as a junior developer, contributing animation, physics interactions, and visual effects that helped bring the band's holographic performances to life.",
         ],
       },
@@ -401,14 +398,6 @@ export const works = {
         body: [
           "In one sequence, a holographic band member spray-paints a surface in the environment. To make the effect believable, I positioned a virtual 3D spray can over the one visible in the volumetric capture, then animated it by hand to follow the performer's hand.",
           "Using raycasting and masking, I created an effect that progressively revealed painted imagery on the user's wall, in sync with the movement of the spray can. The challenge was making an entirely prerecorded performance appear to leave a physical mark on the room around it.",
-        ],
-      },
-      // A close-up of the fire, ideally with the hologram moving.
-      {
-        title: "Fire From Remington's Eyes",
-        body: [
-          "One of the more surreal moments features Remington with flames pouring from his eyes. I animated invisible objects to track his eyes throughout the volumetric performance, and used them as attachment points for the fire effects, so the flames stayed aligned with his face as he moved.",
-          "It was another case of using hand-animated reference points to make up for the absence of a skeletal rig.",
         ],
       },
       // The full feather-pen sequence, then a closer view of the writing.
@@ -452,16 +441,7 @@ export const works = {
         title: "Extending the Band's World",
         body: [
           "Curse of Calypso offered Palaye Royale fans an unusual way to experience the band's music and visual identity. By bringing their performances into augmented reality, it extended their artistic world beyond music videos and live shows, letting audiences experience its imagery within their own surroundings. The experience became part of the band's larger creative universe and received a Webby Award nomination.",
-          "For Jadu, the project was an exploration of volumetric performance and immersive entertainment during the company's early years. For me, it marked the beginning of my professional journey in interactive media.",
-        ],
-      },
-      // A closing shot: a holographic performer in an everyday room.
-      {
-        title: "Engineering as Artistic Expression",
-        body: [
-          "I still look back on Curse of Calypso as one of my favorite projects from my time at Jadu. Part of that is sentimental: it was my first professional development experience, and it brought together so many of my interests, from music and animation to visual art and emerging technology.",
-          "But the project also introduced me to a way of thinking about interactive media that has stayed with me. We were taking performances that had already been recorded and making them appear responsive, physical, and present in the viewer's environment. Through animation, physics, and carefully constructed visual effects, we could blur the line between a prerecorded performance and something seemingly happening right in front of you.",
-          "It showed me that engineering could be more than implementing functionality. It could also be a form of artistic expression: a way of constructing illusions and exploring new relationships between the digital and physical worlds. At the very start of my career, that was a pretty exciting thing to discover.",
+          "For Jadu, the project was an exploration of volumetric performance and immersive entertainment during the company's early years. For me, it marked the beginning of my professional journey in interactive media, and it showed me that engineering can be a powerful form of artistic expression; in this case, one that could bring a rock band into my living room.",
         ],
       },
     ],
